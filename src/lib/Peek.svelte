@@ -29,6 +29,7 @@
     drop: "M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z",
     check: "M9 11l3 3 8-8M20 12v7H4V5h11",
     calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
+    download: "M12 3v12M7 10l5 5 5-5M4 20h16",
   };
 
   type View = { icon: string; tone?: string; title: string; detail?: string; value?: string; level?: number };
@@ -120,6 +121,17 @@
       </div>
     </div>
   </div>
+{:else if peek.kind === "update"}
+  <!-- A new version is downloaded; clicking installs it (Notchy restarts in a few seconds). -->
+  <button class="note" onclick={() => onOpen?.()}>
+    <span class="icon" style:color="#38bdf8" style:background="#38bdf822">
+      <svg viewBox="0 0 24 24"><path d={ICONS.download} /></svg>
+    </span>
+    <div class="text">
+      <div class="title">Notchy v{peek.version} siap</div>
+      <div class="detail">Klik untuk pasang, Notchy mulai ulang sebentar</div>
+    </div>
+  </button>
 {:else if view}
   <div class="row">
     <span class="icon" style:color={view.tone ?? "#fff"} style:background={view.tone ? `${view.tone}22` : "rgba(255,255,255,.1)"}>

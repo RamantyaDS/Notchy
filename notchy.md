@@ -53,8 +53,9 @@ Notchy dianggap berhasil kalau:
 | Deteksi full-screen | `SHQueryUserNotificationState` **atau** jendela aktif menutupi seluruh monitor, dicek setiap 1 detik | Shell Windows tidak mendeteksi semua jendela full-screen (misalnya browser F11) |
 | Penyimpanan data | File JSON di `%APPDATA%\Notchy\` | Tanpa akun, tanpa server, data tetap di laptop |
 | Penjaga (watchdog) | Task Scheduler **"Notchy Watchdog"** (hanya di laptop pengguna, belum ikut installer): saat login + tiap 2 menit menjalankan `notchy.exe --watchdog`, tanpa batas waktu, tetap jalan di baterai, `MultipleInstances IgnoreNew`. Kalau Notchy hidup, salinan baru langsung keluar (single-instance); kalau mati, salinan itu yang mengambil alih (log: `start (restarted by watchdog)`). Exit dari tray menulis `%APPDATA%\Notchy\exited-by-user`, sehingga penjaga membiarkannya mati; dibuka normal (atau autostart) menghapus penanda itu. | Notchy sempat hilang tanpa jejak. Autostart (Run key) hanya berlaku saat login; Notchy bertahan melewati sleep. |
+| Update otomatis | `tauri-plugin-updater` dari GitHub Releases repo ini (repo publik): `releases/latest/download/latest.json`. Dicek saat Notchy menyala dan tiap 6 jam. Saat baru menyala, update langsung dipasang (installer NSIS mode passive, Notchy mulai ulang sendiri); setelahnya hanya diunduh lalu muncul peek "Notchy vX siap, klik untuk pasang", jadi tidak pernah restart saat dipakai. Installer ditandatangani: kunci privat di `%USERPROFILE%\.tauri\notchy.key` (tanpa password, **jangan di-commit, wajib dibackup**; kalau hilang, pengguna harus pasang ulang manual), kunci publik di `tauri.conf.json`. Salinan yang jalan dari folder `target\` (milik pengembang) tidak pernah update sendiri. | Pilihan pengguna: tarik dari repo yang sama (dijadikan publik); riwayat git diringkas jadi satu commit supaya bersih |
 | Log "kotak hitam" | `%APPDATA%\Notchy\notchy.log`: `start vX`, `exit (normal)`, dan `PANIC …` (thread, file:baris, pesan). Release memakai `panic = "unwind"`, sehingga panic di thread latar hanya mematikan thread itu. | Notchy dua kali "hilang" tanpa jejak crash (19 Okt 2026). Ada baris PANIC berarti bug kode; tidak ada baris sama sekali berarti dimatikan dari luar (curiga: Trend Micro Apex One, karena Notchy memakai keyboard hook). |
-| Distribusi | Installer bawaan Tauri (NSIS, per-user, tanpa admin), dibagikan manual. Update = jalankan setup versi baru di atas yang lama (aplikasi yang berjalan ditutup otomatis, data tetap). Cara membuat rilis: bagian 9. | Hanya untuk diri sendiri dan teman. Tidak perlu auto-update atau code signing. Windows akan menampilkan peringatan SmartScreen; teman cukup klik "Run anyway". |
+| Distribusi | Installer bawaan Tauri (NSIS, per-user, tanpa admin), dipasang manual sekali; sesudahnya update otomatis (baris "Update otomatis"). Data tetap saat update. Cara membuat rilis: bagian 9. | Hanya untuk diri sendiri dan teman. Tanpa code signing. Windows akan menampilkan peringatan SmartScreen; teman cukup klik "Run anyway". |
 
 ---
 
@@ -63,7 +64,6 @@ Notchy dianggap berhasil kalau:
 - [ ] Shortcut keyboard untuk membuka notch.
 - [ ] Ikon aplikasi: masih ikon bawaan Tauri. Kandidat: wordmark "notchy" + pil notch dari video promo.
 - [ ] Overlay volume bawaan Windows masih ikut muncul bersama peek volume Notchy.
-- [ ] Auto-update untuk teman (plugin updater Tauri + GitHub Releases); ditunda, saat ini kirim installer manual.
 
 ---
 
@@ -188,7 +188,7 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 
 - Versi macOS atau Linux.
 - Akun, login, sinkronisasi cloud, atau analytics.
-- Rilis publik, auto-update, dan code signing.
+- Code signing Windows (peringatan SmartScreen tetap muncul saat pasang manual).
 - Lirik dari Spotify atau sumber lain yang butuh login/scraping.
 - Jadwal sholat.
 - Tema yang bisa dikustomisasi bebas (cukup satu gaya yang rapi dulu).
@@ -210,12 +210,9 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.1.0 | 19 Okt 2026 | Rilis pertama untuk teman: semua fitur bagian 5, tampilan hitam polos, musik + lirik di notch kecil |
 | v0.1.1 | 19 Okt 2026 | Notifikasi ~0,3–0,5 s, antrean, klik untuk membuka aplikasi, tombol Do Not Disturb di Settings |
 
-**Cara membuat rilis baru**
-1. Naikkan versi di tiga tempat: `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `package.json`.
-2. `npm run tauri build` → `src-tauri/target/release/bundle/nsis/Notchy_<versi>_x64-setup.exe`. Sebelumnya `Disable-ScheduledTask 'Notchy Watchdog'` lalu tutup Notchy (file `.exe` di folder build ditimpa, dan penjaga bisa menyalakannya lagi di tengah build sehingga file terkunci). Sesudahnya jalankan Notchy lagi dan `Enable-ScheduledTask 'Notchy Watchdog'`.
-3. Kalau gagal dengan "user-mapped section open (os error 1224)": antivirus sedang memindai `.exe` baru. Hapus setup yang setengah jadi, tunggu sebentar, build ulang.
-4. Uji update: pasang versi lama (`/S`), jalankan, pasang versi baru di atasnya (`/S`), cek versi di registry Uninstall, lalu uninstall (`uninstall.exe /S`). Data di `%APPDATA%\Notchy` tidak ikut terhapus.
-5. Commit, `git tag v<versi>`, `git push` + `git push origin v<versi>`.
-6. Kirim setup ke teman. Mereka cukup menjalankannya di atas versi lama.
+**Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
+1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.
+2. Skrip itu: menaikkan versi di `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`; menjeda `Notchy Watchdog` dan menutup Notchy; build installer bertanda tangan (kunci `%USERPROFILE%\.tauri\notchy.key`, mengulang otomatis kalau antivirus memicu os error 1224); menjalankan Notchy lagi dan menyalakan penjaga; menulis `latest.json`; commit, tag `v<versi>`, push; membuat GitHub Release berisi setup, `.sig`, dan `latest.json`.
+3. Salinan teman yang sudah v0.1.2 ke atas akan update sendiri (saat menyala, atau lewat peek dalam 6 jam). Yang masih v0.1.0/v0.1.1 perlu menjalankan setup terbaru sekali secara manual (ada di halaman Releases).
 
 **Video promo** (bukan bagian repo ini): `D:\Projects\notchy-promo` – Reels 9:16, 27 detik, konsep "Satu garis, semuanya"; render lewat `render-par.mjs` (batas segmen dikunci ke frame), musik `music.html`, campur VO `mix.mjs`.

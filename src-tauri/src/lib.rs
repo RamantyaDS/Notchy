@@ -43,6 +43,7 @@ mod notifications;
 mod settings;
 mod store;
 mod system;
+mod update;
 
 /// Briefly shows a status in the notch (volume, charger, Wi-Fi, ...).
 /// `data` must be a JSON object; its `kind` tells the frontend which view to use.
@@ -536,6 +537,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|_, _, _| {}))
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_drag::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             set_notch_size,
             is_tucked,
@@ -563,6 +565,7 @@ pub fn run() {
             store::open_path,
             notifications::open_app,
             notifications::open_dnd_settings,
+            update::install_update,
         ])
         .setup(move |app| {
             // Logged here, not earlier: a second copy (e.g. a watchdog run while Notchy is
@@ -587,6 +590,7 @@ pub fn run() {
             audio::start(app.handle().clone());
             system::start(app.handle().clone());
             notifications::start(app.handle().clone());
+            update::start(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())

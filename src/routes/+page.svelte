@@ -71,9 +71,9 @@
   // click (notification, screenshot) stays put while the cursor is on it.
   let peekTimer: ReturnType<typeof setTimeout>;
   let peekQueue: PeekData[] = [];
-  const clickable = (p: PeekData | null) => p?.kind === "notification" || p?.kind === "screenshot";
+  const clickable = (p: PeekData | null) => ["notification", "screenshot", "update"].includes(p?.kind ?? "");
   const peekLength = (p: PeekData) =>
-    p.kind === "screenshot" ? 6000 : p.kind === "notification" ? (peekQueue.length ? 3200 : 4500) : ["todo", "calendar"].includes(p.kind) ? 5000 : 2200;
+    p.kind === "screenshot" || p.kind === "update" ? 6000 : p.kind === "notification" ? (peekQueue.length ? 3200 : 4500) : ["todo", "calendar"].includes(p.kind) ? 5000 : 2200;
   function showPeek(data: PeekData) {
     if (data.kind === "notification" && peek?.kind === "notification") {
       peekQueue.push(data);
@@ -90,6 +90,7 @@
   }
   function openFromPeek(p: PeekData) {
     if (p.kind === "notification" && p.aumid) invoke("open_app", { aumid: p.aumid, id: p.id });
+    if (p.kind === "update") invoke("install_update");
     clearTimeout(peekTimer);
     endPeek();
   }

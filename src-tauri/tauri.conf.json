@@ -38,6 +38,7 @@
   "bundle": {
     "active": true,
     "targets": "nsis",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -45,5 +46,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQyQzFCMzM2QTRFMThCMjcKUldRbmkrR2tOclBCUWtoNGFpOGtxemhRc3hOZy9pMEQ3SmR3ekkrWjFYd0xKa3hHd3BuS3ZzQWIK",
+      "endpoints": ["https://github.com/RamantyaDS/Notchy/releases/latest/download/latest.json"],
+      "windows": { "installMode": "passive" }
+    }
   }
 }
