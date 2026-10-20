@@ -31,11 +31,15 @@ $watchdog = Get-ScheduledTask "Notchy Watchdog" -ErrorAction SilentlyContinue
 if ($watchdog) { Disable-ScheduledTask "Notchy Watchdog" | Out-Null }
 Stop-Process -Name notchy -ErrorAction SilentlyContinue
 try {
-    # The antivirus sometimes holds the fresh exe (os error 1224); a retry gets through.
-    foreach ($try in 1..3) {
-        npm run tauri build
+    npm run tauri build -- --no-bundle
+    if ($LASTEXITCODE) { throw "Build failed." }
+    # The antivirus scans the fresh exe and holds it meanwhile (os error 1224 when
+    # packing it), so give it a moment and retry the packing alone.
+    foreach ($try in 1..5) {
+        Start-Sleep -Seconds 20
+        npx tauri bundle --bundles nsis
         if (-not $LASTEXITCODE) { break }
-        if ($try -eq 3) { throw "Build failed." }
+        if ($try -eq 5) { throw "Packing the installer failed." }
     }
 } finally {
     Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "`"$root\src-tauri\target\release\notchy.exe`"" } | Out-Null
