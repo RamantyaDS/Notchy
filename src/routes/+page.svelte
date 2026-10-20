@@ -228,6 +228,13 @@
   });
   $effect(() => {
     if (view !== "compact" || !smallLyrics || !media?.playing || !lyrics?.synced) return;
+    // A new song, a seek, a pause or coming back from another view re-runs this with
+    // lineNow left behind, which would put the song near its start and leave the line
+    // empty until the next wake-up. Catch up to the real time first (this re-runs it).
+    if (Date.now() - lineNow > 250) {
+      lineNow = Date.now();
+      return;
+    }
     const pos = positionAt(media, lineNow);
     const next = lyrics.synced.find((l) => l.time > pos + 0.25);
     if (!next) return;
