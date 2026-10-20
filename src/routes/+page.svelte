@@ -17,6 +17,14 @@
   import { fetchWeather, type Weather } from "$lib/weather";
   import { upcoming, type CalEvent } from "$lib/calendar";
 
+  // Black box for the page: errors go to notchy.log, and a heartbeat tells Rust the
+  // page still runs and draws (sent from an animation frame, which only comes while
+  // the page renders). Without beats for a while, Rust reloads the page.
+  const logJs = (msg: string) => invoke("log_js", { msg }).catch(() => {});
+  window.addEventListener("error", (e) => logJs(`${e.message} (${String(e.filename).split("/").pop()}:${e.lineno})`));
+  window.addEventListener("unhandledrejection", (e) => logJs(`unhandled: ${e.reason?.stack ?? e.reason}`));
+  setInterval(() => requestAnimationFrame(() => invoke("heartbeat").catch(() => {})), 5000);
+
   // Sizes from notchy.md §4 (logical px).
   const SIZES = {
     tucked: { w: 90, h: 6, r: 4, e: 4 },

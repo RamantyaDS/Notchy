@@ -38,6 +38,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 mod audio;
+mod health;
 mod media;
 mod notifications;
 mod settings;
@@ -480,10 +481,11 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         None::<&str>,
     )?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
+    let reload = MenuItem::with_id(app, "reload", "Muat ulang notch", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
-        &[&settings, &autostart, &PredefinedMenuItem::separator(app)?, &quit],
+        &[&settings, &autostart, &reload, &PredefinedMenuItem::separator(app)?, &quit],
     )?;
 
     TrayIconBuilder::new()
@@ -502,6 +504,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 let _ = autostart.set_checked(launcher.is_enabled().unwrap_or(false));
             }
             "settings" => settings::open_window(app),
+            "reload" => health::reload(app, "from the tray"),
             "quit" => {
                 // Tells the watchdog task this was on purpose, so it doesn't bring Notchy back.
                 let _ = std::fs::write(exited_flag(), "");
@@ -566,6 +569,8 @@ pub fn run() {
             notifications::open_app,
             notifications::open_dnd_settings,
             update::install_update,
+            health::heartbeat,
+            health::log_js,
         ])
         .setup(move |app| {
             // Logged here, not earlier: a second copy (e.g. a watchdog run while Notchy is
@@ -591,6 +596,7 @@ pub fn run() {
             system::start(app.handle().clone());
             notifications::start(app.handle().clone());
             update::start(app.handle().clone());
+            health::start(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())
