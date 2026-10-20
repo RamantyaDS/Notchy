@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman (installer dibagikan manual, lihat bagian 9). Tidak dirilis publik.
 
-**Status:** v0.1.1 (19 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (private).
+**Status:** v0.1.2 (20 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer: halaman Releases repo itu.
 
 ---
 
@@ -209,6 +209,7 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 |---|---|---|
 | v0.1.0 | 19 Okt 2026 | Rilis pertama untuk teman: semua fitur bagian 5, tampilan hitam polos, musik + lirik di notch kecil |
 | v0.1.1 | 19 Okt 2026 | Notifikasi ~0,3–0,5 s, antrean, klik untuk membuka aplikasi, tombol Do Not Disturb di Settings |
+| v0.1.2 | 20 Okt 2026 | Klik notifikasi = klik notifikasi asli (WA Web langsung ke chat-nya); update otomatis dari GitHub Releases; log kotak hitam, panic tidak mematikan aplikasi; perbaikan notifikasi bertumpuk dengan halaman saat di-hover. Teruji: v0.1.1 uji update sendiri ke v0.1.2 dalam ~9 detik |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.
