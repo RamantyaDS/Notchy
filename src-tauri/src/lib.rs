@@ -28,8 +28,9 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, GetClassNameW, GetForegroundWindow, GetMessageW, GetWindowLongPtrW,
-    GetWindowRect, GetWindowThreadProcessId, IsIconic, IsWindowVisible, SetForegroundWindow,
-    SetWindowLongPtrW, SetWindowsHookExW, ShowWindow,
+    GetWindow, GetWindowRect, GetWindowThreadProcessId, IsIconic, IsWindowVisible, SetForegroundWindow,
+    SetWindowLongPtrW, SetWindowPos, SetWindowsHookExW, ShowWindow, GW_HWNDPREV, HWND_TOPMOST,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WS_EX_TOPMOST,
     EVENT_OBJECT_LOCATIONCHANGE, EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZEEND,
     EVENT_SYSTEM_MINIMIZESTART, GWL_EXSTYLE, MSG, MSLLHOOKSTRUCT, OBJID_WINDOW, SW_HIDE,
     SW_SHOWNOACTIVATE, WH_MOUSE_LL, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS, WM_LBUTTONUP,
@@ -384,6 +385,23 @@ fn something_under_notch(uia: &IUIAutomation) -> bool {
     }
 }
 
+/// Whether a visible window without the topmost flag sits above the notch in the z-order.
+fn below_ordinary_window(ours: HWND) -> bool {
+    unsafe {
+        let mut h = ours;
+        while let Ok(above) = GetWindow(h, GW_HWNDPREV) {
+            if above.is_invalid() {
+                break;
+            }
+            if IsWindowVisible(above).as_bool() && GetWindowLongPtrW(above, GWL_EXSTYLE) as u32 & WS_EX_TOPMOST.0 == 0 {
+                return true;
+            }
+            h = above;
+        }
+        false
+    }
+}
+
 #[tauri::command]
 fn is_tucked() -> bool {
     TUCKED.load(Ordering::Relaxed)
@@ -443,6 +461,7 @@ fn start_watcher(window: WebviewWindow) {
             last_check = Some((key.0, key.1, result, Instant::now()));
             result
         };
+        let mut last_lift: Option<Instant> = None;
         loop {
             let timed_out = rx.recv_timeout(Duration::from_secs(1)).is_err();
             while rx.try_recv().is_ok() {}
@@ -456,6 +475,17 @@ fn start_watcher(window: WebviewWindow) {
                 unsafe { let _ = ShowWindow(h, SW_HIDE); }
             } else if !hide && !visible {
                 unsafe { let _ = ShowWindow(h, SW_SHOWNOACTIVATE); }
+            }
+            if !hide && below_ordinary_window(h) {
+                // The notch can end up under ordinary windows while keeping its topmost
+                // flag (21 Oct 2026, with Outlook in front): it's there, just covered.
+                unsafe {
+                    let _ = SetWindowPos(h, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                }
+                if last_lift.is_none_or(|at: Instant| at.elapsed() > Duration::from_secs(600)) {
+                    log_line("notch was under other windows; brought it back on top");
+                    last_lift = Some(Instant::now());
+                }
             }
 
             let tucked = !hide && foreground_covers_notch() && under_notch(!timed_out);
