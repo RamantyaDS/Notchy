@@ -1,6 +1,6 @@
 [package]
 name = "notchy"
-version = "0.1.4"
+version = "0.1.5"
 description = "Dynamic Island-style notch for Windows"
 authors = ["you"]
 edition = "2024"
