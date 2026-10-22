@@ -68,4 +68,4 @@ git commit -m "Release $Version"
 git tag "v$Version"
 git push origin HEAD "v$Version"
 gh release create "v$Version" $setup "$setup.sig" $latest --title "Notchy $Version" --notes $Notes
-Write-Host "Released v$Version. Installed copies update within 6 hours, or on their next start."
+Write-Host "Released v$Version. Installed copies (v0.2.1+) pick it up within an hour, after waking from sleep, or on their next start."
