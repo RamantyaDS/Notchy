@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.1.5 (21 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer: halaman Releases repo itu.
+**Status:** v0.2.0 (22 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer: halaman Releases repo itu.
 
 ---
 
@@ -223,7 +223,8 @@ Semua fitur di atas masuk v1. Urutan ini ada karena sebagian fitur bergantung pa
    - Uji bersama pengguna, lolos semua: panggilan sungguhan + mute, drag ke "Bagikan" membuka Share, "Cek update" (peek versi pengembang), timer + musik, geser touchpad, pintasan link, klik notif WA, unduhan asli. Earbuds belum (pengguna tidak punya).
    - Perbaikan dari pengujian: kecepatan unduhan 0 B/s (daftar folder tidak memperbarui ukuran file yang sedang ditulis → baca ukuran dari file, sekali per detik); titik mic menumpuk di gelembung panggilan (titik pindah ke ujung pulau, mic disembunyikan saat panggilan); gambar clipboard dobel; scroll volume tanpa tanda saat notch terbuka (peek volume tampil di atas halaman); tombol kamera tidak terjangkau saat musik main ("Kamera" jadi pintasan default); equalizer + piringan menggambar ulang ~13×/detik (meter 5×/detik dan piringan diputar oleh detak yang sama); lirik macet saat aktivitas lain memimpin (pengatur waktu lirik kini jalan selama musik ada di pulau).
    - Uji sendiri yang perlu diingat: tulisan registry/file dari shell Claude yang di-sandbox tidak terlihat proses lain; tulis lewat proses WMI (`Win32_Process.Create`). Hook mouse Notchy tidak melihat `SetCursorPos`; pakai `mouse_event` (input tersuntik).
-   - Belum: uji tahan lama semalam, uji update versi lama → v0.2.0.
+   - Update: v0.1.5 terpasang → v0.2.0 lewat updater dalam ~9 detik; "Cek update (v0.2.0)" di versi terpasang → "Sudah versi terbaru". Penanda NSS ada di exe dalam installer.
+   - Uji tahan lama semalam **dilewati** atas keputusan pengguna (rilis 22 Okt 2026); pantau `notchy.log` beberapa hari pertama.
 
 Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 
@@ -258,6 +259,7 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.1.3 | 20 Okt 2026 | Notch yang berhenti tergambar pulih sendiri (detak jantung, muat ulang, restart); error tampilan masuk log; menu "Muat ulang notch" di tray |
 | v0.1.4 | 20 Okt 2026 | Baris lirik di notch kecil langsung muncul setelah ganti lagu, pause/play, geser posisi, atau kembali dari tampilan lain (sebelumnya jam internalnya basi sehingga lirik tertahan sampai ada kejadian lain, misalnya minimize semua jendela) |
 | v0.1.5 | 21 Okt 2026 | Notch tidak lagi "hilang" di balik jendela lain (misalnya Outlook): kalau terdorong ke bawah, dalam 1 detik kembali paling atas |
+| v0.2.0 | 22 Okt 2026 | Bagian 5F: pulau terbelah (musik/timer/panggilan/unduhan berdampingan, geser untuk ganti), pil panggilan + mute, progres unduhan, equalizer asli, cek kamera + Join meeting, drop untuk Bagikan, riwayat clipboard, halaman pintasan, scroll volume, tekan lama untuk mengunci terbuka, baterai earbuds, "Cek update" di tray |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.
