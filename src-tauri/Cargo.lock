@@ -2378,7 +2378,9 @@ dependencies = [
  "tauri-plugin-drag",
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
+ "webview2-com",
  "windows 0.61.3",
+ "windows-collections 0.2.0",
  "windows-core 0.61.2",
  "winreg 0.55.0",
 ]

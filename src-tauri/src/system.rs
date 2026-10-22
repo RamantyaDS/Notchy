@@ -240,34 +240,56 @@ static IN_USE: Mutex<Option<InUse>> = Mutex::new(None);
 const CONSENT: &str = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore";
 
 /// Windows records each app's camera/mic use under ConsentStore; an entry
-/// whose LastUsedTimeStop is 0 is in use right now.
-fn apps_using(device: &str) -> Vec<String> {
+/// whose LastUsedTimeStop is 0 is in use right now. Returns the raw entries:
+/// the key name (a package id, or an exe path with '#' for '\') and when the
+/// use started (FILETIME).
+pub fn sessions(device: &str) -> Vec<(String, u64)> {
     let Ok(root) = RegKey::predef(HKEY_CURRENT_USER).open_subkey(format!(r"{CONSENT}\{device}")) else {
         return vec![];
     };
     let active = |key: &RegKey| {
         let start: u64 = key.get_value("LastUsedTimeStart").unwrap_or(0);
         let stop: u64 = key.get_value("LastUsedTimeStop").unwrap_or(1);
-        start != 0 && stop == 0
+        (start != 0 && stop == 0).then_some(start)
     };
-    let mut apps = vec![];
+    let mut found = vec![];
     for name in root.enum_keys().flatten() {
         let Ok(key) = root.open_subkey(&name) else { continue };
         if name == "NonPackaged" {
-            // Subkeys are exe paths with '#' for '\'.
             for exe in key.enum_keys().flatten() {
-                if key.open_subkey(&exe).is_ok_and(|k| active(&k)) {
-                    let file = exe.rsplit('#').next().unwrap_or(&exe);
-                    apps.push(file.trim_end_matches(".exe").to_string());
+                if let Some(start) = key.open_subkey(&exe).ok().and_then(|k| active(&k)) {
+                    found.push((exe, start));
                 }
             }
-        } else if active(&key) {
-            // Packaged apps: "Microsoft.WindowsCamera_8wekyb3d8bbwe" -> "WindowsCamera".
-            let id = name.split('_').next().unwrap_or(&name);
-            apps.push(id.rsplit('.').next().unwrap_or(id).to_string());
+        } else if let Some(start) = active(&key) {
+            found.push((name, start));
         }
     }
-    apps
+    found
+}
+
+/// "C:#Program Files#Zoom#bin#Zoom.exe" -> "Zoom"; "Microsoft.WindowsCamera_8wekyb3d8bbwe" -> "WindowsCamera".
+pub fn app_name(id: &str) -> String {
+    if id.contains('#') {
+        let file = id.rsplit('#').next().unwrap_or(id);
+        return file.trim_end_matches(".exe").trim_end_matches(".EXE").to_string();
+    }
+    let id = id.split('_').next().unwrap_or(id);
+    id.rsplit('.').next().unwrap_or(id).to_string()
+}
+
+/// While Notchy's own camera mirror runs, its WebView2 shows up as a camera
+/// user; that one isn't news.
+pub static MIRROR_ON: AtomicBool = AtomicBool::new(false);
+
+fn is_ours(id: &str) -> bool {
+    let lower = id.to_ascii_lowercase();
+    lower.ends_with("#notchy.exe") || lower.ends_with("#msedgewebview2.exe")
+}
+
+fn apps_using(device: &str) -> Vec<String> {
+    let mirror = device == "webcam" && MIRROR_ON.load(Ordering::Relaxed);
+    sessions(device).iter().filter(|(id, _)| !(mirror && is_ours(id))).map(|(id, _)| app_name(id)).collect()
 }
 
 #[tauri::command]
@@ -296,6 +318,9 @@ fn start_privacy(app: AppHandle) {
                     *last = Some(now);
                 }
                 drop(last);
+                if device == "microphone" {
+                    crate::calls::poke();
+                }
                 // Blocks until something under this key changes.
                 if !wait_for_change(&key) {
                     return;

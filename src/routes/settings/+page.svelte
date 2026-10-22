@@ -16,7 +16,29 @@
     mirrorNotifications: boolean;
     calendarUrl: string;
     smallLyrics: boolean;
+    shortcuts: Shortcut[];
   };
+  type Shortcut = { name: string; action: string; target: string };
+
+  const ACTIONS: [string, string][] = [
+    ["lock", "Kunci layar"],
+    ["sleep", "Sleep"],
+    ["screenshot", "Screenshot"],
+    ["downloads", "Buka Downloads"],
+    ["camera", "Cek kamera"],
+    ["open", "Buka aplikasi / file / folder / link / skrip"],
+  ];
+  const DEFAULT_SHORTCUTS: Shortcut[] = [
+    { name: "Kunci", action: "lock", target: "" },
+    { name: "Sleep", action: "sleep", target: "" },
+    { name: "Screenshot", action: "screenshot", target: "" },
+    { name: "Downloads", action: "downloads", target: "" },
+    { name: "Kamera", action: "camera", target: "" },
+  ];
+  function editShortcut(i: number, patch: Partial<Shortcut>) {
+    if (!settings) return;
+    save({ shortcuts: settings.shortcuts.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
+  }
 
   let settings = $state<Settings | null>(null);
   let query = $state("");
@@ -127,6 +149,44 @@
         placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
         onchange={(e) => save({ calendarUrl: e.currentTarget.value.trim() })}
       />
+    {/if}
+  </section>
+
+  <section>
+    <h2>Pintasan</h2>
+    <p class="current">
+      Tombol di halaman Pintasan pada notch (maksimal 8). "Buka" menerima aplikasi (.exe), file, folder, link
+      https://, atau skrip (.bat, .cmd, .ps1) milikmu sendiri.
+    </p>
+    {#if settings}
+      {#each settings.shortcuts as s, i}
+        <div class="shortcut">
+          <input class="name" value={s.name} placeholder="Nama" onchange={(e) => editShortcut(i, { name: e.currentTarget.value.trim() })} />
+          <select value={s.action} onchange={(e) => editShortcut(i, { action: e.currentTarget.value })}>
+            {#each ACTIONS as [value, label]}<option {value}>{label}</option>{/each}
+          </select>
+          <button class="link" onclick={() => save({ shortcuts: settings!.shortcuts.filter((_, j) => j !== i) })} aria-label="Hapus pintasan">Hapus</button>
+          {#if s.action === "open"}
+            <input
+              class="wide target"
+              value={s.target}
+              placeholder="C:\Tools\backup.bat atau https://…"
+              onchange={(e) => editShortcut(i, { target: e.currentTarget.value.trim() })}
+            />
+          {/if}
+        </div>
+      {/each}
+      <div class="row-buttons">
+        {#if settings.shortcuts.length < 8}
+          <button
+            class="secondary"
+            onclick={() => save({ shortcuts: [...settings!.shortcuts, { name: "Baru", action: "open", target: "" }] })}
+          >
+            Tambah pintasan
+          </button>
+        {/if}
+        <button class="link" onclick={() => save({ shortcuts: DEFAULT_SHORTCUTS })}>Kembalikan default</button>
+      </div>
     {/if}
   </section>
 
@@ -317,5 +377,36 @@
     font-style: normal;
     font-size: 12px;
     color: #8c94a8;
+  }
+  .shortcut {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+  }
+  .shortcut .name {
+    flex: none;
+    width: 110px;
+  }
+  select {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 6px;
+    border: 1px solid rgba(236, 239, 247, 0.15);
+    border-radius: 8px;
+    background: #141826;
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+  }
+  .shortcut .target {
+    flex-basis: 100%;
+  }
+  .row-buttons {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
   }
 </style>

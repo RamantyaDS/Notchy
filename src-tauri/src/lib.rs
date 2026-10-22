@@ -33,16 +33,21 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WS_EX_TOPMOST,
     EVENT_OBJECT_LOCATIONCHANGE, EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZEEND,
     EVENT_SYSTEM_MINIMIZESTART, GWL_EXSTYLE, MSG, MSLLHOOKSTRUCT, OBJID_WINDOW, SW_HIDE,
-    SW_SHOWNOACTIVATE, WH_MOUSE_LL, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS, WM_LBUTTONUP,
+    SW_SHOWNOACTIVATE, WH_MOUSE_LL, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS, WM_LBUTTONDOWN, WM_LBUTTONUP,
     WM_MOUSEMOVE,
     WS_EX_TRANSPARENT,
 };
 
 mod audio;
+mod calls;
+mod clipboard;
+mod downloads;
 mod health;
 mod media;
 mod notifications;
 mod settings;
+mod share;
+mod shortcuts;
 mod store;
 mod system;
 mod update;
@@ -65,6 +70,9 @@ static WATCH_TX: OnceLock<mpsc::Sender<()>> = OnceLock::new();
 static TUCKED: AtomicBool = AtomicBool::new(false);
 static CLICKED: AtomicBool = AtomicBool::new(false);
 static TYPING: AtomicBool = AtomicBool::new(false);
+/// Long-pressed open: stays open (and clickable) until long-pressed again or a click lands elsewhere.
+static PINNED: AtomicBool = AtomicBool::new(false);
+static OUTSIDE_TX: OnceLock<mpsc::Sender<()>> = OnceLock::new();
 static PREV_FOREGROUND: AtomicIsize = AtomicIsize::new(0);
 static HIT: Mutex<Hit> = Mutex::new(Hit { size: (0.0, 0.0), rect: (0, 0, 0, 0), inside: false });
 
@@ -189,6 +197,21 @@ fn end_typing(window: WebviewWindow) {
     });
 }
 
+/// Keeps the notch open and clickable after a long press, until the frontend
+/// lets go (another long press, or a click outside it).
+#[tauri::command]
+fn set_pinned(on: bool) {
+    PINNED.store(on, Ordering::Relaxed);
+    let inside = HIT.lock().unwrap().inside;
+    set_click_through(!on && !inside && !TYPING.load(Ordering::Relaxed));
+}
+
+/// The camera mirror is on: Notchy's own camera use isn't shown as news.
+#[tauri::command]
+fn set_mirror(on: bool) {
+    system::MIRROR_ON.store(on, Ordering::Relaxed);
+}
+
 /// The hook callback must return fast or Windows drops the hook, so the style
 /// change (which waits on the UI thread) and the frontend event run here instead.
 fn start_hover_emitter() {
@@ -196,9 +219,18 @@ fn start_hover_emitter() {
     HOVER_TX.set(tx).ok();
     std::thread::spawn(move || {
         for inside in rx {
-            set_click_through(!inside && !TYPING.load(Ordering::Relaxed));
+            set_click_through(!inside && !TYPING.load(Ordering::Relaxed) && !PINNED.load(Ordering::Relaxed));
             if let Some(window) = main_window() {
                 let _ = window.emit("notch-hover", inside);
+            }
+        }
+    });
+    let (tx, rx) = mpsc::channel::<()>();
+    OUTSIDE_TX.set(tx).ok();
+    std::thread::spawn(move || {
+        for () in rx {
+            if let Some(window) = main_window() {
+                let _ = window.emit("notch-outside-click", ());
             }
         }
     });
@@ -251,6 +283,10 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
     } else if code >= 0 && wparam.0 as u32 == WM_LBUTTONUP {
         // A click can change what's under the notch (e.g. a new tab); re-check on the next pass.
         CLICKED.store(true, Ordering::Relaxed);
+    } else if code >= 0 && wparam.0 as u32 == WM_LBUTTONDOWN && PINNED.load(Ordering::Relaxed) && !HIT.lock().unwrap().inside {
+        if let Some(tx) = OUTSIDE_TX.get() {
+            let _ = tx.send(());
+        }
     }
     unsafe { CallNextHookEx(None, code, wparam, lparam) }
 }
@@ -385,6 +421,33 @@ fn something_under_notch(uia: &IUIAutomation) -> bool {
     }
 }
 
+/// The camera mirror asks WebView2 for the webcam; grant it without a prompt
+/// (the notch can't show WebView2's permission dialog anyway). Camera only.
+fn allow_camera(window: &WebviewWindow) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2PermissionRequestedEventArgs, COREWEBVIEW2_PERMISSION_KIND, COREWEBVIEW2_PERMISSION_KIND_CAMERA,
+        COREWEBVIEW2_PERMISSION_STATE_ALLOW,
+    };
+    use webview2_com::PermissionRequestedEventHandler;
+    let _ = window.with_webview(|webview| unsafe {
+        let Ok(core) = webview.controller().CoreWebView2() else { return };
+        let handler = PermissionRequestedEventHandler::create(Box::new(
+            |_, args: Option<ICoreWebView2PermissionRequestedEventArgs>| {
+                if let Some(args) = args {
+                    let mut kind = COREWEBVIEW2_PERMISSION_KIND::default();
+                    args.PermissionKind(&mut kind)?;
+                    if kind == COREWEBVIEW2_PERMISSION_KIND_CAMERA {
+                        args.SetState(COREWEBVIEW2_PERMISSION_STATE_ALLOW)?;
+                    }
+                }
+                Ok(())
+            },
+        ));
+        let mut token = Default::default();
+        let _ = core.add_PermissionRequested(&handler, &mut token);
+    });
+}
+
 /// Whether a visible window without the topmost flag sits above the notch in the z-order.
 fn below_ordinary_window(ours: HWND) -> bool {
     unsafe {
@@ -512,10 +575,12 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     )?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
     let reload = MenuItem::with_id(app, "reload", "Muat ulang notch", true, None::<&str>)?;
+    let update =
+        MenuItem::with_id(app, "update", format!("Cek update (v{})", env!("CARGO_PKG_VERSION")), true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
-        &[&settings, &autostart, &reload, &PredefinedMenuItem::separator(app)?, &quit],
+        &[&settings, &autostart, &reload, &update, &PredefinedMenuItem::separator(app)?, &quit],
     )?;
 
     TrayIconBuilder::new()
@@ -535,6 +600,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
             }
             "settings" => settings::open_window(app),
             "reload" => health::reload(app, "from the tray"),
+            "update" => update::check_now(app.clone()),
             "quit" => {
                 // Tells the watchdog task this was on purpose, so it doesn't bring Notchy back.
                 let _ = std::fs::write(exited_flag(), "");
@@ -601,6 +667,18 @@ pub fn run() {
             update::install_update,
             health::heartbeat,
             health::log_js,
+            set_pinned,
+            set_mirror,
+            calls::call_state,
+            audio::volume_step,
+            audio::set_metering,
+            downloads::open_download,
+            clipboard::clipboard_list,
+            clipboard::clipboard_copy,
+            clipboard::clipboard_clear,
+            share::share_files,
+            shortcuts::run_shortcut,
+            shortcuts::run_link,
         ])
         .setup(move |app| {
             // Logged here, not earlier: a second copy (e.g. a watchdog run while Notchy is
@@ -620,6 +698,7 @@ pub fn run() {
             start_hover_emitter();
             start_eyes_emitter();
             start_mouse_hook();
+            allow_camera(&window);
             start_watcher(window);
             media::start(app.handle().clone());
             audio::start(app.handle().clone());
@@ -627,6 +706,9 @@ pub fn run() {
             notifications::start(app.handle().clone());
             update::start(app.handle().clone());
             health::start(app.handle().clone());
+            calls::start(app.handle().clone());
+            downloads::start(app.handle().clone());
+            clipboard::start(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())

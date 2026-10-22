@@ -40,6 +40,32 @@ pub struct Settings {
     /// Show the line being sung in the small notch. Looks up lyrics for every
     /// song played (sends title and artist to LRCLIB).
     small_lyrics: bool,
+    /// Buttons on the shortcuts page.
+    pub shortcuts: Vec<Shortcut>,
+}
+
+/// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
+/// "downloads", "camera" (the notch's camera check, handled by the page), or
+/// "open" with `target` (an app, file, folder or link the user chose in
+/// Settings; scripts run through their usual handler).
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Shortcut {
+    pub name: String,
+    pub action: String,
+    pub target: String,
+}
+
+impl Default for Shortcut {
+    fn default() -> Self {
+        Self { name: String::new(), action: "open".into(), target: String::new() }
+    }
+}
+
+pub fn default_shortcuts() -> Vec<Shortcut> {
+    [("Kunci", "lock"), ("Sleep", "sleep"), ("Screenshot", "screenshot"), ("Downloads", "downloads"), ("Kamera", "camera")]
+        .map(|(name, action)| Shortcut { name: name.into(), action: action.into(), target: String::new() })
+        .to_vec()
 }
 
 impl Default for Settings {
@@ -56,6 +82,7 @@ impl Default for Settings {
             mirror_notifications: true,
             calendar_url: String::new(),
             small_lyrics: true,
+            shortcuts: default_shortcuts(),
         }
     }
 }

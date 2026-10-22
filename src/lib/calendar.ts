@@ -2,7 +2,27 @@
 // Handles time zones, all-day events, simple daily/weekly repeats, EXDATE,
 // moved occurrences (RECURRENCE-ID) and cancelled events.
 
-export type CalEvent = { title: string; start: number; end: number; allDay: boolean; location: string };
+export type CalEvent = {
+  title: string;
+  start: number;
+  end: number;
+  allDay: boolean;
+  location: string;
+  /** Teams/Meet/Zoom/Webex link found in the event, or "". */
+  link: string;
+};
+
+const MEETING =
+  /https:\/\/(?:teams\.microsoft\.com|teams\.live\.com|meet\.google\.com|(?:[\w-]+\.)?zoom\.us|[\w-]+\.webex\.com)\/[^\s"<>\\,;]+/i;
+
+/** The first video-meeting link in an event's text, or "". */
+export function meetingLink(...texts: string[]): string {
+  for (const t of texts) {
+    const m = t.match(MEETING);
+    if (m) return m[0];
+  }
+  return "";
+}
 
 type Props = Map<string, { value: string; params: Record<string, string> }[]>;
 
@@ -129,6 +149,14 @@ export function upcoming(ics: string, now = Date.now()): CalEvent[] {
       ...(e.get("EXDATE") ?? []).flatMap((x) => x.value.split(",").map((v) => parseDate(v, x.params.TZID).t)),
       ...(rrule ? (moved.get(uid) ?? []) : []),
     ]);
+    const location = unescape(e.get("LOCATION")?.[0]?.value ?? "");
+    // Raw text (not unescaped) so a link isn't glued to the next line.
+    const link = meetingLink(
+      location,
+      e.get("URL")?.[0]?.value ?? "",
+      e.get("X-GOOGLE-CONFERENCE")?.[0]?.value ?? "",
+      (e.get("DESCRIPTION")?.[0]?.value ?? "").replace(/\\n/gi, " ").replace(/\\([,;\\])/g, "$1"),
+    );
     for (const t of occurrences(start.t, rrule, until)) {
       if (skip.has(t) || t + length <= now || t >= until) continue;
       events.push({
@@ -136,7 +164,8 @@ export function upcoming(ics: string, now = Date.now()): CalEvent[] {
         start: t,
         end: t + length,
         allDay: start.allDay,
-        location: unescape(e.get("LOCATION")?.[0]?.value ?? ""),
+        location,
+        link,
       });
     }
   }

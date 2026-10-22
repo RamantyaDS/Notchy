@@ -7,7 +7,8 @@
   import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
   // onOpen: the peek was clicked through (opens the app / closes the peek).
-  let { peek, onOpen }: { peek: PeekData; onOpen?: () => void } = $props();
+  // onAction: one of its buttons was clicked (e.g. "camera", "join").
+  let { peek, onOpen, onAction }: { peek: PeekData; onOpen?: () => void; onAction?: (action: string) => void } = $props();
 
   // Stroke icons, 24×24.
   const ICONS: Record<string, string> = {
@@ -30,9 +31,13 @@
     check: "M9 11l3 3 8-8M20 12v7H4V5h11",
     calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
     download: "M12 3v12M7 10l5 5 5-5M4 20h16",
+    done: "M5 12l5 5L20 7",
+    sync: "M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3M4 4v4h4M20 20v-4h-4",
+    alert: "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
+    code: "M8 9l-3 3 3 3M16 9l3 3-3 3M13 6l-2 12",
   };
 
-  type View = { icon: string; tone?: string; title: string; detail?: string; value?: string; level?: number };
+  type View = { icon: string; tone?: string; title: string; detail?: string; value?: string; level?: number; battery?: number };
 
   const view = $derived.by((): View | null => {
     const p = peek;
@@ -59,8 +64,24 @@
           : { icon: "wifiOff", tone: "#f87171", title: "Koneksi terputus", detail: "Tidak ada internet" };
       case "output":
         return p.headphones
-          ? { icon: "headphones", tone: "#a78bfa", title: "Headphone tersambung", detail: p.name }
+          ? {
+              icon: "headphones",
+              tone: "#a78bfa",
+              title: p.battery != null ? p.name : "Headphone tersambung",
+              detail: p.battery != null ? "Tersambung" : p.name,
+              battery: p.battery ?? undefined,
+            }
           : { icon: "speaker", title: "Audio keluar lewat", detail: p.name };
+      case "earbuds-low":
+        return { icon: "headphones", tone: "#fb923c", title: `Baterai tinggal ${p.battery}%`, detail: p.name, battery: p.battery };
+      case "update-info":
+        return p.state === "checking"
+          ? { icon: "sync", tone: "#38bdf8", title: "Mengecek update…", detail: `Notchy v${p.version}` }
+          : p.state === "latest"
+            ? { icon: "done", tone: "#34d399", title: "Sudah versi terbaru", detail: `Notchy v${p.version}` }
+            : p.state === "dev"
+              ? { icon: "code", title: "Versi pengembang", detail: "Update lewat build, bukan updater" }
+              : { icon: "alert", tone: "#f87171", title: "Gagal mengecek update", detail: "Cek koneksi internet" };
       case "camera":
         return { icon: "camera", tone: "#34d399", title: "Kamera dipakai", detail: p.app };
       case "mic-in-use":
@@ -121,6 +142,32 @@
       </div>
     </div>
   </div>
+{:else if peek.kind === "download-done"}
+  <!-- A download finished: click opens it. -->
+  <button class="note" onclick={() => onOpen?.()}>
+    <span class="icon" style:color="#34d399" style:background="#34d39922">
+      <svg viewBox="0 0 24 24"><path d={ICONS.done} /></svg>
+    </span>
+    <div class="text">
+      <div class="title one">{peek.name}</div>
+      <div class="detail">Selesai diunduh · klik untuk buka</div>
+    </div>
+  </button>
+{:else if peek.kind === "meeting"}
+  <!-- A meeting with a link starts soon: check the camera, or join. -->
+  <div class="row">
+    <span class="icon" style:color="#fb923c" style:background="#fb923c22">
+      <svg viewBox="0 0 24 24"><path d={ICONS.calendar} /></svg>
+    </span>
+    <div class="text">
+      <div class="title one">{peek.title}</div>
+      <div class="detail">Mulai 2 menit lagi</div>
+    </div>
+    <div class="actions inline">
+      <button onclick={() => onAction?.("camera")}>Cek kamera</button>
+      {#if peek.link}<button class="primary" onclick={() => onAction?.("join")}>Join</button>{/if}
+    </div>
+  </div>
 {:else if peek.kind === "update"}
   <!-- A new version is downloaded; clicking installs it (Notchy restarts in a few seconds). -->
   <button class="note" onclick={() => onOpen?.()}>
@@ -144,6 +191,11 @@
     {#if view.level !== undefined}
       <div class="level"><span style:width="{Math.round(view.level * 100)}%"></span></div>
       <span class="value">{Math.round(view.level * 100)}</span>
+    {:else if view.battery !== undefined}
+      <div class="level short">
+        <span style:width="{view.battery}%" style:background={view.battery < 15 ? "#fb923c" : "#34d399"}></span>
+      </div>
+      <span class="value">{view.battery}%</span>
     {:else if view.value}
       <span class="value">{view.value}</span>
     {/if}
@@ -206,6 +258,18 @@
     border-radius: 3px;
     background: #fff;
     transition: width 0.15s ease-out;
+  }
+  .level.short {
+    width: 56px;
+  }
+  .actions.inline {
+    flex: none;
+    margin-top: 0;
+  }
+  .actions button.primary {
+    background: #fff;
+    color: #000;
+    font-weight: 600;
   }
   .value {
     flex: none;

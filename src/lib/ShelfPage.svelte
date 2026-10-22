@@ -3,7 +3,8 @@
   import { startDrag } from "@crabnebula/tauri-plugin-drag";
   import type { Shelf, ShelfItem } from "./productivity.svelte";
 
-  let { shelf, dropping }: { shelf: Shelf; dropping: boolean } = $props();
+  // dropTarget: which zone the dragged file is over ("shelf" or "share").
+  let { shelf, dropping, dropTarget = null }: { shelf: Shelf; dropping: boolean; dropTarget?: string | null } = $props();
 
   const IMAGE = /\.(png|jpe?g|gif|webp|bmp)$/i;
   const ext = (name: string) => (name.includes(".") ? name.split(".").pop()!.slice(0, 4).toUpperCase() : "");
@@ -53,10 +54,20 @@
     {#if shelf.items.length}<button class="clear" onclick={() => shelf.clear()}>Bersihkan</button>{/if}
   </div>
 
-  {#if shelf.items.length === 0 || dropping}
+  {#if dropping}
+    <!-- Two places to drop: keep it on the shelf, or hand it to Windows' Share window. -->
+    <div class="zones">
+      <div class="zone" class:hot={dropTarget !== "share"} data-drop="shelf">
+        <span class="tray">📥</span><strong>Simpan di Shelf</strong>
+      </div>
+      <div class="zone" class:hot={dropTarget === "share"} data-drop="share">
+        <svg viewBox="0 0 24 24"><path d="M4 12v7h16v-7M12 3v12M8 7l4-4 4 4" /></svg><strong>Bagikan</strong>
+      </div>
+    </div>
+  {:else if shelf.items.length === 0}
     <div class="zone">
       <span class="tray">📥</span>
-      <strong>{dropping ? "Lepaskan untuk menyimpan" : "Tarik file ke sini"}</strong>
+      <strong>Tarik file ke sini</strong>
     </div>
   {:else}
     <div class="items scroll">
@@ -127,9 +138,27 @@
       border-color 0.2s,
       background 0.2s;
   }
-  .dropping .zone {
+  .zones {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+  }
+  .zones .zone {
+    flex: 1;
+  }
+  .zone.hot {
     border-color: #38bdf8;
-    background: rgba(56, 189, 248, 0.1);
+    background: rgba(56, 189, 248, 0.12);
+    color: #bae6fd;
+  }
+  .zone svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
   .tray {
     font-size: 20px;

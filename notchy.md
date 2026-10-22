@@ -12,7 +12,7 @@ Notchy dianggap berhasil kalau:
 - Menyala otomatis saat Windows start, dan bisa dibiarkan seharian tanpa perlu di-restart.
 - Tidak pernah menghalangi klik ke aplikasi di bawahnya, kecuali di area notch itu sendiri.
 - Hilang sendiri saat ada aplikasi full-screen (game, video, presentasi).
-- Saat diam (tidak ada animasi), CPU-nya ~0% di Task Manager. *Kenyataan terukur: ~1% satu core saat diam (sebagian besar WebView2), ~4% saat musik diputar dengan animasi piringan/equalizer.*
+- Saat diam (tidak ada animasi), CPU-nya ~0% di Task Manager. *Kenyataan terukur: ~1% satu core saat diam (sebagian besar WebView2), ~4% saat musik diputar dengan animasi piringan/equalizer. v0.2.0 (22 Okt 2026, semua proses Notchy + WebView2): diam 1,7%; musik dengan equalizer asli 4,8% vs v0.1.5 4,4% diukur bergantian dalam kondisi sama.*
 - Semua fitur di bagian 5 berjalan.
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
@@ -169,7 +169,7 @@ Setiap fitur baru dianggap selesai kalau memenuhi **Definition of Done (DoD)**-n
 
 ### F. v0.2.0: ala Dynamic Island iPhone dan aplikasi notch Mac
 Dikerjakan sebagai **satu tahap besar**, dirilis sekali setelah lolos pengujian menyeluruh (lihat bagian 6, langkah 7). Referensi: Live Activities iPhone (sampai 3 aktivitas sekaligus di iPhone 18 Pro, panggilan, AirPods + baterai, progres AirDrop) dan aplikasi notch Mac (NotchNook: mirror kamera, tray + AirDrop, Shortcuts; Boring Notch: visualizer; NotchNest/Crest: clipboard).
-1. **Pulau terbelah**: aktivitas utama di tengah + sampai 2 gelembung kecil di samping (mis. musik + timer + panggilan). Aturan prioritas dan ukuran ditetapkan lewat mockup.
+1. **Pulau terbelah**: gaya **1B "satu pulau bersekat"** (dipilih pengguna dari mockup 22 Okt 2026, `D:\Projects\notchy-promo\mockup\v020.png`): satu pil memanjang, aktivitas utama di kiri/tengah, sampai 2 aktivitas lain di ujung kanan dipisah garis tipis. Prioritas: panggilan > timer > unduhan > musik; yang tertinggi jadi utama, kecuali musik yang sedang menampilkan baris lirik (lirik tetap utama). Geser touchpad mengganti aktivitas utama.
    DoD: dua/tiga aktivitas tampil bersamaan tanpa saling menimpa; klik tiap gelembung membuka halamannya; area klik mengikuti bentuk; menyingkir dan full-screen tetap benar.
 2. **Pil panggilan**: hijau, durasi berjalan, tombol mute. Muncul saat Teams, WhatsApp, Zoom memakai mic, atau browser memakai mic > 10 detik (supaya voice typing tidak terhitung).
    DoD: panggilan Teams/WA sungguhan memunculkan pil, durasi benar, mute bekerja, pil hilang saat panggilan selesai.
@@ -187,7 +187,7 @@ Dikerjakan sebagai **satu tahap besar**, dirilis sekali setelah lolos pengujian 
    DoD: copy teks/gambar tampil; teks bertanda password tidak tampil; hilang setelah restart.
 9. **Pintasan cepat**: halaman tombol (default: kunci layar, sleep, screenshot, buka Downloads), bisa diubah di Settings (aplikasi, folder, link, skrip milik pengguna).
    DoD: semua tombol default bekerja; tombol buatan sendiri tersimpan dan bekerja.
-10. **Gestur**: saat notch tertutup, scroll di atas notch = volume (atas = naik), geser touchpad = pindah aktivitas, tekan lama = buka.
+10. **Gestur**: scroll di pita atas notch (setinggi notch tertutup) = volume (atas = naik); geser touchpad = pindah aktivitas utama (tertutup) atau halaman (terbuka); **tekan lama = kunci notch tetap terbuka** sampai tekan lama lagi atau klik di luar (hover sudah membuka notch, jadi "tekan lama = buka" diganti ini).
     DoD: tidak bentrok dengan scroll di halaman yang terbuka; volume berubah dengan peek volume yang sudah ada.
 11. **Cek update di tray**: menu "Cek update (v0.x.x)". Ada versi baru → langsung pasang dan menyala lagi; sudah terbaru → peek "Sudah versi terbaru"; gagal → peek gagal; versi dari folder build → peek "versi pengembang".
     DoD: ketiga hasil teruji (versi lama → update, versi terbaru, tanpa internet).
@@ -216,6 +216,14 @@ Semua fitur di atas masuk v1. Urutan ini ada karena sebagian fitur bergantung pa
    - **Regresi** semua fitur lama (bagian 5A–E dan perbaikan v0.1.x).
    - **Kinerja**: CPU/memori saat diam, musik, dan 2–3 aktivitas sekaligus (target diam tetap ~1–2%); satu malam uji tahan lama, lalu baca log.
    - **Update**: versi lama → v0.2.0 lewat updater, dan tombol "Cek update".
+
+   **Hasil (22 Okt 2026)**, semua 11 fitur dibangun:
+   - Otomatis: 15 tes Rust (deteksi panggilan, nama unduhan, thumbnail clipboard, pintasan, link, equalizer) + 11 tes TS (pulau terbelah, ukuran, kalender/link meeting) lolos; `svelte-check` dan `cargo check` tanpa peringatan; `cargo clippy` hanya saran gaya (kode lama).
+   - Uji mandiri dengan screenshot (`PrintWindow` + `PW_RENDERFULLCONTENT`; screenshot layar biasa tidak menangkap jendela WebView2 transparan, dan PrintWindow ikut menggambar bingkai caption tersembunyi yang tidak tampil di layar): musik + lirik + equalizer bergerak; lirik + unduhan; lirik + panggilan + unduhan dan geser ganti aktivitas utama (Zoom utama dengan mute, unduhan utama dengan garis berjalan); browser baru dianggap panggilan setelah 10 detik; peek "Selesai diunduh"; clipboard (teks bertanda password manager tidak tersimpan, gambar tidak dobel, kosong lagi setelah restart); halaman Pintasan dan tombol Downloads; tekan lama mengunci terbuka, klik di luar melepas; scroll volume dengan peek; cermin kamera terbuka, tetap terbuka, kamera dilepas setelah "Selesai".
+   - Uji bersama pengguna, lolos semua: panggilan sungguhan + mute, drag ke "Bagikan" membuka Share, "Cek update" (peek versi pengembang), timer + musik, geser touchpad, pintasan link, klik notif WA, unduhan asli. Earbuds belum (pengguna tidak punya).
+   - Perbaikan dari pengujian: kecepatan unduhan 0 B/s (daftar folder tidak memperbarui ukuran file yang sedang ditulis → baca ukuran dari file, sekali per detik); titik mic menumpuk di gelembung panggilan (titik pindah ke ujung pulau, mic disembunyikan saat panggilan); gambar clipboard dobel; scroll volume tanpa tanda saat notch terbuka (peek volume tampil di atas halaman); tombol kamera tidak terjangkau saat musik main ("Kamera" jadi pintasan default); equalizer + piringan menggambar ulang ~13×/detik (meter 5×/detik dan piringan diputar oleh detak yang sama); lirik macet saat aktivitas lain memimpin (pengatur waktu lirik kini jalan selama musik ada di pulau).
+   - Uji sendiri yang perlu diingat: tulisan registry/file dari shell Claude yang di-sandbox tidak terlihat proses lain; tulis lewat proses WMI (`Win32_Process.Create`). Hook mouse Notchy tidak melihat `SetCursorPos`; pakai `mouse_event` (input tersuntik).
+   - Belum: uji tahan lama semalam, uji update versi lama → v0.2.0.
 
 Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 

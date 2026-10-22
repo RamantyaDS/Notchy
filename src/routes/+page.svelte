@@ -4,14 +4,18 @@
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
   import { onMount, untrack } from "svelte";
   import { fade } from "svelte/transition";
-  import Bars from "$lib/Bars.svelte";
+  import ClipboardPage, { type ClipEntry } from "$lib/ClipboardPage.svelte";
+  import Island from "$lib/Island.svelte";
+  import Mirror from "$lib/Mirror.svelte";
   import Peek, { type PeekData } from "$lib/Peek.svelte";
   import Player from "$lib/Player.svelte";
   import ShelfPage from "$lib/ShelfPage.svelte";
+  import ShortcutsPage, { type Shortcut } from "$lib/ShortcutsPage.svelte";
+  import { arrange, islandWidth, type Activity, type Call, type Download } from "$lib/island";
   import TimerPage from "$lib/TimerPage.svelte";
   import TodoPage from "$lib/TodoPage.svelte";
   import WaterPage from "$lib/WaterPage.svelte";
-  import { formatTime, positionAt, type NowPlaying } from "$lib/media";
+  import { positionAt, type NowPlaying } from "$lib/media";
   import { cleanTrack, currentLine, findLyrics, type Lyrics } from "$lib/lyrics";
   import { Pomodoro, Shelf, Todo, Water, type Settings } from "$lib/productivity.svelte";
   import { fetchWeather, type Weather } from "$lib/weather";
@@ -29,10 +33,9 @@
   const SIZES = {
     tucked: { w: 90, h: 6, r: 4, e: 4 },
     rest: { w: 150, h: 30, r: 14, e: 10 },
-    compact: { w: 200, h: 30, r: 14, e: 10 },
-    compactLyrics: { w: 380, h: 30, r: 14, e: 10 },
+    // The island's width depends on what it shows (lib/island.ts).
+    island: { w: 200, h: 30, r: 14, e: 10 },
     charging: { w: 200, h: 30, r: 14, e: 10 },
-    timer: { w: 200, h: 30, r: 14, e: 10 },
     peek: { w: 310, h: 60, r: 19, e: 13 },
     shot: { w: 360, h: 96, r: 24, e: 16 },
     notify: { w: 380, h: 72, r: 22, e: 14 },
@@ -43,10 +46,13 @@
     water: { w: 420, h: 140, r: 32, e: 22 },
     todo: { w: 420, h: 140, r: 32, e: 22 },
     shelf: { w: 420, h: 140, r: 32, e: 22 },
+    clipboard: { w: 420, h: 140, r: 32, e: 22 },
+    shortcuts: { w: 420, h: 140, r: 32, e: 22 },
+    mirror: { w: 420, h: 140, r: 32, e: 22 },
   };
 
   // Pages of the open notch, switched with the dots or the mouse wheel.
-  const PAGES = ["now", "pomodoro", "water", "todo", "shelf"] as const;
+  const PAGES = ["now", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"] as const;
 
   type Power = { charging: boolean; percent: number; battery: boolean };
   type InUse = { camera: string[]; mic: string[] };
@@ -71,17 +77,45 @@
   // Typing a task: the notch holds keyboard focus and stays open.
   let typing = $state(false);
   let hovered = false;
-  // A file is being dragged over the notch.
+  // A file is being dragged over the notch, and which drop zone it's over.
   let dropping = $state(false);
+  let dropTarget = $state<string | null>(null);
+  // Things running at once, shown side by side in the closed notch.
+  let call = $state<Call | null>(null);
+  let download = $state<Download | null>(null);
+  // Equalizer bar heights from the audio meter, while it runs.
+  let levels = $state<number[] | null>(null);
+  // Horizontal swipes cycle which activity leads.
+  let turn = $state(0);
+  let clipItems = $state<ClipEntry[]>([]);
+  let shortcuts = $state<Shortcut[]>([]);
+  // Long-pressed open: stays open until long-pressed again or a click elsewhere.
+  let pinned = $state(false);
+  // Camera check in the notch, optionally for a meeting.
+  let mirror = $state<{ title: string; link: string } | null>(null);
+  // The wheel is changing the volume right now.
+  let scrollingVolume = $state(false);
+  let scrollVolumeTimer: ReturnType<typeof setTimeout>;
 
   // Status peeks: a few seconds each; volume/brightness drags keep extending it.
   // Notifications queue up instead of replacing each other, and a peek you can
   // click (notification, screenshot) stays put while the cursor is on it.
   let peekTimer: ReturnType<typeof setTimeout>;
   let peekQueue: PeekData[] = [];
-  const clickable = (p: PeekData | null) => ["notification", "screenshot", "update"].includes(p?.kind ?? "");
+  const clickable = (p: PeekData | null) =>
+    ["notification", "screenshot", "update", "download-done", "meeting"].includes(p?.kind ?? "");
   const peekLength = (p: PeekData) =>
-    p.kind === "screenshot" || p.kind === "update" ? 6000 : p.kind === "notification" ? (peekQueue.length ? 3200 : 4500) : ["todo", "calendar"].includes(p.kind) ? 5000 : 2200;
+    p.kind === "meeting"
+      ? 30_000
+      : ["screenshot", "update", "download-done"].includes(p.kind)
+        ? 6000
+        : p.kind === "notification"
+          ? peekQueue.length
+            ? 3200
+            : 4500
+          : ["todo", "calendar", "update-info", "earbuds-low"].includes(p.kind)
+            ? 5000
+            : 2200;
   function showPeek(data: PeekData) {
     if (data.kind === "notification" && peek?.kind === "notification") {
       peekQueue.push(data);
@@ -99,8 +133,39 @@
   function openFromPeek(p: PeekData) {
     if (p.kind === "notification" && p.aumid) invoke("open_app", { aumid: p.aumid, id: p.id });
     if (p.kind === "update") invoke("install_update");
+    if (p.kind === "download-done") invoke("open_download", { path: p.path });
     clearTimeout(peekTimer);
     endPeek();
+  }
+  // Buttons inside a peek (the meeting reminder's "Cek kamera" and "Join").
+  function peekAction(p: PeekData, action: string) {
+    if (action === "camera") openMirror(p.title, p.link ?? "");
+    if (action === "join" && p.link) invoke("run_link", { url: p.link });
+    clearTimeout(peekTimer);
+    endPeek();
+  }
+
+  function setPinned(on: boolean) {
+    pinned = on;
+    invoke("set_pinned", { on });
+    if (!on && !hovered && !typing) closeTimer = setTimeout(() => (open = false), 250);
+  }
+  function openMirror(title = "", link = "") {
+    mirror = { title, link };
+    invoke("set_mirror", { on: true });
+    setPinned(true);
+    open = true;
+  }
+  function closeMirror() {
+    mirror = null;
+    setPinned(false);
+    // The camera's in-use entry clears a moment after the stream stops.
+    setTimeout(() => invoke("set_mirror", { on: false }), 3000);
+  }
+  function joinMeeting() {
+    const link = mirror?.link;
+    closeMirror();
+    if (link) invoke("run_link", { url: link });
   }
 
   // Calendar: re-read every 15 minutes; remind 10 minutes before and at the start.
@@ -110,13 +175,19 @@
     const ics = await invoke<string>("fetch_calendar").catch(() => "");
     events = ics ? upcoming(ics) : [];
     calendarTimers.forEach(clearTimeout);
+    // Reminders 10 minutes before and at the start; for a video meeting also an
+    // offer 2 minutes before to check the camera or join.
     calendarTimers = events
       .filter((e) => !e.allDay)
       .flatMap((e) =>
-        [10, 0].map((before) => {
+        (e.link ? [10, 2, 0] : [10, 0]).map((before) => {
           const at = e.start - before * 60_000;
+          const peekData: PeekData =
+            before === 2
+              ? { kind: "meeting", title: e.title, start: e.start, link: e.link }
+              : { kind: "calendar", title: e.title, start: e.start, before };
           return at > Date.now() && at - Date.now() < 2 * 24 * 3600_000
-            ? setTimeout(() => showPeek({ kind: "calendar", title: e.title, start: e.start, before }), at - Date.now())
+            ? setTimeout(() => showPeek(peekData), at - Date.now())
             : undefined;
         }),
       )
@@ -146,27 +217,37 @@
   const timerActive = $derived(pomo.running || pomo.left < pomo.length());
   // The notch is showing its pages (not a held notification or screenshot peek).
   const paged = $derived(open && !clickable(peek));
+  // What runs right now, for the closed notch (the lyric flag is filled in below).
+  const running = $derived.by((): Activity[] => [
+    ...(call ? [{ kind: "call", call } as const] : []),
+    ...(timerActive ? [{ kind: "timer" } as const] : []),
+    ...(download ? [{ kind: "download", download } as const] : []),
+    ...(media?.playing ? [{ kind: "music", lyric: false } as const] : []),
+  ]);
   const view = $derived(
-    paged
-      ? PAGES[page] === "now"
-        ? media
-          ? lyricsOn
-            ? "lyrics"
-            : "player"
-          : "clock"
-        : (PAGES[page] as Exclude<(typeof PAGES)[number], "now">)
-      : peek
-        ? peek.kind === "screenshot"
-          ? "shot"
-          : peek.kind === "notification"
-            ? "notify"
-            : "peek"
-        : tucked
-          ? "tucked"
-          : timerActive
-            ? "timer"
-            : media?.playing
-              ? "compact"
+    mirror
+      ? "mirror"
+      : // Scrolling the volume on an open notch: show the volume, not the page.
+        scrollingVolume && peek?.kind === "volume"
+        ? "peek"
+        : paged
+        ? PAGES[page] === "now"
+          ? media
+            ? lyricsOn
+              ? "lyrics"
+              : "player"
+            : "clock"
+          : (PAGES[page] as Exclude<(typeof PAGES)[number], "now">)
+        : peek
+          ? peek.kind === "screenshot"
+            ? "shot"
+            : peek.kind === "notification" || peek.kind === "meeting" || peek.kind === "download-done"
+              ? "notify"
+              : "peek"
+          : tucked
+            ? "tucked"
+            : running.length
+              ? "island"
               : charging
                 ? "charging"
                 : "rest",
@@ -215,7 +296,6 @@
     };
     img.src = art;
   });
-  const tinted = $derived(!!tint && (view === "player" || view === "lyrics" || view === "compact"));
 
   // The line being sung, for the small notch. Instead of ticking, wake up
   // exactly when the next line starts.
@@ -226,8 +306,20 @@
     // Instrumental gaps ("♪") count as no line, so the clock shows instead.
     return i >= 0 && lyrics.synced[i].text !== "♪" ? lyrics.synced[i].text : "";
   });
+  // The island with the sung line filled in: music with words leads (lib/island.ts).
+  const island = $derived(
+    arrange(
+      running.map((a) => (a.kind === "music" ? { kind: "music", lyric: !!smallLine } : a)),
+      turn,
+    ),
+  );
+  const musicLeads = $derived(view === "island" && island.main?.kind === "music");
+  const tinted = $derived(!!tint && (view === "player" || view === "lyrics" || musicLeads));
+  // Keeps the sung line current whenever music is in the island, also while
+  // another activity leads: during an instrumental gap the line is empty, the
+  // timer (say) takes the lead, and the next line must still bring music back.
   $effect(() => {
-    if (view !== "compact" || !smallLyrics || !media?.playing || !lyrics?.synced) return;
+    if (view !== "island" || !smallLyrics || !media?.playing || !lyrics?.synced) return;
     // A new song, a seek, a pause or coming back from another view re-runs this with
     // lineNow left behind, which would put the song near its start and leave the line
     // empty until the next wake-up. Catch up to the real time first (this re-runs it).
@@ -242,8 +334,21 @@
     return () => clearTimeout(id);
   });
 
-  const size = $derived(view === "compact" && smallLine ? SIZES.compactLyrics : SIZES[view]);
-  const closedView = $derived(view === "rest" || view === "compact" || view === "charging" || view === "timer");
+  // In the island the camera/mic dots sit at the end, so they get room of their own.
+  const islandDots = $derived((inUse.camera.length > 0 ? 10 : 0) + (inUse.mic.length > 0 && !call ? 10 : 0));
+  const size = $derived(
+    view === "island" && island.main
+      ? { ...SIZES.island, w: islandWidth(island.main, island.side) + islandDots }
+      : SIZES[view],
+  );
+  const closedView = $derived(view === "rest" || view === "island" || view === "charging");
+
+  // The audio meter runs only while the equalizer is on screen.
+  const metering = $derived(view === "island" && !!media?.playing && island.main !== null && [island.main, ...island.side].some((a) => a.kind === "music"));
+  $effect(() => {
+    invoke("set_metering", { on: metering });
+    if (!metering) levels = null;
+  });
 
   // Tell Rust the target size right away, so the growing notch already counts as "inside".
   // Tucked, the notch is a thin line, so whatever is underneath (like browser tabs) stays clickable.
@@ -255,7 +360,8 @@
   // running timer (smooth when open, once a second in the small notch).
   let nowMs = $state(Date.now());
   $effect(() => {
-    const every = open && (media?.playing || pomo.running) ? 250 : pomo.running && view === "timer" ? 1000 : 0;
+    const every =
+      open && (media?.playing || pomo.running) ? 250 : view === "island" && (pomo.running || call) ? 1000 : 0;
     if (!every) return;
     nowMs = Date.now();
     const id = setInterval(() => (nowMs = Date.now()), every);
@@ -270,7 +376,25 @@
   }
 
   let lastWheel = 0;
+  let lastVolume = 0;
   function wheel(e: WheelEvent) {
+    // Sideways (touchpad swipe): another activity leads the closed notch.
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      if (Date.now() - lastWheel < 450 || Math.abs(e.deltaX) < 8) return;
+      lastWheel = Date.now();
+      turn += e.deltaX > 0 ? 1 : -1;
+      return;
+    }
+    // The band where the closed notch sits: volume, up = louder.
+    if (e.offsetY >= 0 && (e.target as HTMLElement).closest(".notch") && e.clientY < 30 && !typing) {
+      if (Date.now() - lastVolume < 40 || Math.abs(e.deltaY) < 1) return;
+      lastVolume = Date.now();
+      invoke("volume_step", { up: e.deltaY < 0 });
+      scrollingVolume = true;
+      clearTimeout(scrollVolumeTimer);
+      scrollVolumeTimer = setTimeout(() => (scrollingVolume = false), 1200);
+      return;
+    }
     // Lists scroll themselves; elsewhere the wheel flips pages.
     if (!open || typing || (e.target as HTMLElement).closest(".scroll, .lyrics")) return;
     if (Date.now() - lastWheel < 350 || Math.abs(e.deltaY) < 4) return;
@@ -278,12 +402,37 @@
     page = (page + (e.deltaY > 0 ? 1 : -1) + PAGES.length) % PAGES.length;
   }
 
+  // Long press (still, on a non-button spot) pins the notch open, or lets it go.
+  let pressTimer: ReturnType<typeof setTimeout> | undefined;
+  let pressAt: [number, number] = [0, 0];
+  function pressDown(e: PointerEvent) {
+    if (e.button !== 0 || (e.target as HTMLElement).closest("button, input, textarea, .item, video")) return;
+    pressAt = [e.clientX, e.clientY];
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+      pressTimer = undefined;
+      if (mirror) return;
+      setPinned(!pinned);
+      open = true;
+    }, 600);
+  }
+  function pressMove(e: PointerEvent) {
+    if (pressTimer && Math.hypot(e.clientX - pressAt[0], e.clientY - pressAt[1]) > 6) {
+      clearTimeout(pressTimer);
+      pressTimer = undefined;
+    }
+  }
+  function pressUp() {
+    clearTimeout(pressTimer);
+    pressTimer = undefined;
+  }
+
   onMount(() => {
     const unlisten = listen<boolean>("notch-hover", (e) => {
       hovered = e.payload;
       clearTimeout(closeTimer);
       if (e.payload) open = true;
-      else if (!typing) closeTimer = setTimeout(() => (open = false), 250);
+      else if (!typing && !pinned) closeTimer = setTimeout(() => (open = false), 250);
       // Hold a clickable peek while the cursor is on it; let it go shortly after.
       if (clickable(peek)) {
         clearTimeout(peekTimer);
@@ -291,18 +440,41 @@
       }
     });
 
-    // Files dragged onto the notch go to the shelf.
+    // A click outside a pinned notch lets it close.
+    const unlistenOutside = listen("notch-outside-click", () => {
+      if (pinned && !mirror) setPinned(false);
+    });
+
+    // Files dragged onto the notch go to the shelf, or to Windows' Share window
+    // when dropped on "Bagikan".
+    const zoneAt = (p: { x: number; y: number }) => {
+      const el = document.elementFromPoint(p.x / devicePixelRatio, p.y / devicePixelRatio);
+      return (el?.closest("[data-drop]") as HTMLElement | null)?.dataset.drop ?? null;
+    };
     const unlistenDrop = getCurrentWebviewWindow().onDragDropEvent((e) => {
       if (e.payload.type === "enter" || e.payload.type === "over") {
         dropping = true;
         page = PAGES.indexOf("shelf");
+        dropTarget = zoneAt(e.payload.position);
       } else if (e.payload.type === "drop") {
+        const target = zoneAt(e.payload.position);
         dropping = false;
-        shelf.add(e.payload.paths);
+        dropTarget = null;
+        if (target === "share") invoke("share_files", { paths: e.payload.paths }).catch((err) => logJs(`share: ${err}`));
+        else shelf.add(e.payload.paths);
       } else {
         dropping = false;
+        dropTarget = null;
       }
     });
+
+    // Activities and pages fed from Rust.
+    const unlistenCall = listen<Call | null>("call", (e) => (call = e.payload));
+    invoke<Call | null>("call_state").then((c) => (call = c));
+    const unlistenDownload = listen<Download | null>("download", (e) => (download = e.payload));
+    const unlistenLevel = listen<number[]>("audio-level", (e) => (levels = metering ? e.payload : null));
+    const unlistenClip = listen<ClipEntry[]>("clipboard", (e) => (clipItems = e.payload));
+    invoke<ClipEntry[]>("clipboard_list").then((c) => (clipItems = c));
 
     water.load();
     todo.load();
@@ -347,6 +519,7 @@
     type AllSettings = Settings & {
       weatherCity: { latitude: number; longitude: number } | null;
       smallLyrics: boolean;
+      shortcuts: Shortcut[];
     };
     let weatherTimer: ReturnType<typeof setTimeout>;
     const loadWeather = async (settings?: AllSettings) => {
@@ -359,6 +532,7 @@
     };
     const applySettings = (s: AllSettings) => {
       smallLyrics = s.smallLyrics;
+      shortcuts = s.shortcuts ?? [];
       pomo.configure(s);
       water.configure(s);
       loadWeather(s);
@@ -393,8 +567,21 @@
       unlistenLook.then((f) => f());
       unlistenTuck.then((f) => f());
       unlistenMedia.then((f) => f());
-      for (const u of [unlistenPeek, unlistenPower, unlistenInUse, unlistenMic, unlistenSettings, unlistenDrop])
+      for (const u of [
+        unlistenPeek,
+        unlistenPower,
+        unlistenInUse,
+        unlistenMic,
+        unlistenSettings,
+        unlistenDrop,
+        unlistenOutside,
+        unlistenCall,
+        unlistenDownload,
+        unlistenLevel,
+        unlistenClip,
+      ])
         u.then((f) => f());
+      clearTimeout(pressTimer);
       clearTimeout(peekTimer);
       clearTimeout(weatherTimer);
       clearInterval(calendarPoll);
@@ -412,6 +599,8 @@
 
 <div
   class="notch"
+  role="group"
+  aria-label="Notchy"
   class:open={paged}
   class:tucked={view === "tucked"}
   class:charging
@@ -423,7 +612,12 @@
   style:--e="{size.e}px"
   style:--battery="{power.percent}%"
   onwheel={wheel}
+  onpointerdown={pressDown}
+  onpointermove={pressMove}
+  onpointerup={pressUp}
+  onpointerleave={pressUp}
 >
+  {#if pinned && paged && !mirror}<i class="pin" title="Terkunci terbuka · tekan lama untuk melepas"></i>{/if}
   <div class="ambient"></div>
 
   <div class="layer rest" class:on={view === "rest"}>
@@ -437,18 +631,25 @@
     {/if}
   </div>
 
-  <!-- Playing: the cover as a spinning disc, the line being sung, moving bars. -->
-  <div class="layer compact" class:on={view === "compact"}>
-    <div
-      class="disc"
-      class:spin={view === "compact" && media?.playing}
-      style:background-image={media?.art ? `url(${media.art})` : null}
-    ></div>
-    {#key smallLine}
-      <span class="line" class:clock-line={!smallLine} in:fade={{ duration: 250 }}>{smallLine || time}</span>
-    {/key}
-    <Bars live={view === "compact" && !!media?.playing} />
-  </div>
+  <!-- Things running (music, timer, a call, a download), side by side. -->
+  {#if island.main}
+    <div class="layer" class:on={view === "island"}>
+      <Island
+        main={island.main}
+        side={island.side}
+        {media}
+        line={smallLine}
+        {time}
+        {pomo}
+        now={nowMs}
+        {levels}
+        {micMuted}
+        active={view === "island"}
+        camera={inUse.camera.length > 0}
+        mic={inUse.mic.length > 0 && !call}
+      />
+    </div>
+  {/if}
 
   <!-- While charging: a battery ring with a bolt, and the time. -->
   <div class="layer charge" class:on={view === "charging"}>
@@ -458,15 +659,6 @@
       <path d="M10.6 5.5 7.5 10.6h2.4l-.5 3.9 3.1-5.1h-2.4z" />
     </svg>
     <span class="charge-time">{time}</span>
-  </div>
-
-  <!-- Pomodoro running (or paused mid-way): its ring and the time left. -->
-  <div class="layer charge timer" class:on={view === "timer"} class:rest-phase={pomo.phase === "break"}>
-    <svg class="ring" viewBox="0 0 20 20">
-      <circle cx="10" cy="10" r="8" />
-      <circle cx="10" cy="10" r="8" class="fill" pathLength="100" stroke-dasharray="{pomo.progress(nowMs) * 100} 100" />
-    </svg>
-    <span class="charge-time">{formatTime(Math.ceil(pomo.remaining(nowMs)))}</span>
   </div>
 
   <div class="layer clock" class:on={view === "clock"}>
@@ -481,12 +673,18 @@
 
   {#if peek && (view === "peek" || view === "shot" || view === "notify")}
     <div class="layer on" in:fade={{ duration: 220, delay: 120 }} out:fade={{ duration: 100 }}>
-      <Peek {peek} onOpen={() => peek && openFromPeek(peek)} />
+      <Peek {peek} onOpen={() => peek && openFromPeek(peek)} onAction={(a) => peek && peekAction(peek, a)} />
+    </div>
+  {/if}
+
+  {#if mirror}
+    <div class="layer on" in:fade={{ duration: 260, delay: 160 }} out:fade={{ duration: 100 }}>
+      <Mirror title={mirror.title} link={mirror.link} onDone={closeMirror} onJoin={joinMeeting} />
     </div>
   {/if}
 
   <!-- Camera/mic in use, and a muted mic: always visible while the notch shows anything. -->
-  {#if closedView && (inUse.camera.length || inUse.mic.length || micMuted)}
+  {#if closedView && view !== "island" && (inUse.camera.length || inUse.mic.length || micMuted)}
     <div class="dots" class:wide={view !== "rest"}>
       {#if inUse.camera.length}<i class="cam" title="Kamera: {inUse.camera.join(', ')}"></i>{/if}
       {#if micMuted}
@@ -531,6 +729,15 @@
         </svg>
       </button>
     {/if}
+    <button
+      class="mic-toggle camera"
+      onclick={() => openMirror(nextEvent?.link ? nextEvent.title : "", nextEvent?.link ?? "")}
+      title="Cek kamera"
+      aria-label="Cek kamera"
+      in:fade={{ duration: 200, delay: 200 }}
+    >
+      <svg viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3zM3 7h12v10H3z" /></svg>
+    </button>
   {/if}
 
   {#if media && (view === "player" || view === "lyrics")}
@@ -547,7 +754,7 @@
     </div>
   {/if}
 
-  {#if paged && PAGES[page] !== "now"}
+  {#if paged && !mirror && view !== "peek" && PAGES[page] !== "now"}
     {#key page}
       <div class="layer on" in:fade={{ duration: 260, delay: 160 }} out:fade={{ duration: 100 }}>
         {#if PAGES[page] === "pomodoro"}
@@ -556,14 +763,18 @@
           <WaterPage {water} />
         {:else if PAGES[page] === "todo"}
           <TodoPage {todo} onTyping={setTyping} />
+        {:else if PAGES[page] === "clipboard"}
+          <ClipboardPage items={clipItems} />
+        {:else if PAGES[page] === "shortcuts"}
+          <ShortcutsPage {shortcuts} onCamera={() => openMirror(nextEvent?.link ? nextEvent.title : "", nextEvent?.link ?? "")} />
         {:else}
-          <ShelfPage {shelf} {dropping} />
+          <ShelfPage {shelf} {dropping} {dropTarget} />
         {/if}
       </div>
     {/key}
   {/if}
 
-  {#if paged && view !== "lyrics"}
+  {#if paged && !mirror && view !== "lyrics" && view !== "peek"}
     {#each [-1, 1] as step}
       <button
         class="arrow"
@@ -714,11 +925,6 @@
     transition: opacity 0.3s 0.15s;
   }
 
-  .compact {
-    flex-direction: row;
-    justify-content: space-between;
-    padding: 0 12px 0 8px;
-  }
   .rest-time {
     font-size: 14px;
     font-weight: 700;
@@ -764,19 +970,6 @@
     font-size: 15px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-  }
-
-  .timer .ring circle {
-    stroke: rgba(251, 113, 133, 0.25);
-  }
-  .timer .ring .fill {
-    stroke: #fb7185;
-  }
-  .timer.rest-phase .ring circle {
-    stroke: rgba(52, 211, 153, 0.25);
-  }
-  .timer.rest-phase .ring .fill {
-    stroke: #34d399;
   }
 
   /* Previous / next page, on the notch's sides. */
@@ -917,6 +1110,10 @@
   .mic-toggle.output {
     left: 50px;
   }
+  .mic-toggle.camera {
+    left: auto;
+    right: 18px;
+  }
 
   .event {
     max-width: 300px;
@@ -944,48 +1141,17 @@
     height: 6px;
   }
 
-  /* Cover as a little record: round, with a spindle hole, turning while playing. */
-  .disc {
-    position: relative;
-    flex: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #1b1f2e center / cover;
-    box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.25);
-  }
-  .disc::after {
-    content: "";
+  /* Pinned open (long press): a small mark in the corner. */
+  .pin {
     position: absolute;
-    inset: 7.5px;
+    top: 9px;
+    right: 14px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: #000;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
-  }
-  /* Stepped in time with the bars (one change every 0.2 s), see Bars.svelte. */
-  .disc.spin {
-    animation: spin 6s steps(30) infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  .clock-line {
-    font-size: 14px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-  .line {
-    flex: 1;
-    min-width: 0;
-    padding: 0 10px;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    background: #38bdf8;
+    box-shadow: 0 0 6px #38bdf8;
+    z-index: 2;
   }
 
   .eyes {
