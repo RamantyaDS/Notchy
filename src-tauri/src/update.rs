@@ -1,12 +1,13 @@
 //! Updates itself from the GitHub releases (latest.json + a signed installer).
 //!
-//! Checked at start and every 6 hours. Right after start nobody is using the notch
-//! yet, so a new version is installed at once; later on it is only downloaded and
-//! offered as a peek ("click to install"), so Notchy never restarts mid-use.
+//! Checked at start, every hour, and shortly after the laptop wakes from sleep.
+//! Right after start nobody is using the notch yet, so a new version is installed
+//! at once; later on it is only downloaded and offered as a peek ("click to
+//! install", once per version), so Notchy never restarts mid-use.
 //! The tray's "Cek update" checks right away and installs whatever it finds.
 //! The copy run from the build folder (the developer's own) never updates itself.
 
-use std::sync::Mutex;
+use std::sync::{mpsc, Mutex, OnceLock};
 use std::time::Duration;
 
 use serde_json::json;
@@ -23,23 +24,42 @@ fn is_dev_build() -> bool {
     exe.to_string_lossy().to_lowercase().contains(r"\target\")
 }
 
+static WAKE: OnceLock<mpsc::Sender<()>> = OnceLock::new();
+
+/// The laptop woke from sleep: look for an update once the network is back.
+pub fn woke() {
+    if let Some(tx) = WAKE.get() {
+        let _ = tx.send(());
+    }
+}
+
 pub fn start(app: AppHandle) {
     if is_dev_build() {
         return;
     }
+    let (tx, rx) = mpsc::channel::<()>();
+    WAKE.set(tx).ok();
     std::thread::spawn(move || {
         let mut just_started = true;
+        let mut offered: Option<String> = None;
         loop {
             if let Ok(Some((update, bytes))) = tauri::async_runtime::block_on(fetch(&app)) {
                 if just_started {
                     install(update, bytes);
                 } else {
-                    peek(&app, "update", json!({ "version": update.version }));
+                    if offered.as_deref() != Some(update.version.as_str()) {
+                        peek(&app, "update", json!({ "version": update.version }));
+                        offered = Some(update.version.clone());
+                    }
                     *READY.lock().unwrap() = Some((update, bytes));
                 }
             }
             just_started = false;
-            std::thread::sleep(Duration::from_secs(6 * 60 * 60));
+            // Hourly, or soon after a wake-up (Wi-Fi needs a moment to reconnect).
+            if rx.recv_timeout(Duration::from_secs(60 * 60)).is_ok() {
+                std::thread::sleep(Duration::from_secs(30));
+                while rx.try_recv().is_ok() {}
+            }
         }
     });
 }

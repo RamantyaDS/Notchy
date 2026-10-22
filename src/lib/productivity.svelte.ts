@@ -13,6 +13,8 @@ export type Settings = {
   waterFrom: number;
   waterTo: number;
   remindEvery: number;
+  /** Off: no water reminders and no water page. */
+  waterEnabled: boolean;
 };
 
 type Notify = (peek: PeekData) => void;
@@ -152,7 +154,7 @@ export class Water {
   #schedule() {
     clearTimeout(this.#timer);
     const s = this.settings;
-    if (!s || s.remindEvery <= 0) return;
+    if (!s || s.waterEnabled === false || s.remindEvery <= 0) return;
     const now = new Date();
     const open = startOfDay(now) + s.waterFrom * 60 * MINUTE;
     const close = startOfDay(now) + s.waterTo * 60 * MINUTE;

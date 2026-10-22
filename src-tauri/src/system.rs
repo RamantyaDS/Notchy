@@ -110,6 +110,11 @@ pub fn power_state() -> Power {
 }
 
 unsafe extern "system" fn power_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    // Back from sleep (PBT_APMRESUMEAUTOMATIC / PBT_APMRESUMESUSPEND): a good moment to look for updates.
+    if msg == WM_POWERBROADCAST && matches!(wparam.0 as u32, 0x12 | 0x7) {
+        crate::update::woke();
+        return LRESULT(1);
+    }
     if msg == WM_POWERBROADCAST && wparam.0 as u32 == PBT_POWERSETTINGCHANGE {
         let setting = unsafe { &*(lparam.0 as *const POWERBROADCAST_SETTING) };
         let Some(app) = APP.get() else { return LRESULT(1) };

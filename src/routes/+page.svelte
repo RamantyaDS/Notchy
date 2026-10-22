@@ -52,7 +52,11 @@
   };
 
   // Pages of the open notch, switched with the dots or the mouse wheel.
-  const PAGES = ["now", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"] as const;
+  const ALL_PAGES = ["now", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"] as const;
+  type PageName = (typeof ALL_PAGES)[number];
+  // The water page goes away when the water feature is turned off in Settings.
+  let waterEnabled = $state(true);
+  const pages = $derived(ALL_PAGES.filter((p) => waterEnabled || p !== "water"));
 
   type Power = { charging: boolean; percent: number; battery: boolean };
   type InUse = { camera: string[]; mic: string[] };
@@ -231,13 +235,13 @@
         scrollingVolume && peek?.kind === "volume"
         ? "peek"
         : paged
-        ? PAGES[page] === "now"
+        ? pages[page] === "now"
           ? media
             ? lyricsOn
               ? "lyrics"
               : "player"
             : "clock"
-          : (PAGES[page] as Exclude<(typeof PAGES)[number], "now">)
+          : (pages[page] as Exclude<PageName, "now">)
         : peek
           ? peek.kind === "screenshot"
             ? "shot"
@@ -399,7 +403,7 @@
     if (!open || typing || (e.target as HTMLElement).closest(".scroll, .lyrics")) return;
     if (Date.now() - lastWheel < 350 || Math.abs(e.deltaY) < 4) return;
     lastWheel = Date.now();
-    page = (page + (e.deltaY > 0 ? 1 : -1) + PAGES.length) % PAGES.length;
+    page = (page + (e.deltaY > 0 ? 1 : -1) + pages.length) % pages.length;
   }
 
   // Long press (still, on a non-button spot) pins the notch open, or lets it go.
@@ -454,7 +458,7 @@
     const unlistenDrop = getCurrentWebviewWindow().onDragDropEvent((e) => {
       if (e.payload.type === "enter" || e.payload.type === "over") {
         dropping = true;
-        page = PAGES.indexOf("shelf");
+        page = pages.indexOf("shelf");
         dropTarget = zoneAt(e.payload.position);
       } else if (e.payload.type === "drop") {
         const target = zoneAt(e.payload.position);
@@ -533,6 +537,10 @@
     const applySettings = (s: AllSettings) => {
       smallLyrics = s.smallLyrics;
       shortcuts = s.shortcuts ?? [];
+      // Keep the same page in view when the water page appears or goes.
+      const current = pages[page];
+      waterEnabled = s.waterEnabled !== false;
+      page = Math.max(0, pages.indexOf(current));
       pomo.configure(s);
       water.configure(s);
       loadWeather(s);
@@ -754,18 +762,18 @@
     </div>
   {/if}
 
-  {#if paged && !mirror && view !== "peek" && PAGES[page] !== "now"}
+  {#if paged && !mirror && view !== "peek" && pages[page] !== "now"}
     {#key page}
       <div class="layer on" in:fade={{ duration: 260, delay: 160 }} out:fade={{ duration: 100 }}>
-        {#if PAGES[page] === "pomodoro"}
+        {#if pages[page] === "pomodoro"}
           <TimerPage {pomo} now={nowMs} />
-        {:else if PAGES[page] === "water"}
+        {:else if pages[page] === "water"}
           <WaterPage {water} />
-        {:else if PAGES[page] === "todo"}
+        {:else if pages[page] === "todo"}
           <TodoPage {todo} onTyping={setTyping} />
-        {:else if PAGES[page] === "clipboard"}
+        {:else if pages[page] === "clipboard"}
           <ClipboardPage items={clipItems} />
-        {:else if PAGES[page] === "shortcuts"}
+        {:else if pages[page] === "shortcuts"}
           <ShortcutsPage {shortcuts} onCamera={() => openMirror(nextEvent?.link ? nextEvent.title : "", nextEvent?.link ?? "")} />
         {:else}
           <ShelfPage {shelf} {dropping} {dropTarget} />
@@ -779,7 +787,7 @@
       <button
         class="arrow"
         class:next={step > 0}
-        onclick={() => (page = (page + step + PAGES.length) % PAGES.length)}
+        onclick={() => (page = (page + step + pages.length) % pages.length)}
         aria-label={step > 0 ? "Halaman berikutnya" : "Halaman sebelumnya"}
         in:fade={{ duration: 200, delay: 200 }}
       >
@@ -787,7 +795,7 @@
       </button>
     {/each}
     <div class="pager" role="tablist" in:fade={{ duration: 200, delay: 200 }}>
-      {#each PAGES as name, i}
+      {#each pages as name, i}
         <button role="tab" aria-selected={i === page} aria-label={name} class:on={i === page} onclick={() => (page = i)}></button>
       {/each}
     </div>

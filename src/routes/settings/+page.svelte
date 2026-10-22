@@ -13,6 +13,7 @@
     waterFrom: number;
     waterTo: number;
     remindEvery: number;
+    waterEnabled: boolean;
     mirrorNotifications: boolean;
     calendarUrl: string;
     smallLyrics: boolean;
@@ -197,7 +198,19 @@
 
   <section>
     <h2>Minum air</h2>
-    {#each water as [key, label, unit]}{@render field(key, label, unit)}{/each}
+    {#if settings}
+      <label class="field check">
+        <input
+          type="checkbox"
+          checked={settings.waterEnabled}
+          onchange={(e) => save({ waterEnabled: e.currentTarget.checked })}
+        />
+        <span>Pakai fitur minum air (pengingat dan halaman Air di notch)</span>
+      </label>
+      {#if settings.waterEnabled}
+        {#each water as [key, label, unit]}{@render field(key, label, unit)}{/each}
+      {/if}
+    {/if}
   </section>
 
   <section>

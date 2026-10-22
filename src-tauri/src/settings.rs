@@ -33,6 +33,8 @@ pub struct Settings {
     water_from: u32,
     water_to: u32,
     remind_every: u32,
+    /// Off: no water reminders and no water page in the notch.
+    water_enabled: bool,
     /// Show new Windows notifications in the notch.
     pub mirror_notifications: bool,
     /// Secret ICS address of a calendar (Google/Outlook), or empty.
@@ -79,6 +81,7 @@ impl Default for Settings {
             water_from: 8,
             water_to: 21,
             remind_every: 60,
+            water_enabled: true,
             mirror_notifications: true,
             calendar_url: String::new(),
             small_lyrics: true,
