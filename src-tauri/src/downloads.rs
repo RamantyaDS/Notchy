@@ -72,12 +72,12 @@ pub fn start(app: AppHandle) {
         if watcher.watch(&dir, RecursiveMode::NonRecursive).is_err() {
             return;
         }
-        let mut last: HashMap<PathBuf, u64> = HashMap::new();
+        let mut seen: HashMap<PathBuf, Seen> = HashMap::new();
         let mut last_pass = Instant::now();
         let mut shown: Option<Download> = None;
         loop {
-            // Sleep until something happens in the folder; while downloads run, look every second.
-            let busy = !last.is_empty();
+            // Sleep until something happens in the folder; while a download grows, look every second.
+            let busy = seen.values().any(|s| s.changed.elapsed() < KEEP_LOOKING);
             let event = if busy { rx.recv_timeout(Duration::from_secs(1)).ok() } else { rx.recv().ok() };
             if !busy && event.is_none() {
                 return;
@@ -88,12 +88,12 @@ pub fn start(app: AppHandle) {
             }
             while rx.try_recv().is_ok() {}
 
-            let now = partials(&dir);
             let secs = last_pass.elapsed().as_secs_f64().max(0.2);
             last_pass = Instant::now();
+            let step = step(&mut seen, partials(&dir), Instant::now());
 
-            // Partials that disappeared: done if the final file is there, else cancelled.
-            for gone in last.keys().filter(|p| !now.contains_key(*p)) {
+            // Partials that disappeared while in use: done if the final file is there, else cancelled.
+            for gone in step.finished {
                 let name = gone.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                 if let Some(Some(final_name)) = final_name(&name) {
                     let path = dir.join(&final_name);
@@ -104,22 +104,60 @@ pub fn start(app: AppHandle) {
             }
 
             // The biggest download in progress is the one shown.
-            let current = now
-                .iter()
-                .max_by_key(|(_, size)| **size)
-                .map(|(path, &bytes)| {
-                    let file = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                    let name = final_name(&file).flatten().unwrap_or_else(|| "Mengunduh…".into());
-                    let before = last.get(path).copied().unwrap_or(bytes);
-                    Download { name, bytes, speed: (bytes.saturating_sub(before) as f64 / secs) as u64 }
-                });
+            let current = step.growing.iter().max_by_key(|(_, bytes, _)| *bytes).map(|(path, bytes, grew)| {
+                let file = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                let name = final_name(&file).flatten().unwrap_or_else(|| "Mengunduh…".into());
+                Download { name, bytes: *bytes, speed: (*grew as f64 / secs) as u64 }
+            });
             if current != shown {
                 let _ = app.emit("download", &current);
                 shown = current;
             }
-            last = now;
         }
     });
+}
+
+/// A partial download that hasn't grown for this long is a leftover (failed or
+/// cancelled earlier), not a download in progress.
+const STALE: Duration = Duration::from_secs(15);
+/// How long after the last growth the folder is still looked at every second.
+const KEEP_LOOKING: Duration = Duration::from_secs(60);
+
+pub struct Seen {
+    bytes: u64,
+    changed: Instant,
+}
+
+pub struct Step {
+    /// In progress: path, size, bytes added since the last pass.
+    pub growing: Vec<(PathBuf, u64, u64)>,
+    /// Gone since the last pass after being written to recently.
+    pub finished: Vec<PathBuf>,
+}
+
+/// Folds one look at the folder into what we know of each partial file. A file
+/// first seen counts as old until it grows, so leftovers never show.
+pub fn step(seen: &mut HashMap<PathBuf, Seen>, now: HashMap<PathBuf, u64>, at: Instant) -> Step {
+    let finished = seen
+        .iter()
+        .filter(|(p, s)| !now.contains_key(*p) && at.duration_since(s.changed) < KEEP_LOOKING)
+        .map(|(p, _)| p.clone())
+        .collect();
+    seen.retain(|p, _| now.contains_key(p));
+    let mut growing = vec![];
+    for (path, bytes) in now {
+        // Back-dated so a leftover is neither shown nor reported finished when it goes.
+        let entry = seen.entry(path.clone()).or_insert(Seen { bytes, changed: at.checked_sub(KEEP_LOOKING).unwrap_or(at) });
+        let grew = bytes.saturating_sub(entry.bytes);
+        if bytes != entry.bytes {
+            entry.bytes = bytes;
+            entry.changed = at;
+        }
+        if at.duration_since(entry.changed) < STALE {
+            growing.push((path, bytes, grew));
+        }
+    }
+    Step { growing, finished }
 }
 
 /// Opens a finished download. Only files in the Downloads folder.
@@ -135,6 +173,42 @@ pub fn open_download(path: String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sizes(list: &[(&str, u64)]) -> HashMap<PathBuf, u64> {
+        list.iter().map(|(p, b)| (PathBuf::from(p), *b)).collect()
+    }
+
+    #[test]
+    fn leftover_partials_never_show() {
+        let mut seen = HashMap::new();
+        let t0 = Instant::now() + Duration::from_secs(100);
+        let old = sizes(&[("big.zip.crdownload", 223_000_000)]);
+        assert!(step(&mut seen, old.clone(), t0).growing.is_empty());
+        assert!(step(&mut seen, old, t0 + Duration::from_secs(1)).growing.is_empty());
+    }
+
+    #[test]
+    fn growing_downloads_show_and_fade_when_they_stop() {
+        let mut seen = HashMap::new();
+        let t0 = Instant::now() + Duration::from_secs(100);
+        step(&mut seen, sizes(&[("a.pdf.crdownload", 0)]), t0);
+        let s = step(&mut seen, sizes(&[("a.pdf.crdownload", 3_000_000)]), t0 + Duration::from_secs(1));
+        assert_eq!(s.growing, vec![(PathBuf::from("a.pdf.crdownload"), 3_000_000, 3_000_000)]);
+        // Stuck for longer than STALE: no longer shown.
+        let s = step(&mut seen, sizes(&[("a.pdf.crdownload", 3_000_000)]), t0 + Duration::from_secs(20));
+        assert!(s.growing.is_empty());
+    }
+
+    #[test]
+    fn finished_only_for_recent_downloads() {
+        let mut seen = HashMap::new();
+        let t0 = Instant::now() + Duration::from_secs(100);
+        step(&mut seen, sizes(&[("a.pdf.crdownload", 0), ("old.zip.part", 5)]), t0);
+        step(&mut seen, sizes(&[("a.pdf.crdownload", 9), ("old.zip.part", 5)]), t0 + Duration::from_secs(1));
+        let s = step(&mut seen, sizes(&[]), t0 + Duration::from_secs(2));
+        assert_eq!(s.finished, vec![PathBuf::from("a.pdf.crdownload")]);
+        assert!(seen.is_empty());
+    }
 
     #[test]
     fn names_partial_downloads() {

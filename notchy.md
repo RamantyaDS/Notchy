@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.2.0 (22 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer: halaman Releases repo itu.
+**Status:** v0.2.2 (23 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer: halaman Releases repo itu.
 
 ---
 
@@ -261,6 +261,7 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.1.5 | 21 Okt 2026 | Notch tidak lagi "hilang" di balik jendela lain (misalnya Outlook): kalau terdorong ke bawah, dalam 1 detik kembali paling atas |
 | v0.2.0 | 22 Okt 2026 | Bagian 5F: pulau terbelah (musik/timer/panggilan/unduhan berdampingan, geser untuk ganti), pil panggilan + mute, progres unduhan, equalizer asli, cek kamera + Join meeting, drop untuk Bagikan, riwayat clipboard, halaman pintasan, scroll volume, tekan lama untuk mengunci terbuka, baterai earbuds, "Cek update" di tray |
 | v0.2.1 | 22 Okt 2026 | Sakelar "Pakai fitur minum air" di Settings; cek update tiap jam dan setelah bangun dari sleep. (Pemicu: teman di v0.1.2 tidak kunjung ter-update karena Notchy-nya tidak dibuka ulang.) |
+| v0.2.2 | 23 Okt 2026 | Sisa unduhan yang gagal/dibatalkan (`.crdownload`/`.part` yang tidak bertambah) tidak lagi tampil terus sebagai "Mengunduh…". Hanya tes otomatis; uji langsung dilewati. |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.
