@@ -177,6 +177,7 @@ Dikerjakan sebagai **satu tahap besar**, dirilis sekali setelah lolos pengujian 
    DoD: earbuds pengguna memunculkan peek; tanpa data baterai tetap muncul "tersambung".
 4. **Progres berjalan**: unduhan browser (file `.crdownload`/`.part` di folder Downloads: ukuran + kecepatan, lalu "Selesai, klik untuk buka"; tanpa persen karena total tidak diketahui). Rekam layar: titik merah + durasi, **hanya kalau riset menemukan sinyal Windows yang bisa dipakai**; kalau tidak, dicoret dan dicatat.
    DoD: unduhan nyata di Edge tampil dan selesai dengan benar; unduhan yang dibatalkan hilang dari notch.
+   Sejak v0.2.2: hanya file yang bertambah dalam 15 detik terakhir yang tampil. File yang sudah ada saat pertama terlihat dianggap sisa (unduhan gagal/dibatalkan) sampai ia bertambah lagi, dan tidak dilaporkan "selesai" saat dihapus. Pemeriksaan tiap detik berhenti 60 detik setelah pertumbuhan terakhir. (Pemicu: di laptop teman, sisa `.crdownload` 223 MB tampil terus sebagai "Mengunduh…".)
 5. **Equalizer asli**: batang mengikuti level suara yang diputar (meter audio Windows, ~10×/detik, hanya saat musik main).
    DoD: batang diam saat lagu hening, berdenyut saat ramai; CPU saat musik tidak naik berarti dibanding v0.1.5.
 6. **Cermin kamera**: preview webcam kecil di notch lewat tombol, plus tawaran "Cek kamera" 2 menit sebelum meeting di kalender. Indikator "kamera dipakai" mengabaikan Notchy sendiri.
