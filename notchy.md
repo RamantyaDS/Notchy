@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.2.2 (23 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer: halaman Releases repo itu.
+**Status:** v0.2.3 (26 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer: halaman Releases repo itu.
 
 ---
 
@@ -204,6 +204,7 @@ Dipilih pengguna dari mockup 26 Okt 2026 (`D:\Projects\notchy-promo\mockup\v023.
 - **G. Mata menyapa**: saat kembali dari diam, mata tersenyum (^ ^) dan notch memantul sekali, ±1,5 detik.
 - **H. Tray**: sakelar "Mata (maskot)" (setting `mascot`; mati = jam tidak pernah diganti mata) dan "Notch minimal".
 - **Rilis**: SHA-256 installer di catatan rilis GitHub. **README**: FAQ, peringatan Windows/SmartScreen, cara cek SHA-256, link "Kirim masukan" (GitHub Issues).
+- Diuji 26 Okt 2026: screenshot baris status (82% ⚡, tanggal, jam) di Musik/Timer/Air/To-do/Shelf; halaman Timer, Air, To-do sesuai mockup; sakelar Pengingat tersimpan ke settings.json; pengguna mencoba peek cincin (cabut/colok charger), Notch minimal, dan sakelar Mata di tray. Belum: mata menyapa (perlu 2 menit diam).
 
 ---
 
@@ -275,6 +276,7 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.2.0 | 22 Okt 2026 | Bagian 5F: pulau terbelah (musik/timer/panggilan/unduhan berdampingan, geser untuk ganti), pil panggilan + mute, progres unduhan, equalizer asli, cek kamera + Join meeting, drop untuk Bagikan, riwayat clipboard, halaman pintasan, scroll volume, tekan lama untuk mengunci terbuka, baterai earbuds, "Cek update" di tray |
 | v0.2.1 | 22 Okt 2026 | Sakelar "Pakai fitur minum air" di Settings; cek update tiap jam dan setelah bangun dari sleep. (Pemicu: teman di v0.1.2 tidak kunjung ter-update karena Notchy-nya tidak dibuka ulang.) |
 | v0.2.2 | 23 Okt 2026 | Sisa unduhan yang gagal/dibatalkan (`.crdownload`/`.part` yang tidak bertambah) tidak lagi tampil terus sebagai "Mengunduh…". Hanya tes otomatis; uji langsung dilewati. |
+| v0.2.3 | 26 Okt 2026 | Paket polesan (bagian 5G): baris status di notch terbuka, halaman Air/To-do/Timer dirapikan, peek bercincin baterai, notch minimal, mata menyapa, sakelar Mata dan Notch minimal di tray; SHA-256 di catatan rilis; FAQ dan link masukan di README |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.
