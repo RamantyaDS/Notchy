@@ -574,13 +574,16 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         None::<&str>,
     )?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
+    let current = settings::get_settings();
+    let mascot = CheckMenuItem::with_id(app, "mascot", "Mata (maskot)", true, current.mascot, None::<&str>)?;
+    let minimal = CheckMenuItem::with_id(app, "minimal", "Notch minimal", true, current.minimal_notch, None::<&str>)?;
     let reload = MenuItem::with_id(app, "reload", "Muat ulang notch", true, None::<&str>)?;
     let update =
         MenuItem::with_id(app, "update", format!("Cek update (v{})", env!("CARGO_PKG_VERSION")), true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
-        &[&settings, &autostart, &reload, &update, &PredefinedMenuItem::separator(app)?, &quit],
+        &[&settings, &autostart, &mascot, &minimal, &reload, &update, &PredefinedMenuItem::separator(app)?, &quit],
     )?;
 
     TrayIconBuilder::new()
@@ -599,6 +602,16 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 let _ = autostart.set_checked(launcher.is_enabled().unwrap_or(false));
             }
             "settings" => settings::open_window(app),
+            "mascot" => {
+                let on = !settings::get_settings().mascot;
+                let _ = settings::patch_settings(app.clone(), serde_json::json!({ "mascot": on }));
+                let _ = mascot.set_checked(on);
+            }
+            "minimal" => {
+                let on = !settings::get_settings().minimal_notch;
+                let _ = settings::patch_settings(app.clone(), serde_json::json!({ "minimalNotch": on }));
+                let _ = minimal.set_checked(on);
+            }
             "reload" => health::reload(app, "from the tray"),
             "update" => update::check_now(app.clone()),
             "quit" => {
@@ -679,6 +692,8 @@ pub fn run() {
             share::share_files,
             shortcuts::run_shortcut,
             shortcuts::run_link,
+            settings::patch_settings,
+            settings::open_settings,
         ])
         .setup(move |app| {
             // Logged here, not earlier: a second copy (e.g. a watchdog run while Notchy is

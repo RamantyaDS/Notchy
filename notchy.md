@@ -193,6 +193,18 @@ Dikerjakan sebagai **satu tahap besar**, dirilis sekali setelah lolos pengujian 
 11. **Cek update di tray**: menu "Cek update (v0.x.x)". Ada versi baru → langsung pasang dan menyala lagi; sudah terbaru → peek "Sudah versi terbaru"; gagal → peek gagal; versi dari folder build → peek "versi pengembang".
     DoD: ketiga hasil teruji (versi lama → update, versi terbaru, tanpa internet).
 
+### G. v0.2.3: paket polesan
+Dipilih pengguna dari mockup 26 Okt 2026 (`D:\Projects\notchy-promo\mockup\v023.png`), semua bagian A–H plus rilis/README.
+- **A. Baris status** di notch terbuka (semua halaman kecuali Jam dan cermin kamera): cincin baterai + persen (petir saat mengecas; tanpa baterai: tidak tampil), tanggal, jam. Tinggi notch terbuka 140 → 154 px untuk memberi tempat; jam di kepala Player dihapus karena sudah ada di baris status.
+- **B. Halaman Air**: sakelar "Pengingat" langsung di halaman (setting `waterReminders`), tombol "Atur" membuka Settings, grafik berlabel sumbu ml.
+- **C. Halaman To-do**: angka besar "x/y selesai hari ini" + "+ Tambah" di kiri, daftar di kanan, tugas selesai jadi pil hijau bercoret.
+- **D. Halaman Timer**: cincin besar dengan ikon stopwatch; tombol cepat "Istirahat N" dan "Fokus N" di kiri-kanan tombol utama (langsung mulai fase itu), ↺ di samping waktu.
+- **E. Peek mengecas, headphone, baterai earbuds lemah**: ikon di dalam cincin baterai dan persen besar.
+- **F. Notch minimal** (sakelar tray, setting `minimalNotch`): saat diam/mengecas notch hanya garis hitam 160×5; area hover tetap 10 px; pulau, peek, dan hover tetap normal.
+- **G. Mata menyapa**: saat kembali dari diam, mata tersenyum (^ ^) dan notch memantul sekali, ±1,5 detik.
+- **H. Tray**: sakelar "Mata (maskot)" (setting `mascot`; mati = jam tidak pernah diganti mata) dan "Notch minimal".
+- **Rilis**: SHA-256 installer di catatan rilis GitHub. **README**: FAQ, peringatan Windows/SmartScreen, cara cek SHA-256, link "Kirim masukan" (GitHub Issues).
+
 ---
 
 ## 6. Urutan pengerjaan

@@ -30,8 +30,11 @@
   setInterval(() => requestAnimationFrame(() => invoke("heartbeat").catch(() => {})), 5000);
 
   // Sizes from notchy.md §4 (logical px).
+  // Open pages are 154 tall: a 16 px status row (battery, date, time) above the page.
   const SIZES = {
     tucked: { w: 90, h: 6, r: 4, e: 4 },
+    // "Notch minimal": a closed, idle notch is a thin black line.
+    minimal: { w: 160, h: 5, r: 3, e: 3 },
     rest: { w: 150, h: 30, r: 14, e: 10 },
     // The island's width depends on what it shows (lib/island.ts).
     island: { w: 200, h: 30, r: 14, e: 10 },
@@ -40,14 +43,14 @@
     shot: { w: 360, h: 96, r: 24, e: 16 },
     notify: { w: 380, h: 72, r: 22, e: 14 },
     clock: { w: 420, h: 140, r: 32, e: 22 },
-    player: { w: 420, h: 140, r: 32, e: 22 },
-    lyrics: { w: 520, h: 140, r: 32, e: 22 },
-    pomodoro: { w: 420, h: 140, r: 32, e: 22 },
-    water: { w: 420, h: 140, r: 32, e: 22 },
-    todo: { w: 420, h: 140, r: 32, e: 22 },
-    shelf: { w: 420, h: 140, r: 32, e: 22 },
-    clipboard: { w: 420, h: 140, r: 32, e: 22 },
-    shortcuts: { w: 420, h: 140, r: 32, e: 22 },
+    player: { w: 420, h: 154, r: 32, e: 22 },
+    lyrics: { w: 520, h: 154, r: 32, e: 22 },
+    pomodoro: { w: 420, h: 154, r: 32, e: 22 },
+    water: { w: 420, h: 154, r: 32, e: 22 },
+    todo: { w: 420, h: 154, r: 32, e: 22 },
+    shelf: { w: 420, h: 154, r: 32, e: 22 },
+    clipboard: { w: 420, h: 154, r: 32, e: 22 },
+    shortcuts: { w: 420, h: 154, r: 32, e: 22 },
     mirror: { w: 420, h: 140, r: 32, e: 22 },
   };
 
@@ -67,6 +70,11 @@
   let blink = $state(false);
   // Nobody has moved the mouse for a while: the clock rests and the eyes come out.
   let dozing = $state(false);
+  // Back after a quiet while: the eyes smile hello for a moment.
+  let greeting = $state(false);
+  // Settings from the tray: eyes on/off, and the thin-line "minimal" notch.
+  let mascot = $state(true);
+  let minimalNotch = $state(false);
   // Where the eyes look (-1..1 per axis) and how close the cursor is (0..1), from Rust.
   let look = $state<[number, number, number]>([0, 0, 0]);
   let now = $state(new Date());
@@ -252,9 +260,11 @@
             ? "tucked"
             : running.length
               ? "island"
-              : charging
-                ? "charging"
-                : "rest",
+              : minimalNotch
+                ? "minimal"
+                : charging
+                  ? "charging"
+                  : "rest",
   );
   // Lyrics: fetched for the lyrics panel, and (if enabled) for a single line in the small notch.
   let lyrics = $state<Lyrics | null>(null);
@@ -346,6 +356,8 @@
       : SIZES[view],
   );
   const closedView = $derived(view === "rest" || view === "island" || view === "charging");
+  // The status row sits above the open pages (not the clock, the camera or a peek).
+  const withStatus = $derived(paged && !mirror && view !== "peek" && view !== "clock");
 
   // The audio meter runs only while the equalizer is on screen.
   const metering = $derived(view === "island" && !!media?.playing && island.main !== null && [island.main, ...island.side].some((a) => a.kind === "music"));
@@ -357,7 +369,8 @@
   // Tell Rust the target size right away, so the growing notch already counts as "inside".
   // Tucked, the notch is a thin line, so whatever is underneath (like browser tabs) stays clickable.
   $effect(() => {
-    invoke("set_notch_size", { w: size.w, h: size.h });
+    // The minimal line is 5 px tall; hovering it gets a 10 px target.
+    invoke("set_notch_size", { w: size.w, h: view === "minimal" ? 10 : size.h });
   });
 
   // A clock only while something on screen moves: playback position or the
@@ -485,10 +498,16 @@
     shelf.load();
     // Cursor moves keep the clock awake; after 2 quiet minutes the eyes come out.
     let sleepTimer: ReturnType<typeof setTimeout>;
+    let greetTimer: ReturnType<typeof setTimeout>;
     const wake = () => {
+      if (dozing) {
+        greeting = true;
+        clearTimeout(greetTimer);
+        greetTimer = setTimeout(() => (greeting = false), 1500);
+      }
       dozing = false;
       clearTimeout(sleepTimer);
-      sleepTimer = setTimeout(() => (dozing = true), 120_000);
+      sleepTimer = setTimeout(() => (dozing = mascot), 120_000);
     };
     wake();
     const unlistenLook = listen<[number, number, number]>("eyes-look", (e) => {
@@ -524,6 +543,8 @@
       weatherCity: { latitude: number; longitude: number } | null;
       smallLyrics: boolean;
       shortcuts: Shortcut[];
+      mascot: boolean;
+      minimalNotch: boolean;
     };
     let weatherTimer: ReturnType<typeof setTimeout>;
     const loadWeather = async (settings?: AllSettings) => {
@@ -536,6 +557,9 @@
     };
     const applySettings = (s: AllSettings) => {
       smallLyrics = s.smallLyrics;
+      mascot = s.mascot !== false;
+      if (!mascot) dozing = false;
+      minimalNotch = s.minimalNotch === true;
       shortcuts = s.shortcuts ?? [];
       // Keep the same page in view when the water page appears or goes.
       const current = pages[page];
@@ -611,6 +635,8 @@
   aria-label="Notchy"
   class:open={paged}
   class:tucked={view === "tucked"}
+  class:minimal={view === "minimal"}
+  class:greet={greeting && view === "rest"}
   class:charging
   class:tinted
   style:--tint={tint}
@@ -628,9 +654,25 @@
   {#if pinned && paged && !mirror}<i class="pin" title="Terkunci terbuka · tekan lama untuk melepas"></i>{/if}
   <div class="ambient"></div>
 
+  <!-- Battery, date and time above every open page (the clock page shows them big already). -->
+  {#if withStatus}
+    <div class="status" in:fade={{ duration: 200, delay: 200 }}>
+      {#if power.battery}
+        <svg class="mini-ring" class:low={!power.charging && power.percent <= 20} class:charging viewBox="0 0 20 20">
+          <circle cx="10" cy="10" r="7.5" />
+          <circle cx="10" cy="10" r="7.5" class="fill" pathLength="100" stroke-dasharray="{power.percent} 100" />
+        </svg>
+        <span>{power.percent}%{#if power.charging}&nbsp;⚡{/if}</span><span class="sep">·</span>
+      {/if}
+      <span>{date}</span><b>{time}</b>
+    </div>
+  {/if}
+
   <div class="layer rest" class:on={view === "rest"}>
     {#if weather}<span class="weather">{weather.icon}<b>{weather.temp}°</b></span>{/if}
-    {#if dozing}
+    {#if greeting}
+      <div class="eyes happy" in:fade={{ duration: 150 }}><i></i><i></i></div>
+    {:else if dozing}
       <div class="eyes" class:blink style:--lx={look[0]} style:--ly={look[1]} style:--near={look[2]} in:fade={{ duration: 400 }}>
         <i></i><i></i>
       </div>
@@ -749,11 +791,11 @@
   {/if}
 
   {#if media && (view === "player" || view === "lyrics")}
-    <div class="layer on" in:fade={{ duration: 300, delay: 180 }} out:fade={{ duration: 120 }}>
+    <div class="layer on below" in:fade={{ duration: 300, delay: 180 }} out:fade={{ duration: 120 }}>
       <Player
         {media}
         now={nowMs}
-        clock="{date} · {time}"
+        clock=""
         withLyrics={lyricsOn}
         {lyrics}
         status={lyricsStatus}
@@ -764,7 +806,7 @@
 
   {#if paged && !mirror && view !== "peek" && pages[page] !== "now"}
     {#key page}
-      <div class="layer on" in:fade={{ duration: 260, delay: 160 }} out:fade={{ duration: 100 }}>
+      <div class="layer on below" in:fade={{ duration: 260, delay: 160 }} out:fade={{ duration: 100 }}>
         {#if pages[page] === "pomodoro"}
           <TimerPage {pomo} now={nowMs} />
         {:else if pages[page] === "water"}
@@ -1147,6 +1189,81 @@
     right: -2px;
     width: 6px;
     height: 6px;
+  }
+
+  /* Open pages sit under the 16 px status row. */
+  .layer.below {
+    top: 16px;
+  }
+  .open .arrow {
+    margin-top: -6px;
+  }
+  .status {
+    position: absolute;
+    top: 6px;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    color: rgba(255, 255, 255, 0.65);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  .status b {
+    color: #fff;
+    font-weight: 600;
+  }
+  .status .sep {
+    opacity: 0.6;
+  }
+  .mini-ring {
+    width: 12px;
+    height: 12px;
+    transform: rotate(-90deg);
+  }
+  .mini-ring circle {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.25);
+    stroke-width: 3;
+  }
+  .mini-ring .fill {
+    stroke: #fff;
+  }
+  .mini-ring.charging .fill {
+    stroke: #34d399;
+  }
+  .mini-ring.low .fill {
+    stroke: #fb923c;
+  }
+
+  /* "Notch minimal": a plain black line, no glow. */
+  .notch.minimal {
+    box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  }
+  .minimal .ambient {
+    opacity: 0;
+  }
+
+  /* Back after a quiet while: smiling eyes and one little bounce. */
+  .eyes.happy i {
+    width: 12px;
+    height: 7px;
+    border: 2.4px solid #fff;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
+    background: none;
+  }
+  .notch.greet {
+    animation: greet 0.6s var(--spring);
+  }
+  @keyframes greet {
+    40% {
+      transform: translateX(-50%) scale(1.08);
+    }
   }
 
   /* Pinned open (long press): a small mark in the corner. */

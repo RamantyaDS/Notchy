@@ -15,6 +15,8 @@ export type Settings = {
   remindEvery: number;
   /** Off: no water reminders and no water page. */
   waterEnabled: boolean;
+  /** The reminder switch on the water page. */
+  waterReminders: boolean;
 };
 
 type Notify = (peek: PeekData) => void;
@@ -86,6 +88,15 @@ export class Pomodoro {
     this.#switch();
   }
 
+  /** Starts a fresh focus or break right away (the quick buttons). */
+  begin(phase: "focus" | "break") {
+    clearTimeout(this.#timer);
+    this.running = false;
+    this.phase = phase;
+    this.left = this.length();
+    this.start();
+  }
+
   #switch() {
     this.phase = this.phase === "focus" ? "break" : "focus";
     this.left = this.length();
@@ -154,7 +165,7 @@ export class Water {
   #schedule() {
     clearTimeout(this.#timer);
     const s = this.settings;
-    if (!s || s.waterEnabled === false || s.remindEvery <= 0) return;
+    if (!s || s.waterEnabled === false || s.waterReminders === false || s.remindEvery <= 0) return;
     const now = new Date();
     const open = startOfDay(now) + s.waterFrom * 60 * MINUTE;
     const close = startOfDay(now) + s.waterTo * 60 * MINUTE;

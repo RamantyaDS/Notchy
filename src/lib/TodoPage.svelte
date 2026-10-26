@@ -40,15 +40,17 @@
   }
 </script>
 
+<!-- Left: how the day is going, and the add button. Right: the tasks. -->
 <div class="page">
-  <div class="header">
-    <span class="title">To-do</span>
-    <span class="count">{todo.doneToday()}/{todo.tasks.length} selesai hari ini</span>
+  <div class="side">
+    <div class="count"><b>{todo.doneToday()}</b>/{todo.tasks.length}</div>
+    <div class="caption">selesai hari ini</div>
     {#if editing === null}
       <button class="add" onclick={() => edit()}>+ Tambah</button>
     {/if}
   </div>
 
+  <div class="list">
   {#if editing !== null}
     <div class="form" onfocusout={blur}>
       <input bind:this={input} bind:value={text} onkeydown={keys} placeholder="Tugas baru…" class="text" />
@@ -71,6 +73,7 @@
       {#if editing === null}<li class="empty">Belum ada tugas. Tambah satu, bisa dengan jam pengingat.</li>{/if}
     {/each}
   </ul>
+  </div>
 </div>
 
 <style>
@@ -78,22 +81,43 @@
     position: absolute;
     inset: 0;
     display: flex;
-    flex-direction: column;
-    padding: 12px 40px 20px;
+    gap: 16px;
+    padding: 10px 40px 20px;
   }
-  .header {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-  }
-  .title {
-    font-size: 14px;
-    font-weight: 600;
+  .side {
+    flex: none;
+    width: 100px;
+    padding-top: 2px;
   }
   .count {
-    flex: 1;
-    font-size: 11.5px;
+    font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+    font-size: 16px;
+    font-weight: 600;
     color: rgba(255, 255, 255, 0.5);
+    font-variant-numeric: tabular-nums;
+  }
+  .count b {
+    font-size: 28px;
+    color: #fff;
+  }
+  .caption {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .side .add {
+    margin-top: 10px;
+    background: #fff;
+    color: #000;
+    font-weight: 600;
+  }
+  .side .add:hover {
+    background: #dfe3ee;
+  }
+  .list {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
   }
   button {
     border: 0;
@@ -116,7 +140,7 @@
   .form {
     display: flex;
     gap: 6px;
-    margin-top: 8px;
+    margin-bottom: 4px;
   }
   .form input {
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -141,7 +165,7 @@
   ul {
     flex: 1;
     list-style: none;
-    margin: 6px 0 0;
+    margin: 0;
     padding: 0;
     overflow-y: auto;
     scrollbar-width: none;
@@ -150,8 +174,19 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 3px 0;
-    font-size: 13px;
+    margin-bottom: 4px;
+    padding: 4px 9px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.07);
+    font-size: 12.5px;
+  }
+  /* Done tasks: a green pill, struck through. */
+  li.done {
+    background: rgba(52, 211, 153, 0.14);
+  }
+  li.empty {
+    background: none;
+    padding: 4px 0;
   }
   .check {
     flex: none;

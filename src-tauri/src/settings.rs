@@ -35,6 +35,12 @@ pub struct Settings {
     remind_every: u32,
     /// Off: no water reminders and no water page in the notch.
     water_enabled: bool,
+    /// Water reminders on/off (the switch on the water page).
+    water_reminders: bool,
+    /// The clock gives way to the eyes after a quiet while.
+    pub mascot: bool,
+    /// A closed, idle notch is just a thin black line (for thick top bezels).
+    pub minimal_notch: bool,
     /// Show new Windows notifications in the notch.
     pub mirror_notifications: bool,
     /// Secret ICS address of a calendar (Google/Outlook), or empty.
@@ -82,6 +88,9 @@ impl Default for Settings {
             water_to: 21,
             remind_every: 60,
             water_enabled: true,
+            water_reminders: true,
+            mascot: true,
+            minimal_notch: false,
             mirror_notifications: true,
             calendar_url: String::new(),
             small_lyrics: true,
@@ -107,6 +116,27 @@ pub fn save_settings(app: AppHandle, settings: Settings) -> Result<(), String> {
     std::fs::write(&path, json).map_err(|e| e.to_string())?;
     let _ = app.emit("settings", &settings);
     Ok(())
+}
+
+/// Changes a few settings by name (camelCase, as the page and Settings window use
+/// them), e.g. `{"waterReminders": false}` from the water page's switch.
+#[tauri::command]
+pub fn patch_settings(app: AppHandle, patch: serde_json::Value) -> Result<Settings, String> {
+    let mut all = serde_json::to_value(get_settings()).map_err(|e| e.to_string())?;
+    if let (Some(all), Some(patch)) = (all.as_object_mut(), patch.as_object()) {
+        for (k, v) in patch {
+            all.insert(k.clone(), v.clone());
+        }
+    }
+    let settings: Settings = serde_json::from_value(all).map_err(|e| e.to_string())?;
+    save_settings(app, settings.clone())?;
+    Ok(settings)
+}
+
+/// The water page's "Atur" button.
+#[tauri::command]
+pub fn open_settings(app: AppHandle) {
+    open_window(&app);
 }
 
 /// Latitude and longitude from Windows location, if the user allows desktop apps to use it.

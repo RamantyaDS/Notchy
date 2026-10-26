@@ -67,5 +67,8 @@ git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Ca
 git commit -m "Release $Version"
 git tag "v$Version"
 git push origin HEAD "v$Version"
-gh release create "v$Version" $setup "$setup.sig" $latest --title "Notchy $Version" --notes $Notes
+# The installer's fingerprint goes in the release notes, so anyone can check their download.
+$sha = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+$page = "$Notes`n`n**SHA-256** ``$name```n``$sha``"
+gh release create "v$Version" $setup "$setup.sig" $latest --title "Notchy $Version" --notes $page
 Write-Host "Released v$Version. Installed copies (v0.2.1+) pick it up within an hour, after waking from sleep, or on their next start."

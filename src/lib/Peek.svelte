@@ -37,7 +37,8 @@
     code: "M8 9l-3 3 3 3M16 9l3 3-3 3M13 6l-2 12",
   };
 
-  type View = { icon: string; tone?: string; title: string; detail?: string; value?: string; level?: number; battery?: number };
+  // ring: 0..100, the icon sits inside a battery ring and the value is shown big.
+  type View = { icon: string; tone?: string; title: string; detail?: string; value?: string; level?: number; ring?: number };
 
   const view = $derived.by((): View | null => {
     const p = peek;
@@ -56,8 +57,8 @@
         return { icon: "keyboard", title: "Bahasa keyboard", detail: p.locale, value: String(p.locale).split("-")[0].toUpperCase() };
       case "power":
         return p.charging
-          ? { icon: "bolt", tone: "#34d399", title: "Mengisi daya", detail: "Charger tersambung", value: `${p.percent}%` }
-          : { icon: "battery", title: "Memakai baterai", detail: "Charger dicabut", value: `${p.percent}%` };
+          ? { icon: "bolt", tone: "#34d399", title: "Mengisi daya", detail: "Charger tersambung", value: `${p.percent}%`, ring: p.percent }
+          : { icon: "battery", tone: p.percent <= 20 ? "#fb923c" : "#fff", title: "Memakai baterai", detail: "Charger dicabut", value: `${p.percent}%`, ring: p.percent };
       case "network":
         return p.online
           ? { icon: "wifi", tone: "#38bdf8", title: p.wifi ? "Wi-Fi tersambung" : "Internet tersambung", detail: p.name }
@@ -69,11 +70,12 @@
               tone: "#a78bfa",
               title: p.battery != null ? p.name : "Headphone tersambung",
               detail: p.battery != null ? "Tersambung" : p.name,
-              battery: p.battery ?? undefined,
+              ring: p.battery ?? undefined,
+              value: p.battery != null ? `${p.battery}%` : undefined,
             }
           : { icon: "speaker", title: "Audio keluar lewat", detail: p.name };
       case "earbuds-low":
-        return { icon: "headphones", tone: "#fb923c", title: `Baterai tinggal ${p.battery}%`, detail: p.name, battery: p.battery };
+        return { icon: "headphones", tone: "#fb923c", title: "Baterai earbuds lemah", detail: p.name, ring: p.battery, value: `${p.battery}%` };
       case "update-info":
         return p.state === "checking"
           ? { icon: "sync", tone: "#38bdf8", title: "Mengecek update…", detail: `Notchy v${p.version}` }
@@ -181,9 +183,20 @@
   </button>
 {:else if view}
   <div class="row">
-    <span class="icon" style:color={view.tone ?? "#fff"} style:background={view.tone ? `${view.tone}22` : "rgba(255,255,255,.1)"}>
-      <svg viewBox="0 0 24 24"><path d={ICONS[view.icon]} /></svg>
-    </span>
+    {#if view.ring !== undefined}
+      <!-- Battery as a ring around the icon. -->
+      <span class="icon ringed" style:color={view.tone ?? "#fff"}>
+        <svg class="ring" viewBox="0 0 40 40">
+          <circle cx="20" cy="20" r="17" />
+          <circle cx="20" cy="20" r="17" class="fill" pathLength="100" stroke-dasharray="{view.ring} 100" />
+        </svg>
+        <svg viewBox="0 0 24 24"><path d={ICONS[view.icon]} /></svg>
+      </span>
+    {:else}
+      <span class="icon" style:color={view.tone ?? "#fff"} style:background={view.tone ? `${view.tone}22` : "rgba(255,255,255,.1)"}>
+        <svg viewBox="0 0 24 24"><path d={ICONS[view.icon]} /></svg>
+      </span>
+    {/if}
     <div class="text">
       <div class="title">{view.title}</div>
       {#if view.detail}<div class="detail">{view.detail}</div>{/if}
@@ -191,13 +204,8 @@
     {#if view.level !== undefined}
       <div class="level"><span style:width="{Math.round(view.level * 100)}%"></span></div>
       <span class="value">{Math.round(view.level * 100)}</span>
-    {:else if view.battery !== undefined}
-      <div class="level short">
-        <span style:width="{view.battery}%" style:background={view.battery < 15 ? "#fb923c" : "#34d399"}></span>
-      </div>
-      <span class="value">{view.battery}%</span>
     {:else if view.value}
-      <span class="value">{view.value}</span>
+      <span class="value" class:big={view.ring !== undefined}>{view.value}</span>
     {/if}
   </div>
 {/if}
@@ -259,8 +267,29 @@
     background: #fff;
     transition: width 0.15s ease-out;
   }
-  .level.short {
-    width: 56px;
+  .icon.ringed {
+    position: relative;
+    width: 38px;
+    height: 38px;
+  }
+  .icon.ringed .ring {
+    position: absolute;
+    inset: 0;
+    width: 38px;
+    height: 38px;
+    transform: rotate(-90deg);
+  }
+  .ring circle {
+    stroke-opacity: 0.25;
+    stroke-width: 3;
+  }
+  .ring .fill {
+    stroke-opacity: 1;
+  }
+  .value.big {
+    font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+    font-size: 22px;
+    font-weight: 700;
   }
   .actions.inline {
     flex: none;
