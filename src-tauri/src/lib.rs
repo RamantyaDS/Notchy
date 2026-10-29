@@ -110,6 +110,10 @@ fn set_notch_size(w: f64, h: f64) {
     update_hit_rect();
 }
 
+pub(crate) fn is_notch_open() -> bool {
+    HIT_SIZE.lock().map(|s| s.1 > 60.0).unwrap_or(false)
+}
+
 fn update_hit_rect() {
     let Some(window) = main_window() else { return };
     let geometry = match (window.is_visible(), window.outer_position(), window.outer_size()) {
@@ -728,6 +732,8 @@ pub fn run() {
             calls::start(app.handle().clone());
             downloads::start(app.handle().clone());
             clipboard::start(app.handle().clone());
+            let s = settings::get_settings();
+            network::set_monitoring_active(s.net_speed_island || s.net_speed_status);
             network::start(app.handle().clone());
             Ok(())
         })

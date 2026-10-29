@@ -220,7 +220,7 @@
       <label class="field check">
         <input
           type="checkbox"
-          checked={settings.netSpeedIsland !== false}
+          checked={settings.netSpeedIsland === true}
           onchange={(e) => save({ netSpeedIsland: e.currentTarget.checked })}
         />
         <span class="page-label">

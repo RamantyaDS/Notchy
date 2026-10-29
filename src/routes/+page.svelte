@@ -53,7 +53,7 @@
     rest: { w: 150, h: 30, r: 14, e: 10 },
     // The island's width depends on what it shows (lib/island.ts).
     island: { w: 200, h: 30, r: 14, e: 10 },
-    charging: { w: 150, h: 30, r: 14, e: 10 },
+    charging: { w: 200, h: 30, r: 14, e: 10 },
     peek: { w: 310, h: 60, r: 19, e: 13 },
     shot: { w: 360, h: 96, r: 24, e: 16 },
     notify: { w: 380, h: 72, r: 22, e: 14 },
@@ -125,7 +125,7 @@
   let call = $state<Call | null>(null);
   let download = $state<Download | null>(null);
   let networkSpeed = $state<NetworkSpeed | null>(null);
-  let netSpeedIsland = $state(true);
+  let netSpeedIsland = $state(false);
   let netSpeedStatus = $state(true);
   // Equalizer bar heights from the audio meter, while it runs.
   let levels = $state<number[] | null>(null);
@@ -642,7 +642,7 @@
       shelfEnabled = s.shelfEnabled !== false;
       clipboardEnabled = s.clipboardEnabled !== false;
       shortcutsEnabled = s.shortcutsEnabled !== false;
-      netSpeedIsland = s.netSpeedIsland !== false;
+      netSpeedIsland = s.netSpeedIsland === true;
       netSpeedStatus = s.netSpeedStatus !== false;
       const newIdx = pages.indexOf(current);
       page = newIdx !== -1 ? newIdx : Math.min(page, Math.max(0, pages.length - 1));
@@ -791,8 +791,13 @@
     </div>
   {/if}
 
-  <!-- While charging: clean centered time (ring icon omitted) -->
+  <!-- While charging: a battery ring with a bolt, and the time. -->
   <div class="layer charge" class:on={view === "charging"}>
+    <svg class="ring" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="8" />
+      <circle cx="10" cy="10" r="8" class="fill" pathLength="100" stroke-dasharray="{power.percent} 100" />
+      <path d="M10.6 5.5 7.5 10.6h2.4l-.5 3.9 3.1-5.1h-2.4z" />
+    </svg>
     <span class="charge-time">{time}</span>
   </div>
 
@@ -1082,8 +1087,31 @@
     font-weight: 600;
   }
 
+  .charge {
+    flex-direction: row;
+    gap: 34px;
+  }
+  .ring {
+    width: 20px;
+    height: 20px;
+    transform: rotate(-90deg);
+  }
+  .ring circle {
+    fill: none;
+    stroke: rgba(52, 211, 153, 0.25);
+    stroke-width: 2.4;
+  }
+  .ring .fill {
+    stroke: #34d399;
+    stroke-linecap: round;
+  }
+  .ring path {
+    fill: #34d399;
+    transform: rotate(90deg);
+    transform-origin: center;
+  }
   .charge-time {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
