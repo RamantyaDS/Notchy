@@ -56,16 +56,24 @@ A small black island at the top of your screen that shows what's happening (musi
    - **When you open it** (*"Windows protected your PC"*): click **More info** → **Run anyway**.
 3. That's it. No admin rights, no account. Notchy **updates itself** from now on.
 
+### Portable (no install)
+
+Can't run installers, e.g. on a work laptop? Download `Notchy_x.y.z_x64-portable.zip` from the same release, unzip it anywhere and run `notchy.exe`. Settings and data still live in `%APPDATA%\Notchy`.
+
+The portable copy **doesn't update itself**: when a new version is out, the notch tells you, and clicking it opens the release page. To remove it, untick **Start with Windows** in the tray menu, exit, and delete the folder.
+
 **Tip:** turn on Windows' *Do not disturb* (there's a button in Notchy's Settings) so notifications pop up only in the notch, not twice.
 
 <details>
 <summary>Check that your download is the real one</summary>
 
-Every release page lists the installer's **SHA-256** fingerprint. In PowerShell:
+Every release page lists the **SHA-256** fingerprint of the installer and the portable zip. In PowerShell:
 
 ```bash
 Get-FileHash .\Notchy_x.y.z_x64-setup.exe -Algorithm SHA256
 ```
+
+(or `.\Notchy_x.y.z_x64-portable.zip`)
 
 If the hash doesn't match the one on the release page, don't run the file.
 </details>
@@ -74,7 +82,12 @@ If the hash doesn't match the one on the release page, don't run the file.
 
 <details><summary>How do I update?</summary>
 
-You don't have to: Notchy checks when it starts, every hour and after your laptop wakes up, then installs the new version. To check right now, right-click the tray icon → **Cek update**.
+You don't have to: Notchy checks when it starts, every hour and after your laptop wakes up, then installs the new version. To check right now, right-click the tray icon → **Cek update**. The portable copy only tells you a new version is out; download the new zip from the release page.
+</details>
+
+<details><summary>The installer won't run on my work laptop</summary>
+
+Company laptops often block programs that aren't on an approved list, with a message like *"Windows cannot access the specified device, path, or file"*. Try the **portable zip**. If that's blocked too, ask your IT team to allow Notchy; the SHA-256 on the release page lets them check the exact file.
 </details>
 
 <details><summary>Notifications show up twice</summary>
@@ -143,6 +156,8 @@ Design notes and every decision behind the app are in [`notchy.md`](notchy.md) (
 **Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), timer fokus, pengingat minum, to-do, Shelf file, kalender, dan status sistem. Membesar saat di-hover, menyingkir saat menghalangi.
 
 Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
+
+Tidak bisa menjalankan installer, misalnya di laptop kantor? Unduh **`Notchy_x.y.z_x64-portable.zip`** dari rilis yang sama, ekstrak, lalu jalankan `notchy.exe`. Versi portable tidak update sendiri: kalau ada versi baru, notch memberi tahu dan klik membuka halaman rilis.
 
 Ada bug atau ide? [Buat issue](https://github.com/RamantyaDS/Notchy/issues/new), dan kalau bisa lampirkan `%APPDATA%\Notchy\notchy.log`.
 </details>

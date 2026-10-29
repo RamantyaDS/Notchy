@@ -171,14 +171,15 @@
     </div>
   </div>
 {:else if peek.kind === "update"}
-  <!-- A new version is downloaded; clicking installs it (Notchy restarts in a few seconds). -->
+  <!-- A new version is downloaded; clicking installs it (Notchy restarts in a few seconds).
+       The portable copy only links to the download. -->
   <button class="note" onclick={() => onOpen?.()}>
     <span class="icon" style:color="#38bdf8" style:background="#38bdf822">
       <svg viewBox="0 0 24 24"><path d={ICONS.download} /></svg>
     </span>
     <div class="text">
-      <div class="title">Notchy v{peek.version} siap</div>
-      <div class="detail">Klik untuk pasang, Notchy mulai ulang sebentar</div>
+      <div class="title">Notchy v{peek.version} {peek.portable ? "tersedia" : "siap"}</div>
+      <div class="detail">{peek.portable ? "Klik untuk unduh di GitHub" : "Klik untuk pasang, Notchy mulai ulang sebentar"}</div>
     </div>
   </button>
 {:else if view}

@@ -6,6 +6,8 @@
 //! install", once per version), so Notchy never restarts mid-use.
 //! The tray's "Cek update" checks right away and installs whatever it finds.
 //! The copy run from the build folder (the developer's own) never updates itself.
+//! The portable copy (zip, no installer) can't install one either: it only says
+//! a new version is out, and clicking the peek opens the releases page.
 
 use std::sync::{mpsc, Mutex, OnceLock};
 use std::time::Duration;
@@ -23,6 +25,13 @@ fn is_dev_build() -> bool {
     let exe = std::env::current_exe().unwrap_or_default();
     exe.to_string_lossy().to_lowercase().contains(r"\target\")
 }
+
+/// Only the copy inside the installer is marked as installed (see notchy.md §9).
+fn is_portable() -> bool {
+    tauri::utils::platform::bundle_type().is_none()
+}
+
+const RELEASES: &str = "https://github.com/RamantyaDS/Notchy/releases/latest";
 
 static WAKE: OnceLock<mpsc::Sender<()>> = OnceLock::new();
 
@@ -43,7 +52,14 @@ pub fn start(app: AppHandle) {
         let mut just_started = true;
         let mut offered: Option<String> = None;
         loop {
-            if let Ok(Some((update, bytes))) = tauri::async_runtime::block_on(fetch(&app)) {
+            if is_portable() {
+                if let Ok(Some(version)) = tauri::async_runtime::block_on(newer(&app)) {
+                    if offered.as_deref() != Some(version.as_str()) {
+                        peek(&app, "update", json!({ "version": version, "portable": true }));
+                        offered = Some(version);
+                    }
+                }
+            } else if let Ok(Some((update, bytes))) = tauri::async_runtime::block_on(fetch(&app)) {
                 if just_started {
                     install(update, bytes);
                 } else {
@@ -67,6 +83,10 @@ pub fn start(app: AppHandle) {
 /// The update peek was clicked.
 #[tauri::command]
 pub fn install_update() {
+    if is_portable() {
+        let _ = std::process::Command::new("explorer").arg(RELEASES).spawn();
+        return;
+    }
     if let Some((update, bytes)) = READY.lock().unwrap().take() {
         install(update, bytes);
     }
@@ -85,12 +105,31 @@ pub fn check_now(app: AppHandle) {
             return;
         }
         peek(&app, "update-info", json!({ "state": "checking", "version": version }));
+        if is_portable() {
+            match tauri::async_runtime::block_on(newer(&app)) {
+                Ok(Some(new)) => peek(&app, "update", json!({ "version": new, "portable": true })),
+                Ok(None) => peek(&app, "update-info", json!({ "state": "latest", "version": version })),
+                Err(()) => peek(&app, "update-info", json!({ "state": "failed", "version": version })),
+            }
+            return;
+        }
         match tauri::async_runtime::block_on(fetch(&app)) {
             Ok(Some((update, bytes))) => install(update, bytes),
             Ok(None) => peek(&app, "update-info", json!({ "state": "latest", "version": version })),
             Err(()) => peek(&app, "update-info", json!({ "state": "failed", "version": version })),
         }
     });
+}
+
+/// The newer version's number, without downloading it.
+async fn newer(app: &AppHandle) -> Result<Option<String>, ()> {
+    match app.updater().map_err(|_| ())?.check().await {
+        Ok(update) => Ok(update.map(|u| u.version)),
+        Err(e) => {
+            log_line(&format!("update check failed: {e}"));
+            Err(())
+        }
+    }
 }
 
 /// Ok(None) when already up to date; Err when the check or download failed.

@@ -214,7 +214,15 @@ PR #1 tidak di-merge utuh; bagian yang disetujui di review kedua dimasukkan send
 - **Setting baru** `capsLockPeek` (Settings → Keyboard & sistem): mematikan peek Caps Lock *dan* bahasa keyboard (satu hook keyboard), berlaku setelah Notchy dibuka ulang.
 - **Repo**: CI GitHub Actions (svelte-check, vitest, build, cargo test, clippy), tes lirik.
 - Tidak diambil: workflow rilis (akan menimpa installer bertanda tangan), README/ADVERTISING.md, ubahan border/bayangan/telinga, jeda hover 90 ms, denyut saat tucked.
-- Diuji 29 Okt 2026: 23 tes Rust + 17 tes vitest lulus, svelte-check bersih, clippy tanpa peringatan baru; build dev jalan, nama halaman muncul ("Catatan To-Do"), thumbnail Shelf tetap tampil dengan CSP, log tanpa pelanggaran CSP. Belum diuji langsung: cuaca, lirik, cover lagu, cermin kamera, badge Clipboard, marquee.
+- Diuji 29 Okt 2026: 23 tes Rust + 17 tes vitest lulus, svelte-check bersih, clippy tanpa peringatan baru; build dev jalan, nama halaman muncul ("Catatan To-Do"), thumbnail Shelf tetap tampil dengan CSP, log tanpa pelanggaran CSP. Lalu dengan lagu diputar: cover, warna notch, baris lirik di notch kecil, dan tooltip waktu di bar progres tampil. Belum diuji langsung: cuaca (hanya log tanpa pelanggaran), cermin kamera, badge Clipboard, marquee.
+
+### I. Versi portable, 29 Okt 2026
+Pemicu: laptop kantor teman (akun admin.it) menolak installer dengan "Windows cannot access the specified device, path, or file". Dugaan: Trend Micro Apex One; SRP kosong, kebijakan zona 1806 tidak di-set.
+- Rilis berisi juga `Notchy_<versi>_x64-portable.zip`: hanya `notchy.exe` dari `target\release`, yang penanda bundle-nya `UNK` (salinan di dalam installer `NSS`). `release.ps1` menolak membuat zip kalau exe-nya ternyata `NSS`.
+- Versi portable **tidak memasang update**. Updater Tauri tanpa penanda akan mengambil installer dan menjalankannya, sehingga portable diam-diam berubah menjadi salinan terpasang. Karena itu `update.rs` hanya mengecek: muncul peek "Notchy vX tersedia, klik untuk unduh di GitHub", dan klik membuka halaman rilis terbaru. "Cek update" di tray juga begitu.
+- Data tetap di `%APPDATA%\Notchy`. Start with Windows mencatat lokasi exe; kalau foldernya dipindah, sakelar itu perlu dinyalakan ulang.
+- Portable tidak membantu kalau AppLocker hanya mengizinkan Program Files, atau kalau antivirus memblokir semua exe yang belum dikenal. Untuk kasus itu: whitelist dari IT (pakai SHA-256 di catatan rilis), installer mode "both"/MSI, atau code signing (dibahas, belum dikerjakan).
+- Diuji 29 Okt 2026: build berlabel v0.2.2 dijalankan dari folder di luar `target` (lewat zip). Peek "Notchy v0.2.3 tersedia · Klik untuk unduh di GitHub" muncul, dan Notchy tetap jalan dari folder itu tanpa menjalankan installer.
 
 ---
 
@@ -287,10 +295,11 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.2.1 | 22 Okt 2026 | Sakelar "Pakai fitur minum air" di Settings; cek update tiap jam dan setelah bangun dari sleep. (Pemicu: teman di v0.1.2 tidak kunjung ter-update karena Notchy-nya tidak dibuka ulang.) |
 | v0.2.2 | 23 Okt 2026 | Sisa unduhan yang gagal/dibatalkan (`.crdownload`/`.part` yang tidak bertambah) tidak lagi tampil terus sebagai "Mengunduh…". Hanya tes otomatis; uji langsung dilewati. |
 | v0.2.3 | 26 Okt 2026 | Paket polesan (bagian 5G): baris status di notch terbuka, halaman Air/To-do/Timer dirapikan, peek bercincin baterai, notch minimal, mata menyapa, sakelar Mata dan Notch minimal di tray; SHA-256 di catatan rilis; FAQ dan link masukan di README |
+| v0.2.4 | 29 Okt 2026 | Bagian dari PR #1 Malik (bagian 5H): program tidak dijalankan dari Shelf/Unduhan, filter link notifikasi, CSP, simpan file aman, tooltip nama halaman dan waktu lagu, badge Clipboard, setting Caps Lock & bahasa keyboard; CI. Versi portable (bagian 5I) |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.
-2. Skrip itu: menaikkan versi di `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`; menjeda `Notchy Watchdog` dan menutup Notchy; build installer bertanda tangan (kunci `%USERPROFILE%\.tauri\notchy.key`, mengulang otomatis kalau antivirus memicu os error 1224); menjalankan Notchy lagi dan menyalakan penjaga; menulis `latest.json`; commit, tag `v<versi>`, push; membuat GitHub Release berisi setup, `.sig`, dan `latest.json`.
+2. Skrip itu: menaikkan versi di `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`; menjeda `Notchy Watchdog` dan menutup Notchy; build installer bertanda tangan (kunci `%USERPROFILE%\.tauri\notchy.key`, mengulang otomatis kalau antivirus memicu os error 1224); menjalankan Notchy lagi dan menyalakan penjaga; menulis `latest.json`; commit, tag `v<versi>`, push; membuat GitHub Release berisi setup, `.sig`, `latest.json`, dan (sejak v0.2.4) zip portable, dengan SHA-256 keduanya di catatan rilis.
    Peringatan "__TAURI_BUNDLE_TYPE variable not found in binary" saat pengemasan diulang itu aman selama `notchy.exe` **di dalam installer** memuat `__TAURI_BUNDLE_TYPE_VAR_NSS`; tanpa penanda itu updater tidak tahu jenis installernya. Cek dengan 7-Zip: `7z x Notchy_<versi>_x64-setup.exe notchy.exe -r`, lalu cari teks itu. Exe di `target\release` bisa tetap `VAR_UNK` (Tauri menandai salinan yang dikemas); itu normal. v0.1.3–v0.1.5 sudah dicek: `NSS`.
 3. Salinan teman yang sudah v0.1.2 ke atas akan update sendiri (saat menyala, atau lewat peek dalam 6 jam). Yang masih v0.1.0/v0.1.1 perlu menjalankan setup terbaru sekali secara manual (ada di halaman Releases).
 

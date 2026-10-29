@@ -1,7 +1,7 @@
 # Cuts a release that installed copies pick up on their own:
 #   .\scripts\release.ps1 0.1.2 "Apa yang baru"
 # Bumps the version, builds the signed installer, commits, tags and publishes a
-# GitHub release with the installer, its signature and latest.json.
+# GitHub release with the installer, its signature, latest.json and a portable zip.
 # Needs the signing key at %USERPROFILE%\.tauri\notchy.key (never commit it).
 param(
     [Parameter(Mandatory)][string]$Version,
@@ -41,6 +41,14 @@ try {
         if (-not $LASTEXITCODE) { break }
         if ($try -eq 5) { throw "Packing the installer failed." }
     }
+    # Portable: the plain exe, not marked as installed, so it never tries to run an installer.
+    $exe = "$root\src-tauri\target\release\notchy.exe"
+    if ([IO.File]::ReadAllText($exe, [Text.Encoding]::ASCII).Contains("__TAURI_BUNDLE_TYPE_VAR_NSS")) { throw "notchy.exe is marked as installed; not fit for the portable zip." }
+    $portable = "$root\src-tauri\target\release\bundle\nsis\Notchy_${Version}_x64-portable.zip"
+    foreach ($try in 1..5) {
+        try { Compress-Archive -Path $exe -DestinationPath $portable -Force; break }
+        catch { if ($try -eq 5) { throw }; Start-Sleep -Seconds 20 }  # antivirus still scanning
+    }
 } finally {
     Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "`"$root\src-tauri\target\release\notchy.exe`"" } | Out-Null
     if ($watchdog) { Enable-ScheduledTask "Notchy Watchdog" | Out-Null }
@@ -67,8 +75,10 @@ git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Ca
 git commit -m "Release $Version"
 git tag "v$Version"
 git push origin HEAD "v$Version"
-# The installer's fingerprint goes in the release notes, so anyone can check their download.
+# The fingerprints go in the release notes, so anyone can check their download.
 $sha = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
-$page = "$Notes`n`n**SHA-256** ``$name```n``$sha``"
-gh release create "v$Version" $setup "$setup.sig" $latest --title "Notchy $Version" --notes $page
+$zipSha = (Get-FileHash $portable -Algorithm SHA256).Hash.ToLower()
+$zipName = Split-Path $portable -Leaf
+$page = "$Notes`n`n**Portable** (tanpa instal, tanpa update otomatis): ``$zipName```n`n**SHA-256**`n- ``$name``: ``$sha```n- ``$zipName``: ``$zipSha``"
+gh release create "v$Version" $setup "$setup.sig" $latest $portable --title "Notchy $Version" --notes $page
 Write-Host "Released v$Version. Installed copies (v0.2.1+) pick it up within an hour, after waking from sleep, or on their next start."
