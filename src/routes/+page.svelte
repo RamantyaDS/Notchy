@@ -22,6 +22,7 @@
   import { fetchWeather, type Weather } from "$lib/weather";
   import { upcoming, type CalEvent } from "$lib/calendar";
   import { ALL_PAGES, filterPages, PAGE_LABELS, resolvePageDirection, type PageName } from "$lib/pages";
+  import { formatSpeed, isHighTraffic, type NetworkSpeed } from "$lib/network";
 
   // Black box for the page: errors go to notchy.log, and a heartbeat tells Rust the
   // page still runs and draws (sent from an animation frame, which only comes while
@@ -123,6 +124,9 @@
   // Things running at once, shown side by side in the closed notch.
   let call = $state<Call | null>(null);
   let download = $state<Download | null>(null);
+  let networkSpeed = $state<NetworkSpeed | null>(null);
+  let netSpeedIsland = $state(true);
+  let netSpeedStatus = $state(true);
   // Equalizer bar heights from the audio meter, while it runs.
   let levels = $state<number[] | null>(null);
   // Horizontal swipes cycle which activity leads.
@@ -263,6 +267,9 @@
     ...(timerActive ? [{ kind: "timer" } as const] : []),
     ...(download ? [{ kind: "download", download } as const] : []),
     ...(musicEnabled && media?.playing ? [{ kind: "music", lyric: false } as const] : []),
+    ...(netSpeedIsland && isHighTraffic(networkSpeed) && networkSpeed
+      ? [{ kind: "network", speed: networkSpeed } as const]
+      : []),
   ]);
   const view = $derived(
     mirror
@@ -545,6 +552,7 @@
     const unlistenCall = listen<Call | null>("call", (e) => (call = e.payload));
     invoke<Call | null>("call_state").then((c) => (call = c));
     const unlistenDownload = listen<Download | null>("download", (e) => (download = e.payload));
+    const unlistenNetSpeed = listen<NetworkSpeed>("network-speed", (e) => (networkSpeed = e.payload));
     const unlistenLevel = listen<number[]>("audio-level", (e) => (levels = metering ? e.payload : null));
     const unlistenClip = listen<ClipEntry[]>("clipboard", (e) => (clipItems = e.payload));
     invoke<ClipEntry[]>("clipboard_list").then((c) => (clipItems = c));
@@ -607,6 +615,8 @@
       shelfEnabled?: boolean;
       clipboardEnabled?: boolean;
       shortcutsEnabled?: boolean;
+      netSpeedIsland?: boolean;
+      netSpeedStatus?: boolean;
     };
     let weatherTimer: ReturnType<typeof setTimeout>;
     const loadWeather = async (settings?: AllSettings) => {
@@ -632,6 +642,8 @@
       shelfEnabled = s.shelfEnabled !== false;
       clipboardEnabled = s.clipboardEnabled !== false;
       shortcutsEnabled = s.shortcutsEnabled !== false;
+      netSpeedIsland = s.netSpeedIsland !== false;
+      netSpeedStatus = s.netSpeedStatus !== false;
       const newIdx = pages.indexOf(current);
       page = newIdx !== -1 ? newIdx : Math.min(page, Math.max(0, pages.length - 1));
       pomo.configure(s);
@@ -678,6 +690,7 @@
         unlistenOutside,
         unlistenCall,
         unlistenDownload,
+        unlistenNetSpeed,
         unlistenLevel,
         unlistenClip,
       ])
@@ -733,6 +746,13 @@
           <circle cx="10" cy="10" r="7.5" class="fill" pathLength="100" stroke-dasharray="{power.percent} 100" />
         </svg>
         <span>{power.percent}%{#if power.charging}&nbsp;⚡{/if}</span><span class="sep">·</span>
+      {/if}
+      {#if netSpeedStatus && networkSpeed}
+        <span class="net-status">
+          <span class="down">↓ {formatSpeed(networkSpeed.down)}</span>
+          <span class="up">↑ {formatSpeed(networkSpeed.up)}</span>
+        </span>
+        <span class="sep">·</span>
       {/if}
       <span>{date}</span><b>{time}</b>
     </div>
@@ -1283,6 +1303,18 @@
   }
   .status .sep {
     opacity: 0.6;
+  }
+  .net-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+  }
+  .net-status .down {
+    color: #38bdf8;
+  }
+  .net-status .up {
+    color: #34d399;
   }
   .mini-ring {
     width: 12px;

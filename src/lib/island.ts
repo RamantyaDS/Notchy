@@ -1,3 +1,5 @@
+import type { NetworkSpeed } from "./network";
+
 // What the closed notch shows when several things run at once (notchy.md §5F.1,
 // style 1B): one pill, the main activity first, up to two more at its right end.
 
@@ -8,9 +10,10 @@ export type Activity =
   | { kind: "call"; call: Call }
   | { kind: "timer" }
   | { kind: "download"; download: Download }
-  | { kind: "music"; lyric: boolean };
+  | { kind: "music"; lyric: boolean }
+  | { kind: "network"; speed: NetworkSpeed };
 
-const ORDER: Activity["kind"][] = ["call", "timer", "download", "music"];
+const ORDER: Activity["kind"][] = ["call", "timer", "download", "music", "network"];
 
 /** Main activity and the ones beside it. `turn` (from horizontal swipes) cycles the main one. */
 export function arrange(activities: Activity[], turn = 0): { main: Activity | null; side: Activity[] } {
@@ -36,6 +39,8 @@ export function mainWidth(a: Activity): number {
       return 260;
     case "timer":
       return 200;
+    case "network":
+      return 210;
   }
 }
 
@@ -50,6 +55,8 @@ export function sideWidth(a: Activity): number {
       return 92;
     case "music":
       return 56;
+    case "network":
+      return 82;
   }
 }
 

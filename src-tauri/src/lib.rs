@@ -44,6 +44,7 @@ mod clipboard;
 mod downloads;
 mod health;
 mod media;
+mod network;
 mod notifications;
 mod settings;
 mod share;
@@ -727,6 +728,7 @@ pub fn run() {
             calls::start(app.handle().clone());
             downloads::start(app.handle().clone());
             clipboard::start(app.handle().clone());
+            network::start(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())

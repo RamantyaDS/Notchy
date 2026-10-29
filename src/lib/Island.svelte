@@ -5,6 +5,7 @@
   import { untrack } from "svelte";
   import Bars from "./Bars.svelte";
   import { bytes, duration, type Activity } from "./island";
+  import { formatSpeed } from "./network";
   import { formatTime } from "./media";
   import type { NowPlaying } from "./media";
   import type { Pomodoro } from "./productivity.svelte";
@@ -102,6 +103,15 @@
       <span class="label name">{main.download.name}</span>
       <span class="dim num">{bytes(main.download.bytes)}</span>
       <span class="run" class:on={active}></span>
+    {:else if main.kind === "network"}
+      <span class="net-pill down">
+        <svg class="mini-arrow" viewBox="0 0 24 24"><path d="M12 4v13M7 12l5 5 5-5" /></svg>
+        <span class="num">{formatSpeed(main.speed.down)}</span>
+      </span>
+      <span class="net-pill up">
+        <svg class="mini-arrow" viewBox="0 0 24 24"><path d="M12 20V7M7 12l5-5 5 5" /></svg>
+        <span class="num">{formatSpeed(main.speed.up)}</span>
+      </span>
     {/if}
   </div>
 
@@ -120,6 +130,8 @@
       {:else if a.kind === "download"}
         <span class="blue">{@render arrow()}</span>
         <span class="blue num">{bytes(a.download.speed)}/s</span>
+      {:else if a.kind === "network"}
+        <span class="blue num">↓{formatSpeed(a.speed.down)}</span>
       {/if}
     </div>
   {/each}
@@ -230,6 +242,32 @@
   }
   .blue {
     color: #38bdf8;
+  }
+  .main.network {
+    gap: 10px;
+    justify-content: center;
+  }
+  .net-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .net-pill.down {
+    color: #38bdf8;
+  }
+  .net-pill.up {
+    color: #34d399;
+  }
+  .mini-arrow {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
   .icon {
     display: block;

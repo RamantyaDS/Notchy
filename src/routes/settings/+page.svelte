@@ -25,6 +25,8 @@
     smallLyrics: boolean;
     shortcuts: Shortcut[];
     capsLockPeek: boolean;
+    netSpeedIsland?: boolean;
+    netSpeedStatus?: boolean;
   };
   type Shortcut = { name: string; action: string; target: string };
 
@@ -205,6 +207,37 @@
           onchange={(e) => save({ capsLockPeek: e.currentTarget.checked })}
         />
         <span>Tampilkan Caps Lock dan ganti bahasa keyboard di notch (berlaku setelah Notchy dibuka ulang)</span>
+      </label>
+    {/if}
+  </section>
+
+  <section>
+    <h2>Kecepatan Jaringan</h2>
+    <p class="current">
+      Pantau kecepatan unduh (download) dan unggah (upload) internet secara real-time.
+    </p>
+    {#if settings}
+      <label class="field check">
+        <input
+          type="checkbox"
+          checked={settings.netSpeedIsland !== false}
+          onchange={(e) => save({ netSpeedIsland: e.currentTarget.checked })}
+        />
+        <span class="page-label">
+          <strong>Dynamic Island (Notch Tertutup)</strong>
+          <small>Otomatis melebar saat ada unduhan/unggahan berkecepatan tinggi (&ge; 500 KB/s)</small>
+        </span>
+      </label>
+      <label class="field check">
+        <input
+          type="checkbox"
+          checked={settings.netSpeedStatus !== false}
+          onchange={(e) => save({ netSpeedStatus: e.currentTarget.checked })}
+        />
+        <span class="page-label">
+          <strong>Baris Status (Notch Terbuka)</strong>
+          <small>Tampil di baris atas notch terbuka bersanding dengan baterai dan waktu</small>
+        </span>
       </label>
     {/if}
   </section>

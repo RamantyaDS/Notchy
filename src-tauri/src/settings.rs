@@ -59,6 +59,9 @@ pub struct Settings {
     pub shelf_enabled: bool,
     pub clipboard_enabled: bool,
     pub shortcuts_enabled: bool,
+    /// Network speed indicators on/off
+    pub net_speed_island: bool,
+    pub net_speed_status: bool,
 }
 
 /// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
@@ -111,6 +114,8 @@ impl Default for Settings {
             shelf_enabled: true,
             clipboard_enabled: true,
             shortcuts_enabled: true,
+            net_speed_island: true,
+            net_speed_status: true,
         }
     }
 }
