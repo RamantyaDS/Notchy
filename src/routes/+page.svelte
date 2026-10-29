@@ -994,11 +994,11 @@
   }
   .notch::before {
     right: calc(100% - 1px);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 101 100'%3E%3Cpath d='M0 0 A100 100 0 0 1 100 100 L101 100 L101 0 Z' fill='%23000'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 101 100' preserveAspectRatio='none'%3E%3Cpath d='M0 0 A100 100 0 0 1 100 100 L101 100 L101 0 Z' fill='%23000'/%3E%3C/svg%3E");
   }
   .notch::after {
     left: calc(100% - 1px);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 101 100'%3E%3Cpath d='M101 0 A100 100 0 0 0 1 100 L0 100 L0 0 Z' fill='%23000'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 101 100' preserveAspectRatio='none'%3E%3Cpath d='M101 0 A100 100 0 0 0 1 100 L0 100 L0 0 Z' fill='%23000'/%3E%3C/svg%3E");
   }
 
   /* A faint light rising from the bottom edge, for depth. */
