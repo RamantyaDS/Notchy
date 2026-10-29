@@ -956,13 +956,14 @@
       0 16px 42px rgba(0, 0, 0, 0.4);
   }
 
-  /* "Ears": concave fillets that blend the notch seamlessly into the screen's top edge. */
+  /* "Ears": concave fillets that blend the notch seamlessly into the screen's top edge.
+     1px overlap prevents subpixel rasterization seams on high-DPI (125%, 150%) screens. */
   .notch::before,
   .notch::after {
     content: "";
     position: absolute;
     top: 0;
-    width: var(--e);
+    width: calc(var(--e) + 1px);
     height: var(--e);
     background-size: 100% 100%;
     background-repeat: no-repeat;
@@ -972,12 +973,12 @@
       height 0.62s var(--spring);
   }
   .notch::before {
-    right: 100%;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 A100 100 0 0 1 100 100 L100 0 Z' fill='%23000'/%3E%3C/svg%3E");
+    right: calc(100% - 1px);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 101 100'%3E%3Cpath d='M0 0 A100 100 0 0 1 100 100 L101 100 L101 0 Z' fill='%23000'/%3E%3C/svg%3E");
   }
   .notch::after {
-    left: 100%;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M100 0 A100 100 0 0 0 0 100 L0 0 Z' fill='%23000'/%3E%3C/svg%3E");
+    left: calc(100% - 1px);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 101 100'%3E%3Cpath d='M101 0 A100 100 0 0 0 1 100 L0 100 L0 0 Z' fill='%23000'/%3E%3C/svg%3E");
   }
 
   /* A faint light rising from the bottom edge, for depth. */
