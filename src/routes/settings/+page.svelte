@@ -14,6 +14,12 @@
     waterTo: number;
     remindEvery: number;
     waterEnabled: boolean;
+    musicEnabled: boolean;
+    pomodoroEnabled: boolean;
+    todoEnabled: boolean;
+    shelfEnabled: boolean;
+    clipboardEnabled: boolean;
+    shortcutsEnabled: boolean;
     mirrorNotifications: boolean;
     calendarUrl: string;
     smallLyrics: boolean;
@@ -43,6 +49,30 @@
   }
 
   let settings = $state<Settings | null>(null);
+
+  type PageToggleKey =
+    | "musicEnabled"
+    | "pomodoroEnabled"
+    | "waterEnabled"
+    | "todoEnabled"
+    | "shelfEnabled"
+    | "clipboardEnabled"
+    | "shortcutsEnabled";
+
+  const PAGE_ITEMS: [PageToggleKey, string, string][] = [
+    ["musicEnabled", "Pemutar Musik", "Jam, pemutar media, lirik lagu"],
+    ["pomodoroEnabled", "Fokus Pomodoro", "Timer sesi fokus dan istirahat"],
+    ["waterEnabled", "Minum Air", "Pencatatan hidrasi harian & pengingat"],
+    ["todoEnabled", "Catatan To-Do", "Daftar to-do harian sederhana"],
+    ["shelfEnabled", "Laci File", "Tempat menaruh file/folder sementara"],
+    ["clipboardEnabled", "Papan Klip", "Riwayat salinan teks dan tangkapan layar"],
+    ["shortcutsEnabled", "Pintasan", "Tombol aksi cepat dan peluncur aplikasi"],
+  ];
+
+  const enabledPagesCount = $derived.by(() => {
+    const s = settings;
+    return s ? PAGE_ITEMS.filter(([key]) => s[key] !== false).length : 7;
+  });
   let query = $state("");
   let results = $state<Place[]>([]);
   let searching = $state(false);
@@ -102,6 +132,34 @@
 <main>
   <h1>Notchy</h1>
   {#if saved}<p class="saved">Tersimpan</p>{/if}
+
+  <section>
+    <h2>Halaman di notch</h2>
+    <p class="current">
+      Pilih menu/halaman yang ingin ditampilkan saat notch dibuka:
+      {#if enabledPagesCount <= 1}
+        <strong style="color: #fb923c;"> (Minimal 1 halaman harus aktif)</strong>
+      {/if}
+    </p>
+    {#if settings}
+      <div class="page-toggles">
+        {#each PAGE_ITEMS as [key, label, desc]}
+          <label class="field check" class:disabled={settings[key] !== false && enabledPagesCount <= 1}>
+            <input
+              type="checkbox"
+              checked={settings[key] !== false}
+              disabled={settings[key] !== false && enabledPagesCount <= 1}
+              onchange={(e) => save({ [key]: e.currentTarget.checked })}
+            />
+            <span class="page-label">
+              <strong>{label}</strong>
+              <small>{desc}</small>
+            </span>
+          </label>
+        {/each}
+      </div>
+    {/if}
+  </section>
 
   <section>
     <h2>Notifikasi</h2>
@@ -396,6 +454,29 @@
   }
   .field.check input {
     width: auto;
+  }
+  .field.check.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .page-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0 14px;
+  }
+  .page-label {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .page-label strong {
+    font-size: 13px;
+    color: #eceff7;
+  }
+  .page-label small {
+    font-size: 11.5px;
+    color: #8c94a8;
   }
   input.wide {
     width: 100%;

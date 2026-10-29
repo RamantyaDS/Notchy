@@ -52,6 +52,13 @@ pub struct Settings {
     pub shortcuts: Vec<Shortcut>,
     /// Caps Lock and keyboard-language peeks (one keyboard hook, read at start).
     pub caps_lock_peek: bool,
+    /// Page toggles for the open notch.
+    pub music_enabled: bool,
+    pub pomodoro_enabled: bool,
+    pub todo_enabled: bool,
+    pub shelf_enabled: bool,
+    pub clipboard_enabled: bool,
+    pub shortcuts_enabled: bool,
 }
 
 /// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
@@ -98,6 +105,12 @@ impl Default for Settings {
             small_lyrics: true,
             shortcuts: default_shortcuts(),
             caps_lock_peek: true,
+            music_enabled: true,
+            pomodoro_enabled: true,
+            todo_enabled: true,
+            shelf_enabled: true,
+            clipboard_enabled: true,
+            shortcuts_enabled: true,
         }
     }
 }

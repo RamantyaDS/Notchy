@@ -69,9 +69,29 @@
   // Pages of the open notch, switched with the dots or the mouse wheel.
   const ALL_PAGES = ["now", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"] as const;
   type PageName = (typeof ALL_PAGES)[number];
-  // The water page goes away when the water feature is turned off in Settings.
+  // Page toggles from Settings.
+  let musicEnabled = $state(true);
+  let pomodoroEnabled = $state(true);
   let waterEnabled = $state(true);
-  const pages = $derived(ALL_PAGES.filter((p) => waterEnabled || p !== "water"));
+  let todoEnabled = $state(true);
+  let shelfEnabled = $state(true);
+  let clipboardEnabled = $state(true);
+  let shortcutsEnabled = $state(true);
+
+  const pages = $derived(
+    ALL_PAGES.filter((p) => {
+      switch (p) {
+        case "now": return musicEnabled;
+        case "pomodoro": return pomodoroEnabled;
+        case "water": return waterEnabled;
+        case "todo": return todoEnabled;
+        case "shelf": return shelfEnabled;
+        case "clipboard": return clipboardEnabled;
+        case "shortcuts": return shortcutsEnabled;
+        default: return true;
+      }
+    })
+  );
 
   type Power = { charging: boolean; percent: number; battery: boolean };
   type InUse = { camera: string[]; mic: string[] };
@@ -246,7 +266,7 @@
     ...(call ? [{ kind: "call", call } as const] : []),
     ...(timerActive ? [{ kind: "timer" } as const] : []),
     ...(download ? [{ kind: "download", download } as const] : []),
-    ...(media?.playing ? [{ kind: "music", lyric: false } as const] : []),
+    ...(musicEnabled && media?.playing ? [{ kind: "music", lyric: false } as const] : []),
   ]);
   const view = $derived(
     mirror
@@ -586,6 +606,12 @@
       shortcuts: Shortcut[];
       mascot: boolean;
       minimalNotch: boolean;
+      musicEnabled?: boolean;
+      pomodoroEnabled?: boolean;
+      todoEnabled?: boolean;
+      shelfEnabled?: boolean;
+      clipboardEnabled?: boolean;
+      shortcutsEnabled?: boolean;
     };
     let weatherTimer: ReturnType<typeof setTimeout>;
     const loadWeather = async (settings?: AllSettings) => {
@@ -597,15 +623,22 @@
       weatherTimer = setTimeout(loadWeather, 30 * 60_000);
     };
     const applySettings = (s: AllSettings) => {
-      smallLyrics = s.smallLyrics;
+      smallLyrics = s.smallLyrics && s.musicEnabled !== false;
       mascot = s.mascot !== false;
       if (!mascot) dozing = false;
       minimalNotch = s.minimalNotch === true;
       shortcuts = s.shortcuts ?? [];
-      // Keep the same page in view when the water page appears or goes.
+      // Keep the same page in view when pages appear or go.
       const current = pages[page];
+      musicEnabled = s.musicEnabled !== false;
+      pomodoroEnabled = s.pomodoroEnabled !== false;
       waterEnabled = s.waterEnabled !== false;
-      page = Math.max(0, pages.indexOf(current));
+      todoEnabled = s.todoEnabled !== false;
+      shelfEnabled = s.shelfEnabled !== false;
+      clipboardEnabled = s.clipboardEnabled !== false;
+      shortcutsEnabled = s.shortcutsEnabled !== false;
+      const newIdx = pages.indexOf(current);
+      page = newIdx !== -1 ? newIdx : Math.min(page, Math.max(0, pages.length - 1));
       pomo.configure(s);
       water.configure(s);
       loadWeather(s);
