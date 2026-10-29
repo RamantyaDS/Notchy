@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.2.3 (26 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer: halaman Releases repo itu.
+**Status:** v0.2.4 (29 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
 
 ---
 
