@@ -172,7 +172,7 @@
   function setPinned(on: boolean) {
     pinned = on;
     invoke("set_pinned", { on });
-    if (!on && !hovered && !typing) closeTimer = setTimeout(() => (open = false), 250);
+    if (!on && !hovered && !typing) closeTimer = setTimeout(() => (open = false), 220);
   }
   function openMirror(title = "", link = "") {
     mirror = { title, link };
@@ -397,11 +397,12 @@
     return () => clearInterval(id);
   });
 
-  let closeTimer: ReturnType<typeof setTimeout>;
+  let openTimer: ReturnType<typeof setTimeout> | undefined;
+  let closeTimer: ReturnType<typeof setTimeout> | undefined;
   function setTyping(on: boolean) {
     typing = on;
     invoke(on ? "begin_typing" : "end_typing");
-    if (!on && !hovered) closeTimer = setTimeout(() => (open = false), 250);
+    if (!on && !hovered) closeTimer = setTimeout(() => (open = false), 220);
   }
 
   let lastWheel = 0;
@@ -480,8 +481,16 @@
     const unlisten = listen<boolean>("notch-hover", (e) => {
       hovered = e.payload;
       clearTimeout(closeTimer);
-      if (e.payload) open = true;
-      else if (!typing && !pinned) closeTimer = setTimeout(() => (open = false), 250);
+      clearTimeout(openTimer);
+      if (e.payload) {
+        if (!open) {
+          openTimer = setTimeout(() => (open = true), 90);
+        }
+      } else {
+        if (!typing && !pinned) {
+          closeTimer = setTimeout(() => (open = false), 220);
+        }
+      }
       // Hold a clickable peek while the cursor is on it; let it go shortly after.
       if (clickable(peek)) {
         clearTimeout(peekTimer);
@@ -902,9 +911,6 @@
 
   .notch {
     --spring: cubic-bezier(0.34, 1.32, 0.5, 1);
-    /* Plain black, like the real Dynamic Island. A hairline edge keeps it
-       visible on a black wallpaper; color only appears to mean something. */
-    --edge: rgba(255, 255, 255, 0.16);
     position: absolute;
     top: 0;
     left: 50%;
@@ -914,16 +920,16 @@
     background: #000;
     border-radius: 0 0 var(--r) var(--r);
     box-shadow:
-      0 0 0 0.5px var(--edge),
-      0 14px 34px -16px rgba(0, 0, 0, 0.95);
+      0 4px 14px rgba(0, 0, 0, 0.22),
+      0 10px 30px rgba(0, 0, 0, 0.35);
   }
   .notch.open {
     box-shadow:
-      0 0 0 0.5px var(--edge),
-      0 18px 40px -16px rgba(0, 0, 0, 0.95);
+      0 6px 18px rgba(0, 0, 0, 0.2),
+      0 16px 42px rgba(0, 0, 0, 0.4);
   }
 
-  /* "Ears": concave fillets that blend the notch into the screen's top edge. */
+  /* "Ears": concave fillets that blend the notch seamlessly into the screen's top edge. */
   .notch::before,
   .notch::after {
     content: "";
@@ -931,30 +937,20 @@
     top: 0;
     width: var(--e);
     height: var(--e);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    pointer-events: none;
     transition:
-      width 0.45s,
-      height 0.45s;
+      width 0.62s var(--spring),
+      height 0.62s var(--spring);
   }
-  /* The ears carry the hairline along their curve, covering the straight edge beside them. */
   .notch::before {
     right: 100%;
-    background: radial-gradient(
-      circle at 0 100%,
-      transparent calc(var(--e) - 0.5px),
-      var(--edge) calc(var(--e) - 0.5px),
-      var(--edge) var(--e),
-      #000 calc(var(--e) + 0.3px)
-    );
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 A100 100 0 0 1 100 100 L100 0 Z' fill='%23000'/%3E%3C/svg%3E");
   }
   .notch::after {
     left: 100%;
-    background: radial-gradient(
-      circle at 100% 100%,
-      transparent calc(var(--e) - 0.5px),
-      var(--edge) calc(var(--e) - 0.5px),
-      var(--edge) var(--e),
-      #000 calc(var(--e) + 0.3px)
-    );
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M100 0 A100 100 0 0 0 0 100 L0 0 Z' fill='%23000'/%3E%3C/svg%3E");
   }
 
   /* A faint light rising from the bottom edge, for depth. */
@@ -1305,7 +1301,7 @@
 
   /* "Notch minimal": a plain black line, no glow. */
   .notch.minimal {
-    box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
   }
   .minimal .ambient {
     opacity: 0;

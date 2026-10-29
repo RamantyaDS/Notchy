@@ -44,15 +44,30 @@
 
   // A title or artist too long for the line slides across while hovered.
   // Measured on hover, since the text and the layout change under it.
+  let lineWrapTitle = $state<HTMLElement>();
+  let lineWrapArtist = $state<HTMLElement>();
   let titleEl = $state<HTMLElement>();
   let artistEl = $state<HTMLElement>();
   let titleShift = $state(0);
   let artistShift = $state(0);
+
   function measure() {
-    const shift = (el?: HTMLElement) => (el ? Math.max(0, el.scrollWidth - el.clientWidth) : 0);
-    titleShift = shift(titleEl);
-    artistShift = shift(artistEl);
+    if (titleEl && lineWrapTitle) {
+      const diff = titleEl.scrollWidth - lineWrapTitle.clientWidth;
+      titleShift = diff > 4 ? diff : 0;
+    }
+    if (artistEl && lineWrapArtist) {
+      const diff = artistEl.scrollWidth - lineWrapArtist.clientWidth;
+      artistShift = diff > 4 ? diff : 0;
+    }
   }
+
+  $effect(() => {
+    track.title;
+    track.artist;
+    media.album;
+    requestAnimationFrame(measure);
+  });
 
   // Time under the cursor on the progress bar.
   let hoverTime = $state<string | null>(null);
@@ -74,18 +89,23 @@
       <div class="art" style:background-image={media.art ? `url(${media.art})` : null}>
         {#if !media.art}♪{/if}
       </div>
-      <div class="meta" role="presentation" onpointerenter={measure}>
+      <div
+        class="meta"
+        role="presentation"
+        onpointerenter={measure}
+        style="--title-shift: -{titleShift}px; --artist-shift: -{artistShift}px;"
+      >
         {#if !withLyrics}
           <div class="header">
             <span>{clock}</span>
             <Bars live={media.playing} />
           </div>
         {/if}
-        <div class="line">
-          <div class="title" bind:this={titleEl} class:marquee={titleShift > 0} style:--shift="-{titleShift}px">{track.title}</div>
+        <div class="line-wrap" bind:this={lineWrapTitle}>
+          <div class="title" bind:this={titleEl} class:marquee={titleShift > 0}>{track.title}</div>
         </div>
-        <div class="line">
-          <div class="artist" bind:this={artistEl} class:marquee={artistShift > 0} style:--shift="-{artistShift}px">
+        <div class="line-wrap artist-line" bind:this={lineWrapArtist}>
+          <div class="artist" bind:this={artistEl} class:marquee={artistShift > 0}>
             {[track.artist, media.album].filter(Boolean).join(" - ")}
           </div>
         </div>
@@ -209,39 +229,66 @@
     position: absolute;
     right: 0;
   }
-  .line {
+  .line-wrap {
     overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
+    height: 19px;
+  }
+  .line-wrap.artist-line {
+    height: 16px;
+    margin-top: 2px;
   }
   .title,
   .artist {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: block;
+    margin: 0;
+    padding: 0;
   }
-  .meta:hover .marquee {
-    display: inline-block;
-    overflow: visible;
+  .title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 19px;
+  }
+  .artist {
+    font-size: 12px;
+    line-height: 16px;
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .meta:hover .title.marquee {
+    display: block;
+    width: max-content;
     text-overflow: clip;
-    animation: marquee 5s ease-in-out infinite alternate;
+    animation: marquee-title 5s ease-in-out infinite alternate;
   }
-  @keyframes marquee {
+  .meta:hover .artist.marquee {
+    display: block;
+    width: max-content;
+    text-overflow: clip;
+    animation: marquee-artist 5s ease-in-out infinite alternate;
+  }
+  @keyframes marquee-title {
     0%,
     20% {
       transform: translateX(0);
     }
     80%,
     100% {
-      transform: translateX(var(--shift));
+      transform: translateX(var(--title-shift, 0px));
     }
   }
-  .title {
-    font-size: 14px;
-    font-weight: 600;
-  }
-  .artist {
-    margin-top: 2px;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.55);
+  @keyframes marquee-artist {
+    0%,
+    20% {
+      transform: translateX(0);
+    }
+    80%,
+    100% {
+      transform: translateX(var(--artist-shift, 0px));
+    }
   }
 
   .progress {
