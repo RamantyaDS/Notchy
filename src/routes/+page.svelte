@@ -20,6 +20,7 @@
   import { Pomodoro, Shelf, Todo, Water, type Settings } from "$lib/productivity.svelte";
   import { fetchWeather, type Weather } from "$lib/weather";
   import { upcoming, type CalEvent } from "$lib/calendar";
+  import { ALL_PAGES, filterPages, PAGE_LABELS, type PageName } from "$lib/pages";
 
   // Black box for the page: errors go to notchy.log, and a heartbeat tells Rust the
   // page still runs and draws (sent from an animation frame, which only comes while
@@ -67,9 +68,6 @@
   };
 
   // Pages of the open notch, switched with the dots or the mouse wheel.
-  const ALL_PAGES = ["now", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"] as const;
-  type PageName = (typeof ALL_PAGES)[number];
-  // Page toggles from Settings.
   let musicEnabled = $state(true);
   let pomodoroEnabled = $state(true);
   let waterEnabled = $state(true);
@@ -79,17 +77,14 @@
   let shortcutsEnabled = $state(true);
 
   const pages = $derived(
-    ALL_PAGES.filter((p) => {
-      switch (p) {
-        case "now": return musicEnabled;
-        case "pomodoro": return pomodoroEnabled;
-        case "water": return waterEnabled;
-        case "todo": return todoEnabled;
-        case "shelf": return shelfEnabled;
-        case "clipboard": return clipboardEnabled;
-        case "shortcuts": return shortcutsEnabled;
-        default: return true;
-      }
+    filterPages(ALL_PAGES, {
+      musicEnabled,
+      pomodoroEnabled,
+      waterEnabled,
+      todoEnabled,
+      shelfEnabled,
+      clipboardEnabled,
+      shortcutsEnabled,
     })
   );
 
@@ -453,15 +448,6 @@
   }
 
   // The page's name shows briefly after flipping, and while a dot is hovered.
-  const PAGE_LABELS: Record<PageName, string> = {
-    now: "Pemutar Musik",
-    pomodoro: "Fokus Pomodoro",
-    water: "Minum Air",
-    todo: "Catatan To-Do",
-    shelf: "Laci File",
-    clipboard: "Papan Klip",
-    shortcuts: "Pintasan",
-  };
   let hoveredPage = $state<PageName | null>(null);
   let showPageLabel = $state(false);
   let pageLabelTimer: ReturnType<typeof setTimeout> | undefined;
