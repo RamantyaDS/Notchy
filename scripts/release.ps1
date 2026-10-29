@@ -42,9 +42,11 @@ try {
     New-Item -ItemType Directory -Force (Split-Path $portable) | Out-Null
     foreach ($try in 1..5) {
         Start-Sleep -Seconds 20
-        try { Compress-Archive -Path $exe -DestinationPath $portable -Force; break }
+        # Compress-Archive only reports a locked file, so make that a real failure.
+        try { Compress-Archive -Path $exe -DestinationPath $portable -Force -ErrorAction Stop; break }
         catch { if ($try -eq 5) { throw } }
     }
+    if (-not (Test-Path $portable)) { throw "Making the portable zip failed." }
     # Same antivirus hold (os error 1224 when packing), so retry the packing alone.
     foreach ($try in 1..5) {
         Start-Sleep -Seconds 20

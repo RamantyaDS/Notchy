@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.2.4 (29 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
+**Status:** v0.2.5 (29 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
 
 ---
 
@@ -297,6 +297,7 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.2.2 | 23 Okt 2026 | Sisa unduhan yang gagal/dibatalkan (`.crdownload`/`.part` yang tidak bertambah) tidak lagi tampil terus sebagai "Mengunduh…". Hanya tes otomatis; uji langsung dilewati. |
 | v0.2.3 | 26 Okt 2026 | Paket polesan (bagian 5G): baris status di notch terbuka, halaman Air/To-do/Timer dirapikan, peek bercincin baterai, notch minimal, mata menyapa, sakelar Mata dan Notch minimal di tray; SHA-256 di catatan rilis; FAQ dan link masukan di README |
 | v0.2.4 | 29 Okt 2026 | Bagian dari PR #1 Malik (bagian 5H): program tidak dijalankan dari Shelf/Unduhan, filter link notifikasi, CSP, simpan file aman, tooltip nama halaman dan waktu lagu, badge Clipboard, setting Caps Lock & bahasa keyboard; CI. Versi portable (bagian 5I) |
+| v0.2.5 | 29 Okt 2026 | PR #1 versi akhir dari Malik: notch tanpa garis tepi (bayangan lembut), buka setelah kursor diam 90 ms, tutup 220 ms, judul lagu tidak melompat saat di-hover. Saat rilis, zip portable gagal (antivirus mengunci exe, dan `Compress-Archive` hanya melaporkan error tanpa berhenti), lalu skrip berhenti setelah push tag tapi sebelum GitHub Release dibuat. Pemulihan: zip dibuat dari salinan exe yang penandanya dikembalikan ke `UNK`, lalu rilis dibuat manual. Sejak itu `release.ps1` memakai `-ErrorAction Stop` dan memastikan zip ada sebelum commit |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.
