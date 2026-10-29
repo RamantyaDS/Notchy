@@ -3,7 +3,8 @@
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
   import { onMount, untrack } from "svelte";
-  import { fade } from "svelte/transition";
+  import { fade, fly } from "svelte/transition";
+  import { cubicOut } from "svelte/easing";
   import ClipboardPage, { type ClipEntry } from "$lib/ClipboardPage.svelte";
   import Island from "$lib/Island.svelte";
   import Mirror from "$lib/Mirror.svelte";
@@ -20,7 +21,7 @@
   import { Pomodoro, Shelf, Todo, Water, type Settings } from "$lib/productivity.svelte";
   import { fetchWeather, type Weather } from "$lib/weather";
   import { upcoming, type CalEvent } from "$lib/calendar";
-  import { ALL_PAGES, filterPages, PAGE_LABELS, type PageName } from "$lib/pages";
+  import { ALL_PAGES, filterPages, PAGE_LABELS, resolvePageDirection, type PageName } from "$lib/pages";
 
   // Black box for the page: errors go to notchy.log, and a heartbeat tells Rust the
   // page still runs and draws (sent from an animation frame, which only comes while
@@ -444,15 +445,23 @@
     if (!open || typing || (e.target as HTMLElement).closest(".scroll, .lyrics")) return;
     if (Date.now() - lastWheel < 350 || Math.abs(e.deltaY) < 4) return;
     lastWheel = Date.now();
-    goPage(page + (e.deltaY > 0 ? 1 : -1));
+    const step = e.deltaY > 0 ? 1 : -1;
+    goPage(page + step, step);
   }
 
   // The page's name shows briefly after flipping, and while a dot is hovered.
   let hoveredPage = $state<PageName | null>(null);
   let showPageLabel = $state(false);
   let pageLabelTimer: ReturnType<typeof setTimeout> | undefined;
-  function goPage(i: number) {
-    page = (i + pages.length) % pages.length;
+  let pageDirection = $state<1 | -1>(1);
+
+  function goPage(target: number, step?: number) {
+    if (pages.length <= 1) return;
+    const next = (target + pages.length) % pages.length;
+    if (next === page && step === undefined) return;
+
+    pageDirection = resolvePageDirection(page, next, step);
+    page = next;
     showPageLabel = true;
     clearTimeout(pageLabelTimer);
     pageLabelTimer = setTimeout(() => (showPageLabel = false), 1200);
@@ -862,7 +871,11 @@
 
   {#if paged && !mirror && view !== "peek" && pages[page] !== "now"}
     {#key page}
-      <div class="layer on below" in:fade={{ duration: 260, delay: 160 }} out:fade={{ duration: 100 }}>
+      <div
+        class="layer on below"
+        in:fly={{ x: pageDirection * 48, duration: 220, delay: 50, easing: cubicOut }}
+        out:fly={{ x: -pageDirection * 48, duration: 120, easing: cubicOut }}
+      >
         {#if pages[page] === "pomodoro"}
           <TimerPage {pomo} now={nowMs} />
         {:else if pages[page] === "water"}
@@ -885,7 +898,7 @@
       <button
         class="arrow"
         class:next={step > 0}
-        onclick={() => goPage(page + step)}
+        onclick={() => goPage(page + step, step)}
         aria-label={step > 0 ? "Halaman berikutnya" : "Halaman sebelumnya"}
         in:fade={{ duration: 200, delay: 200 }}
       >
@@ -905,7 +918,7 @@
           aria-label={PAGE_LABELS[name]}
           class:on={i === page}
           onpointerenter={() => (hoveredPage = name)}
-          onclick={() => goPage(i)}
+          onclick={() => goPage(i, i >= page ? 1 : -1)}
         ></button>
       {/each}
     </div>

@@ -49,3 +49,17 @@ export function filterPages(allPages: readonly PageName[], toggles: PageToggles)
 
   return active.length > 0 ? active : ["now"];
 }
+
+/**
+ * Resolves the slide direction (+1 for forward/right-to-left, -1 for backward/left-to-right).
+ */
+export function resolvePageDirection(
+  from: number,
+  to: number,
+  explicitStep?: number
+): 1 | -1 {
+  if (explicitStep !== undefined) {
+    return explicitStep > 0 ? 1 : -1;
+  }
+  return to >= from ? 1 : -1;
+}

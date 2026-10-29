@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALL_PAGES, filterPages, PAGE_LABELS, type PageToggles } from "./pages";
+import { ALL_PAGES, filterPages, PAGE_LABELS, resolvePageDirection, type PageToggles } from "./pages";
 
 describe("pages configuration and labels", () => {
   it("defines all 7 pages with appropriate Indonesian labels", () => {
@@ -65,5 +65,25 @@ describe("pages configuration and labels", () => {
     const fallback = filterPages(ALL_PAGES, allFalse);
     expect(fallback).toEqual(["now"]);
     expect(fallback.length).toBeGreaterThan(0);
+  });
+
+  describe("resolvePageDirection", () => {
+    it("returns 1 for forward navigation without explicit step", () => {
+      expect(resolvePageDirection(0, 1)).toBe(1);
+      expect(resolvePageDirection(2, 5)).toBe(1);
+    });
+
+    it("returns -1 for backward navigation without explicit step", () => {
+      expect(resolvePageDirection(3, 1)).toBe(-1);
+      expect(resolvePageDirection(5, 2)).toBe(-1);
+    });
+
+    it("respects explicit step > 0 even when wrapping backwards (e.g. 6 to 0)", () => {
+      expect(resolvePageDirection(6, 0, 1)).toBe(1);
+    });
+
+    it("respects explicit step < 0 even when wrapping forwards (e.g. 0 to 6)", () => {
+      expect(resolvePageDirection(0, 6, -1)).toBe(-1);
+    });
   });
 });
