@@ -206,6 +206,16 @@ Dipilih pengguna dari mockup 26 Okt 2026 (`D:\Projects\notchy-promo\mockup\v023.
 - **Rilis**: SHA-256 installer di catatan rilis GitHub. **README**: FAQ, peringatan Windows/SmartScreen, cara cek SHA-256, link "Kirim masukan" (GitHub Issues).
 - Diuji 26 Okt 2026: screenshot baris status (82% ⚡, tanggal, jam) di Musik/Timer/Air/To-do/Shelf; halaman Timer, Air, To-do sesuai mockup; sakelar Pengingat tersimpan ke settings.json; pengguna mencoba peek cincin (cabut/colok charger), Notch minimal, dan sakelar Mata di tray. Belum: mata menyapa (perlu 2 menit diam).
 
+### H. Dari PR #1 (Malik), 29 Okt 2026
+PR #1 tidak di-merge utuh; bagian yang disetujui di review kedua dimasukkan sendiri ke kode, dengan Malik sebagai co-author di commit.
+- **Keamanan**: program/skrip (exe, msi, bat, ps1, vbs, …) dari Unduhan atau Shelf hanya ditunjukkan di Explorer, tidak dijalankan; path berawalan `-`/`/` ditolak; link dari klik notifikasi hanya skema yang aman (https, mailto, tel, ms-teams, whatsapp, zoommtg, slack, discord, …); CSP aktif (sebelumnya `null`), dan pelanggarannya masuk notchy.log.
+- **Ketahanan**: settings.json dan file data ditulis ke file sementara lalu di-rename (tidak terpotong saat mati listrik); memori clipboard dibebaskan bila gagal; thumbnail clipboard aman dari overflow; cover lagu > 16 MB diabaikan; area hover dibaca tanpa kunci dari hook mouse.
+- **Tampilan**: nama halaman muncul sebentar saat ganti halaman dan saat titik di-hover; judul/artis panjang bergeser saat di-hover; waktu muncul di atas bar progres saat di-hover; badge Teks/Gambar dan "✓ Tersalin!" di Clipboard.
+- **Setting baru** `capsLockPeek` (Settings → Keyboard & sistem): mematikan peek Caps Lock *dan* bahasa keyboard (satu hook keyboard), berlaku setelah Notchy dibuka ulang.
+- **Repo**: CI GitHub Actions (svelte-check, vitest, build, cargo test, clippy), tes lirik.
+- Tidak diambil: workflow rilis (akan menimpa installer bertanda tangan), README/ADVERTISING.md, ubahan border/bayangan/telinga, jeda hover 90 ms, denyut saat tucked.
+- Diuji 29 Okt 2026: 23 tes Rust + 17 tes vitest lulus, svelte-check bersih, clippy tanpa peringatan baru; build dev jalan, nama halaman muncul ("Catatan To-Do"), thumbnail Shelf tetap tampil dengan CSP, log tanpa pelanggaran CSP. Belum diuji langsung: cuaca, lirik, cover lagu, cermin kamera, badge Clipboard, marquee.
+
 ---
 
 ## 6. Urutan pengerjaan

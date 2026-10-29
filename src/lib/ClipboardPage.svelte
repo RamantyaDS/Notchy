@@ -10,7 +10,7 @@
   async function copy(item: ClipEntry) {
     if (await invoke<boolean>("clipboard_copy", { id: item.id })) {
       copied = item.id;
-      setTimeout(() => (copied = null), 1200);
+      setTimeout(() => (copied = null), 800);
     }
   }
 </script>
@@ -28,13 +28,14 @@
     <div class="list scroll">
       {#each items as item (item.id)}
         <button class="item" class:done={copied === item.id} onclick={() => copy(item)} title={item.kind === "text" ? item.preview : "Gambar"}>
+          <span class="kind" class:img={item.kind === "image"}>{item.kind === "image" ? "Gambar" : "Teks"}</span>
           {#if item.kind === "image"}
             <img src={item.preview} alt="" />
-            <span class="text">Gambar · {item.width} × {item.height}</span>
+            <span class="text">{item.width} × {item.height}</span>
           {:else}
             <span class="text">{item.preview}</span>
           {/if}
-          {#if copied === item.id}<span class="ok">Disalin</span>{/if}
+          {#if copied === item.id}<span class="ok">✓ Tersalin!</span>{/if}
         </button>
       {/each}
     </div>
@@ -126,10 +127,36 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .kind {
+    flex: none;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 1.5px 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.65);
+  }
+  .kind.img {
+    background: rgba(56, 189, 248, 0.18);
+    color: #38bdf8;
+  }
   .ok {
     flex: none;
     font-size: 11px;
     color: #34d399;
+    background: rgba(16, 185, 129, 0.16);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 1px 7px;
+    border-radius: 999px;
     font-weight: 600;
+    animation: pop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes pop {
+    from {
+      transform: scale(0.8);
+      opacity: 0;
+    }
   }
 </style>

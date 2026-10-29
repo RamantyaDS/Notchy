@@ -146,10 +146,12 @@ fn now_playing() -> Option<NowPlaying> {
 /// Reads an image stream (album art, app logo) into a data URL.
 pub(crate) fn read_art(thumbnail: IRandomAccessStreamReference) -> Option<String> {
     let stream = thumbnail.OpenReadAsync().ok()?.get().ok()?;
-    let size = stream.Size().ok()? as u32;
-    if size == 0 {
+    let size = stream.Size().ok()?;
+    // Art is a few hundred KB at most; a huge stream is not worth reading.
+    if size == 0 || size > 16 * 1024 * 1024 {
         return None;
     }
+    let size = size as u32;
     let reader = DataReader::CreateDataReader(&stream.GetInputStreamAt(0).ok()?).ok()?;
     reader.LoadAsync(size).ok()?.get().ok()?;
     let mut bytes = vec![0u8; size as usize];

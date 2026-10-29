@@ -25,9 +25,21 @@
   // page still runs and draws (sent from an animation frame, which only comes while
   // the page renders). Without beats for a while, Rust reloads the page.
   const logJs = (msg: string) => invoke("log_js", { msg }).catch(() => {});
-  window.addEventListener("error", (e) => logJs(`${e.message} (${String(e.filename).split("/").pop()}:${e.lineno})`));
-  window.addEventListener("unhandledrejection", (e) => logJs(`unhandled: ${e.reason?.stack ?? e.reason}`));
-  setInterval(() => requestAnimationFrame(() => invoke("heartbeat").catch(() => {})), 5000);
+  const onError = (e: ErrorEvent) => logJs(`${e.message} (${String(e.filename).split("/").pop()}:${e.lineno})`);
+  const onRejection = (e: PromiseRejectionEvent) => logJs(`unhandled: ${e.reason?.stack ?? e.reason}`);
+  const onBlocked = (e: SecurityPolicyViolationEvent) => logJs(`CSP blocked ${e.blockedURI} (${e.effectiveDirective})`);
+  onMount(() => {
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    document.addEventListener("securitypolicyviolation", onBlocked);
+    const beat = setInterval(() => requestAnimationFrame(() => invoke("heartbeat").catch(() => {})), 5000);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+      document.removeEventListener("securitypolicyviolation", onBlocked);
+      clearInterval(beat);
+    };
+  });
 
   // Sizes from notchy.md §4 (logical px).
   // Open pages are 154 tall: a 16 px status row (battery, date, time) above the page.
@@ -416,7 +428,27 @@
     if (!open || typing || (e.target as HTMLElement).closest(".scroll, .lyrics")) return;
     if (Date.now() - lastWheel < 350 || Math.abs(e.deltaY) < 4) return;
     lastWheel = Date.now();
-    page = (page + (e.deltaY > 0 ? 1 : -1) + pages.length) % pages.length;
+    goPage(page + (e.deltaY > 0 ? 1 : -1));
+  }
+
+  // The page's name shows briefly after flipping, and while a dot is hovered.
+  const PAGE_LABELS: Record<PageName, string> = {
+    now: "Pemutar Musik",
+    pomodoro: "Fokus Pomodoro",
+    water: "Minum Air",
+    todo: "Catatan To-Do",
+    shelf: "Laci File",
+    clipboard: "Papan Klip",
+    shortcuts: "Pintasan",
+  };
+  let hoveredPage = $state<PageName | null>(null);
+  let showPageLabel = $state(false);
+  let pageLabelTimer: ReturnType<typeof setTimeout> | undefined;
+  function goPage(i: number) {
+    page = (i + pages.length) % pages.length;
+    showPageLabel = true;
+    clearTimeout(pageLabelTimer);
+    pageLabelTimer = setTimeout(() => (showPageLabel = false), 1200);
   }
 
   // Long press (still, on a non-button spot) pins the notch open, or lets it go.
@@ -619,6 +651,7 @@
       clearInterval(calendarPoll);
       calendarTimers.forEach(clearTimeout);
       clearTimeout(closeTimer);
+      clearTimeout(pageLabelTimer);
       clearTimeout(tick);
       clearTimeout(blinkTimer);
       clearTimeout(sleepTimer);
@@ -829,16 +862,28 @@
       <button
         class="arrow"
         class:next={step > 0}
-        onclick={() => (page = (page + step + pages.length) % pages.length)}
+        onclick={() => goPage(page + step)}
         aria-label={step > 0 ? "Halaman berikutnya" : "Halaman sebelumnya"}
         in:fade={{ duration: 200, delay: 200 }}
       >
         <svg viewBox="0 0 24 24"><path d={step > 0 ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} /></svg>
       </button>
     {/each}
-    <div class="pager" role="tablist" in:fade={{ duration: 200, delay: 200 }}>
+    {#if hoveredPage || showPageLabel}
+      <div class="page-tooltip" transition:fade={{ duration: 150 }}>
+        {PAGE_LABELS[hoveredPage ?? pages[page]]}
+      </div>
+    {/if}
+    <div class="pager" role="tablist" tabindex="-1" in:fade={{ duration: 200, delay: 200 }} onpointerleave={() => (hoveredPage = null)}>
       {#each pages as name, i}
-        <button role="tab" aria-selected={i === page} aria-label={name} class:on={i === page} onclick={() => (page = i)}></button>
+        <button
+          role="tab"
+          aria-selected={i === page}
+          aria-label={PAGE_LABELS[name]}
+          class:on={i === page}
+          onpointerenter={() => (hoveredPage = name)}
+          onclick={() => goPage(i)}
+        ></button>
       {/each}
     </div>
   {/if}
@@ -1084,6 +1129,24 @@
   .pager button.on {
     width: 15px;
     background: #fff;
+  }
+
+  .page-tooltip {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10.5px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.95);
+    background: rgba(18, 18, 22, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    padding: 2px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
   }
 
   /* Camera / mic indicators on the closed notch. */

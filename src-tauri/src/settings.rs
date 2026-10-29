@@ -50,6 +50,8 @@ pub struct Settings {
     small_lyrics: bool,
     /// Buttons on the shortcuts page.
     pub shortcuts: Vec<Shortcut>,
+    /// Caps Lock and keyboard-language peeks (one keyboard hook, read at start).
+    pub caps_lock_peek: bool,
 }
 
 /// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
@@ -95,6 +97,7 @@ impl Default for Settings {
             calendar_url: String::new(),
             small_lyrics: true,
             shortcuts: default_shortcuts(),
+            caps_lock_peek: true,
         }
     }
 }
@@ -110,10 +113,8 @@ pub fn get_settings() -> Settings {
 
 #[tauri::command]
 pub fn save_settings(app: AppHandle, settings: Settings) -> Result<(), String> {
-    let path = path();
-    std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
-    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    crate::store::write_safely(&path(), &json)?;
     let _ = app.emit("settings", &settings);
     Ok(())
 }

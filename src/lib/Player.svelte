@@ -41,6 +41,29 @@
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     seek(((e.clientX - r.left) / r.width) * media.duration);
   }
+
+  // A title or artist too long for the line slides across while hovered.
+  // Measured on hover, since the text and the layout change under it.
+  let titleEl = $state<HTMLElement>();
+  let artistEl = $state<HTMLElement>();
+  let titleShift = $state(0);
+  let artistShift = $state(0);
+  function measure() {
+    const shift = (el?: HTMLElement) => (el ? Math.max(0, el.scrollWidth - el.clientWidth) : 0);
+    titleShift = shift(titleEl);
+    artistShift = shift(artistEl);
+  }
+
+  // Time under the cursor on the progress bar.
+  let hoverTime = $state<string | null>(null);
+  let hoverX = $state(0);
+  function onBarMove(e: MouseEvent) {
+    if (!media.duration) return;
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    hoverX = ratio * 100;
+    hoverTime = formatTime(ratio * media.duration);
+  }
 </script>
 
 <!-- Layout: cover beside the header and title, progress underneath,
@@ -51,22 +74,36 @@
       <div class="art" style:background-image={media.art ? `url(${media.art})` : null}>
         {#if !media.art}♪{/if}
       </div>
-      <div class="meta">
+      <div class="meta" role="presentation" onpointerenter={measure}>
         {#if !withLyrics}
           <div class="header">
             <span>{clock}</span>
             <Bars live={media.playing} />
           </div>
         {/if}
-        <div class="title">{track.title}</div>
-        <div class="artist">{[track.artist, media.album].filter(Boolean).join(" - ")}</div>
+        <div class="line">
+          <div class="title" bind:this={titleEl} class:marquee={titleShift > 0} style:--shift="-{titleShift}px">{track.title}</div>
+        </div>
+        <div class="line">
+          <div class="artist" bind:this={artistEl} class:marquee={artistShift > 0} style:--shift="-{artistShift}px">
+            {[track.artist, media.album].filter(Boolean).join(" - ")}
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="progress">
       <span>{formatTime(pos)}</span>
-      <button class="bar" onclick={seekTo} disabled={!media.duration} aria-label="Geser posisi lagu">
+      <button
+        class="bar"
+        onclick={seekTo}
+        onmousemove={onBarMove}
+        onmouseleave={() => (hoverTime = null)}
+        disabled={!media.duration}
+        aria-label="Geser posisi lagu"
+      >
         <span class="fill" style:width="{progress * 100}%"></span>
+        {#if hoverTime}<span class="scrub-tooltip" style:left="{hoverX}%">{hoverTime}</span>{/if}
       </button>
       <span>{media.duration ? `-${formatTime(media.duration - pos)}` : "--:--"}</span>
     </div>
@@ -172,11 +209,30 @@
     position: absolute;
     right: 0;
   }
+  .line {
+    overflow: hidden;
+  }
   .title,
   .artist {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .meta:hover .marquee {
+    display: inline-block;
+    overflow: visible;
+    text-overflow: clip;
+    animation: marquee 5s ease-in-out infinite alternate;
+  }
+  @keyframes marquee {
+    0%,
+    20% {
+      transform: translateX(0);
+    }
+    80%,
+    100% {
+      transform: translateX(var(--shift));
+    }
   }
   .title {
     font-size: 14px;
@@ -205,7 +261,7 @@
   .bar {
     position: relative;
     flex: 1;
-    height: 12px;
+    height: 14px;
     padding: 0;
     border: 0;
     background: none;
@@ -221,6 +277,7 @@
     height: 4px;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.16);
+    transition: height 0.15s ease, background 0.15s ease;
   }
   .fill {
     position: relative;
@@ -228,6 +285,32 @@
     height: 4px;
     border-radius: 2px;
     background: #fff;
+    transition: height 0.15s ease;
+  }
+  .bar:hover::after,
+  .bar:hover .fill {
+    height: 6px;
+    border-radius: 3px;
+  }
+  .bar:hover::after {
+    background: rgba(255, 255, 255, 0.25);
+  }
+  .scrub-tooltip {
+    position: absolute;
+    bottom: calc(100% + 5px);
+    transform: translateX(-50%);
+    background: rgba(18, 18, 22, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+    z-index: 10;
   }
 
   /* Transport centered; the lyrics button sits on the left, under the cover. */

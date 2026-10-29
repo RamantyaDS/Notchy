@@ -10,7 +10,7 @@ use base64::Engine;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use windows::core::{w, PCWSTR};
-use windows::Win32::Foundation::{HANDLE, HGLOBAL, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{GlobalFree, HANDLE, HGLOBAL, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::DataExchange::{
     AddClipboardFormatListener, CloseClipboard, EmptyClipboard, GetClipboardData, IsClipboardFormatAvailable,
     OpenClipboard, RegisterClipboardFormatW, SetClipboardData,
@@ -241,19 +241,23 @@ unsafe fn write(data: &Data) -> bool {
         let Ok(mem) = GlobalAlloc(GMEM_MOVEABLE, bytes.len()) else { return false };
         let p = GlobalLock(mem) as *mut u8;
         if p.is_null() {
+            let _ = GlobalFree(Some(mem));
             return false;
         }
         std::ptr::copy_nonoverlapping(bytes.as_ptr(), p, bytes.len());
         let _ = GlobalUnlock(mem);
         if OpenClipboard(None).is_err() {
+            let _ = GlobalFree(Some(mem));
             return false;
         }
         SELF_COPY.store(true, Ordering::Relaxed);
         let _ = EmptyClipboard();
         let ok = SetClipboardData(format, Some(HANDLE(mem.0))).is_ok();
         let _ = CloseClipboard();
+        // The clipboard owns the memory only once SetClipboardData succeeds.
         if !ok {
             SELF_COPY.store(false, Ordering::Relaxed);
+            let _ = GlobalFree(Some(mem));
         }
         ok
     }
@@ -276,7 +280,8 @@ pub fn thumbnail(dib: &[u8], max: u32) -> Option<(Vec<u8>, u32, u32)> {
     let masks = if compression == 3 && header == 40 { 12 } else { 0 };
     let pixels = header + masks;
     let stride = (w * bpp / 8 + 3) & !3;
-    if dib.len() < pixels + stride * h {
+    let total = stride.checked_mul(h).and_then(|s| pixels.checked_add(s))?;
+    if dib.len() < total {
         return None;
     }
     let scale = (w.max(h) as f64 / max as f64).max(1.0);

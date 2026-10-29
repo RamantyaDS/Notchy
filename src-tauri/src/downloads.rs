@@ -160,19 +160,51 @@ pub fn step(seen: &mut HashMap<PathBuf, Seen>, now: HashMap<PathBuf, u64>, at: I
     Step { growing, finished }
 }
 
+/// Programs and scripts: opening one would run it.
+pub fn is_dangerous_executable(path: &Path) -> bool {
+    let Some(ext) = path.extension().and_then(|e| e.to_str()) else { return false };
+    matches!(
+        ext.to_ascii_lowercase().as_str(),
+        "exe" | "msi" | "bat" | "cmd" | "ps1" | "vbs" | "vbe" | "js" | "jse" | "wsf" | "wsh" | "scr" | "pif" | "com" | "hta" | "reg"
+    )
+}
+
+/// Opens a file, except programs and scripts, which are only shown in Explorer
+/// so a click in the notch never runs one.
+pub fn open_or_reveal(path: &Path) {
+    let _ = if is_dangerous_executable(path) {
+        std::process::Command::new("explorer").arg(format!("/select,{}", path.display())).spawn()
+    } else {
+        std::process::Command::new("explorer").arg(path).spawn()
+    };
+}
+
 /// Opens a finished download. Only files in the Downloads folder.
 #[tauri::command]
 pub fn open_download(path: String) {
     let path = PathBuf::from(path);
     let Some(dir) = downloads_dir() else { return };
     if path.parent() == Some(dir.as_path()) && path.is_file() {
-        let _ = std::process::Command::new("explorer").arg(&path).spawn();
+        open_or_reveal(&path);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn identifies_dangerous_executables() {
+        assert!(is_dangerous_executable(Path::new("malware.exe")));
+        assert!(is_dangerous_executable(Path::new("script.BAT")));
+        assert!(is_dangerous_executable(Path::new("installer.MSI")));
+        assert!(is_dangerous_executable(Path::new("test.ps1")));
+        assert!(is_dangerous_executable(Path::new("payload.vbs")));
+        assert!(!is_dangerous_executable(Path::new("document.pdf")));
+        assert!(!is_dangerous_executable(Path::new("photo.png")));
+        assert!(!is_dangerous_executable(Path::new("archive.zip")));
+        assert!(!is_dangerous_executable(Path::new("no_ext")));
+    }
 
     fn sizes(list: &[(&str, u64)]) -> HashMap<PathBuf, u64> {
         list.iter().map(|(p, b)| (PathBuf::from(p), *b)).collect()

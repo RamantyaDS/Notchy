@@ -77,7 +77,9 @@ pub fn install_on_hook_thread() {
         for guid in [&GUID_ACDC_POWER_SOURCE, &GUID_BATTERY_PERCENTAGE_REMAINING, &GUID_VIDEO_CURRENT_MONITOR_BRIGHTNESS] {
             let _ = RegisterPowerSettingNotification(HANDLE(hwnd.0), guid, DEVICE_NOTIFY_WINDOW_HANDLE);
         }
-        let _ = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), None, 0);
+        if crate::settings::get_settings().caps_lock_peek {
+            let _ = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), None, 0);
+        }
     }
 }
 

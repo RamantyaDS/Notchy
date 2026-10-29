@@ -74,15 +74,23 @@ static TYPING: AtomicBool = AtomicBool::new(false);
 static PINNED: AtomicBool = AtomicBool::new(false);
 static OUTSIDE_TX: OnceLock<mpsc::Sender<()>> = OnceLock::new();
 static PREV_FOREGROUND: AtomicIsize = AtomicIsize::new(0);
-static HIT: Mutex<Hit> = Mutex::new(Hit { size: (0.0, 0.0), rect: (0, 0, 0, 0), inside: false });
+/// Notch size in logical px, as reported by the frontend.
+static HIT_SIZE: Mutex<(f64, f64)> = Mutex::new((0.0, 0.0));
+/// The area the notch occupies in physical screen px (everything else is
+/// click-through), and whether the cursor is in it. Atomics, so the mouse hook
+/// never waits on a lock (Windows drops hooks that answer too slowly).
+static HIT_L: AtomicI32 = AtomicI32::new(0);
+static HIT_T: AtomicI32 = AtomicI32::new(0);
+static HIT_R: AtomicI32 = AtomicI32::new(0);
+static HIT_B: AtomicI32 = AtomicI32::new(0);
+static HIT_INSIDE: AtomicBool = AtomicBool::new(false);
 
-/// Area of the window the notch currently occupies. Everything else is click-through.
-struct Hit {
-    /// Notch size in logical px, as reported by the frontend.
-    size: (f64, f64),
-    /// Same area in physical screen px: left, top, right, bottom.
-    rect: (i32, i32, i32, i32),
-    inside: bool,
+fn hit_rect() -> (i32, i32, i32, i32) {
+    (HIT_L.load(Ordering::Relaxed), HIT_T.load(Ordering::Relaxed), HIT_R.load(Ordering::Relaxed), HIT_B.load(Ordering::Relaxed))
+}
+
+fn hit_inside() -> bool {
+    HIT_INSIDE.load(Ordering::Relaxed)
 }
 
 fn main_window() -> Option<WebviewWindow> {
@@ -97,7 +105,7 @@ fn hwnd(window: &WebviewWindow) -> HWND {
 /// always centered at the top of the window.
 #[tauri::command]
 fn set_notch_size(w: f64, h: f64) {
-    HIT.lock().unwrap().size = (w, h);
+    *HIT_SIZE.lock().unwrap() = (w, h);
     update_hit_rect();
 }
 
@@ -107,16 +115,20 @@ fn update_hit_rect() {
         (Ok(true), Ok(pos), Ok(size)) => Some((pos, size, window.scale_factor().unwrap_or(1.0))),
         _ => None,
     };
-    let mut hit = HIT.lock().unwrap();
-    hit.rect = match geometry {
+    let notch = *HIT_SIZE.lock().unwrap();
+    let (l, t, r, b) = match geometry {
         Some((pos, size, scale)) => {
-            let w = (hit.size.0 * scale) as i32;
-            let h = (hit.size.1 * scale) as i32;
+            let w = (notch.0 * scale) as i32;
+            let h = (notch.1 * scale) as i32;
             let left = pos.x + (size.width as i32 - w) / 2;
             (left, pos.y, left + w, pos.y + h)
         }
         None => (0, 0, 0, 0),
     };
+    HIT_L.store(l, Ordering::Relaxed);
+    HIT_T.store(t, Ordering::Relaxed);
+    HIT_R.store(r, Ordering::Relaxed);
+    HIT_B.store(b, Ordering::Relaxed);
 }
 
 fn on_mouse_move(x: i32, y: i32) {
@@ -128,20 +140,14 @@ fn on_mouse_move(x: i32, y: i32) {
         }
     }
 
-    let changed = {
-        let mut hit = HIT.lock().unwrap();
-        let (l, _, r, b) = hit.rect;
-        // No top check: the hook sees the point before it's clamped to the
-        // screen, so pushing against the top edge reports y < 0.
-        let inside = x >= l && x < r && y < b;
-        let changed = inside != hit.inside;
-        hit.inside = inside;
-        changed.then_some(inside)
-    };
-    if let Some(inside) = changed {
-        if let Some(tx) = HOVER_TX.get() {
-            let _ = tx.send(inside);
-        }
+    let (l, _, r, b) = hit_rect();
+    // No top check: the hook sees the point before it's clamped to the
+    // screen, so pushing against the top edge reports y < 0.
+    let inside = x >= l && x < r && y < b;
+    if HIT_INSIDE.swap(inside, Ordering::Relaxed) != inside
+        && let Some(tx) = HOVER_TX.get()
+    {
+        let _ = tx.send(inside);
     }
 }
 
@@ -188,7 +194,7 @@ fn end_typing(window: WebviewWindow) {
     TYPING.store(false, Ordering::Relaxed);
     let _ = window.set_focusable(false);
     let _ = window.run_on_main_thread(|| unsafe {
-        set_click_through(!HIT.lock().unwrap().inside);
+        set_click_through(!hit_inside());
         // Hand the keyboard back to whatever was active before.
         let prev = HWND(PREV_FOREGROUND.swap(0, Ordering::Relaxed) as _);
         if !prev.is_invalid() {
@@ -202,7 +208,7 @@ fn end_typing(window: WebviewWindow) {
 #[tauri::command]
 fn set_pinned(on: bool) {
     PINNED.store(on, Ordering::Relaxed);
-    let inside = HIT.lock().unwrap().inside;
+    let inside = hit_inside();
     set_click_through(!on && !inside && !TYPING.load(Ordering::Relaxed));
 }
 
@@ -247,10 +253,7 @@ fn start_eyes_emitter() {
         for _ in rx {
             std::thread::sleep(Duration::from_millis(16));
             EYES_PENDING.store(false, Ordering::Relaxed);
-            let ((l, t, r, b), inside) = {
-                let hit = HIT.lock().unwrap();
-                (hit.rect, hit.inside)
-            };
+            let ((l, t, r, b), inside) = (hit_rect(), hit_inside());
             if inside || r <= l || TUCKED.load(Ordering::Relaxed) {
                 continue;
             }
@@ -283,7 +286,7 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
     } else if code >= 0 && wparam.0 as u32 == WM_LBUTTONUP {
         // A click can change what's under the notch (e.g. a new tab); re-check on the next pass.
         CLICKED.store(true, Ordering::Relaxed);
-    } else if code >= 0 && wparam.0 as u32 == WM_LBUTTONDOWN && PINNED.load(Ordering::Relaxed) && !HIT.lock().unwrap().inside {
+    } else if code >= 0 && wparam.0 as u32 == WM_LBUTTONDOWN && PINNED.load(Ordering::Relaxed) && !hit_inside() {
         if let Some(tx) = OUTSIDE_TX.get() {
             let _ = tx.send(());
         }

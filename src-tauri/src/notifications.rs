@@ -192,7 +192,7 @@ fn activate(aumid: &str, id: u32) -> Result<(), String> {
 
     if attr(toast, "activationType").as_deref() == Some("protocol") {
         // The toast is a link (e.g. "https://..." or "ms-teams:...").
-        if !launch.contains(':') || launch.starts_with('-') {
+        if !is_safe_protocol(&launch) {
             return Err(format!("odd protocol launch {launch:?}"));
         }
         std::process::Command::new("explorer").arg(&launch).spawn().map_err(|e| e.to_string())?;
@@ -243,6 +243,22 @@ fn activator(aumid: &str) -> Option<windows::core::GUID> {
                 .find_map(|manifest| attr(&manifest, "ToastActivatorCLSID"))
         })?;
     windows::core::GUID::try_from(text.trim_matches(|c| c == '{' || c == '}')).ok()
+}
+
+/// A link from a toast that is fine to hand to explorer: web, mail, phone and
+/// the usual chat/meeting apps. Anything that could run a program is refused.
+pub fn is_safe_protocol(launch: &str) -> bool {
+    if launch.is_empty() || launch.starts_with('-') || launch.starts_with('/') {
+        return false;
+    }
+    if launch.chars().any(|c| c.is_whitespace() || matches!(c, '"' | '\'' | '<' | '>')) {
+        return false;
+    }
+    let Some((scheme, _)) = launch.split_once(':') else { return false };
+    matches!(
+        scheme.to_ascii_lowercase().as_str(),
+        "https" | "http" | "mailto" | "tel" | "ms-teams" | "msteams" | "whatsapp" | "zoommtg" | "slack" | "discord" | "skype" | "tg" | "spotify"
+    )
 }
 
 /// The value of `name="..."` in an XML snippet, with entities decoded.
@@ -297,4 +313,41 @@ fn describe(n: &UserNotification, logos: &mut HashMap<String, Option<String>>) -
     let aumid = info.AppUserModelId().map(|s| s.to_string()).unwrap_or_default();
     let id = n.Id().ok();
     Some(json!({ "app": app, "title": title, "body": body, "icon": logo, "aumid": aumid, "id": id }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn safe_protocols_allowed() {
+        assert!(is_safe_protocol("https://web.whatsapp.com/"));
+        assert!(is_safe_protocol("http://example.com"));
+        assert!(is_safe_protocol("mailto:someone@example.com"));
+        assert!(is_safe_protocol("ms-teams:/l/chat/0/0"));
+        assert!(is_safe_protocol("MSTEAMS:/l/meetup-join"));
+        assert!(is_safe_protocol("zoommtg://zoom.us/join?confno=1"));
+    }
+
+    #[test]
+    fn unsafe_protocols_blocked() {
+        assert!(!is_safe_protocol(""));
+        assert!(!is_safe_protocol("-e"));
+        assert!(!is_safe_protocol(r"/select,C:\x"));
+        assert!(!is_safe_protocol("file:///C:/Windows/System32/calc.exe"));
+        assert!(!is_safe_protocol("javascript:alert(1)"));
+        assert!(!is_safe_protocol("ms-msdt:/id PCWDiagnostic"));
+        assert!(!is_safe_protocol("search-ms:query=x"));
+        assert!(!is_safe_protocol("https://a.com\" /c calc"));
+        assert!(!is_safe_protocol(r"C:\Windows\notepad.exe"));
+        assert!(!is_safe_protocol("no-colon"));
+    }
+
+    #[test]
+    fn parses_attributes() {
+        let toast = r#"<toast launch="a=1&amp;b=&quot;2&quot;" activationType="protocol""#;
+        assert_eq!(attr(toast, "launch").as_deref(), Some("a=1&b=\"2\""));
+        assert_eq!(attr(toast, "activationType").as_deref(), Some("protocol"));
+        assert_eq!(attr(toast, "missing"), None);
+    }
 }

@@ -18,6 +18,7 @@
     calendarUrl: string;
     smallLyrics: boolean;
     shortcuts: Shortcut[];
+    capsLockPeek: boolean;
   };
   type Shortcut = { name: string; action: string; target: string };
 
@@ -132,6 +133,20 @@
           onchange={(e) => save({ smallLyrics: e.currentTarget.checked })}
         />
         <span>Tampilkan baris lirik di notch kecil (judul lagu dikirim ke LRCLIB untuk tiap lagu)</span>
+      </label>
+    {/if}
+  </section>
+
+  <section>
+    <h2>Keyboard & sistem</h2>
+    {#if settings}
+      <label class="field check">
+        <input
+          type="checkbox"
+          checked={settings.capsLockPeek}
+          onchange={(e) => save({ capsLockPeek: e.currentTarget.checked })}
+        />
+        <span>Tampilkan Caps Lock dan ganti bahasa keyboard di notch (berlaku setelah Notchy dibuka ulang)</span>
       </label>
     {/if}
   </section>
