@@ -59,9 +59,11 @@ pub struct Settings {
     pub shelf_enabled: bool,
     pub clipboard_enabled: bool,
     pub shortcuts_enabled: bool,
-    /// Network speed indicators on/off
+    /// Network speed indicators on/off and thresholds (in KB/s)
     pub net_speed_island: bool,
     pub net_speed_status: bool,
+    pub net_speed_threshold_down_kb: u32,
+    pub net_speed_threshold_up_kb: u32,
 }
 
 /// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
@@ -116,6 +118,8 @@ impl Default for Settings {
             shortcuts_enabled: true,
             net_speed_island: false,
             net_speed_status: true,
+            net_speed_threshold_down_kb: 500,
+            net_speed_threshold_up_kb: 250,
         }
     }
 }
@@ -208,4 +212,45 @@ pub fn open_window(app: &AppHandle) {
         .resizable(false)
         .center()
         .build();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_settings_default_thresholds() {
+        let s = Settings::default();
+        assert_eq!(s.net_speed_threshold_down_kb, 500);
+        assert_eq!(s.net_speed_threshold_up_kb, 250);
+        assert_eq!(s.net_speed_island, false);
+        assert_eq!(s.net_speed_status, true);
+    }
+
+    #[test]
+    fn test_settings_deserialize_backward_compatibility() {
+        // Deserializing older settings JSON without threshold fields uses defaults
+        let old_json = r#"{
+            "focusMinutes": 30,
+            "netSpeedIsland": true,
+            "netSpeedStatus": true
+        }"#;
+        let s: Settings = serde_json::from_str(old_json).expect("deserialize old json");
+        assert_eq!(s.focus_minutes, 30);
+        assert_eq!(s.net_speed_island, true);
+        assert_eq!(s.net_speed_status, true);
+        assert_eq!(s.net_speed_threshold_down_kb, 500);
+        assert_eq!(s.net_speed_threshold_up_kb, 250);
+    }
+
+    #[test]
+    fn test_settings_deserialize_custom_thresholds() {
+        let json = r#"{
+            "netSpeedThresholdDownKb": 1200,
+            "netSpeedThresholdUpKb": 600
+        }"#;
+        let s: Settings = serde_json::from_str(json).expect("deserialize custom thresholds");
+        assert_eq!(s.net_speed_threshold_down_kb, 1200);
+        assert_eq!(s.net_speed_threshold_up_kb, 600);
+    }
 }

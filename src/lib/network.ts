@@ -39,5 +39,7 @@ export function isHighTraffic(
   thresholdUp = DEFAULT_SPEED_THRESHOLD_UP
 ): boolean {
   if (!speed) return false;
-  return speed.down >= thresholdDown || speed.up >= thresholdUp;
+  const downActive = thresholdDown <= 0 ? speed.down > 0 : speed.down >= thresholdDown;
+  const upActive = thresholdUp <= 0 ? speed.up > 0 : speed.up >= thresholdUp;
+  return downActive || upActive;
 }

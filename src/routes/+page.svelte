@@ -127,6 +127,8 @@
   let networkSpeed = $state<NetworkSpeed | null>(null);
   let netSpeedIsland = $state(false);
   let netSpeedStatus = $state(true);
+  let netSpeedThresholdDownKb = $state(500);
+  let netSpeedThresholdUpKb = $state(250);
   // Equalizer bar heights from the audio meter, while it runs.
   let levels = $state<number[] | null>(null);
   // Horizontal swipes cycle which activity leads.
@@ -267,7 +269,9 @@
     ...(timerActive ? [{ kind: "timer" } as const] : []),
     ...(download ? [{ kind: "download", download } as const] : []),
     ...(musicEnabled && media?.playing ? [{ kind: "music", lyric: false } as const] : []),
-    ...(netSpeedIsland && isHighTraffic(networkSpeed) && networkSpeed
+    ...(netSpeedIsland &&
+    isHighTraffic(networkSpeed, netSpeedThresholdDownKb * 1024, netSpeedThresholdUpKb * 1024) &&
+    networkSpeed
       ? [{ kind: "network", speed: networkSpeed } as const]
       : []),
   ]);
@@ -617,6 +621,8 @@
       shortcutsEnabled?: boolean;
       netSpeedIsland?: boolean;
       netSpeedStatus?: boolean;
+      netSpeedThresholdDownKb?: number;
+      netSpeedThresholdUpKb?: number;
     };
     let weatherTimer: ReturnType<typeof setTimeout>;
     const loadWeather = async (settings?: AllSettings) => {
@@ -644,6 +650,8 @@
       shortcutsEnabled = s.shortcutsEnabled !== false;
       netSpeedIsland = s.netSpeedIsland === true;
       netSpeedStatus = s.netSpeedStatus !== false;
+      netSpeedThresholdDownKb = s.netSpeedThresholdDownKb ?? 500;
+      netSpeedThresholdUpKb = s.netSpeedThresholdUpKb ?? 250;
       const newIdx = pages.indexOf(current);
       page = newIdx !== -1 ? newIdx : Math.min(page, Math.max(0, pages.length - 1));
       pomo.configure(s);

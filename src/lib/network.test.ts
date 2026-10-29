@@ -73,4 +73,28 @@ describe("isHighTraffic", () => {
     expect(isHighTraffic(speed, 200_000, 100_000)).toBe(false);
     expect(isHighTraffic(speed, 50_000, 50_000)).toBe(true);
   });
+
+  it("handles zero threshold: triggers on any traffic, false when idle", () => {
+    const idle: NetworkSpeed = { down: 0, up: 0 };
+    const activeDown: NetworkSpeed = { down: 50, up: 0 };
+    const activeUp: NetworkSpeed = { down: 0, up: 20 };
+    expect(isHighTraffic(idle, 0, 0)).toBe(false);
+    expect(isHighTraffic(activeDown, 0, 0)).toBe(true);
+    expect(isHighTraffic(activeUp, 0, 0)).toBe(true);
+  });
+
+  it("evaluates custom KB-converted thresholds correctly", () => {
+    const thresholdDownKb = 800; // 800 KB/s
+    const thresholdUpKb = 400;   // 400 KB/s
+    const threshDownBytes = thresholdDownKb * 1024;
+    const threshUpBytes = thresholdUpKb * 1024;
+
+    const below: NetworkSpeed = { down: threshDownBytes - 1, up: threshUpBytes - 1 };
+    const hitDown: NetworkSpeed = { down: threshDownBytes, up: 0 };
+    const hitUp: NetworkSpeed = { down: 0, up: threshUpBytes };
+
+    expect(isHighTraffic(below, threshDownBytes, threshUpBytes)).toBe(false);
+    expect(isHighTraffic(hitDown, threshDownBytes, threshUpBytes)).toBe(true);
+    expect(isHighTraffic(hitUp, threshDownBytes, threshUpBytes)).toBe(true);
+  });
 });

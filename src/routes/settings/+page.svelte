@@ -27,6 +27,8 @@
     capsLockPeek: boolean;
     netSpeedIsland?: boolean;
     netSpeedStatus?: boolean;
+    netSpeedThresholdDownKb?: number;
+    netSpeedThresholdUpKb?: number;
   };
   type Shortcut = { name: string; action: string; target: string };
 
@@ -123,8 +125,11 @@
       <input
         type="number"
         min="0"
-        value={settings[key] as number}
-        onchange={(e) => save({ [key]: Math.max(0, Math.round(Number(e.currentTarget.value))) })}
+        value={settings[key] ?? (key === "netSpeedThresholdDownKb" ? 500 : key === "netSpeedThresholdUpKb" ? 250 : 0)}
+        onchange={(e) => {
+          const val = Number(e.currentTarget.value);
+          save({ [key]: Math.max(0, Math.round(isNaN(val) ? 0 : val)) });
+        }}
       />
       <em>{unit}</em>
     </label>
@@ -225,9 +230,15 @@
         />
         <span class="page-label">
           <strong>Dynamic Island (Notch Tertutup)</strong>
-          <small>Otomatis melebar saat ada unduhan/unggahan berkecepatan tinggi (&ge; 500 KB/s)</small>
+          <small>Otomatis melebar saat ada unduhan/unggahan berkecepatan tinggi (&ge; {settings.netSpeedThresholdDownKb ?? 500} KB/s)</small>
         </span>
       </label>
+      {#if settings.netSpeedIsland === true}
+        <div class="nested-fields">
+          {@render field("netSpeedThresholdDownKb", "Unduh minimum", "KB/s")}
+          {@render field("netSpeedThresholdUpKb", "Unggah minimum", "KB/s")}
+        </div>
+      {/if}
       <label class="field check">
         <input
           type="checkbox"
@@ -510,6 +521,11 @@
   .page-label small {
     font-size: 11.5px;
     color: #8c94a8;
+  }
+  .nested-fields {
+    margin-left: 28px;
+    margin-top: 4px;
+    margin-bottom: 8px;
   }
   input.wide {
     width: 100%;
