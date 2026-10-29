@@ -25,17 +25,25 @@ A small black island at the top of your screen that shows what's happening (musi
 
 ### What it does
 
-🎵 **Music from any player.** Spotify, YouTube in the browser, anything that shows up in Windows' media controls. Cover, progress, play/pause/skip, and the cover's color tints the notch.
+🎵 **Music from any player.** Spotify, YouTube in the browser, anything that shows up in Windows' media controls. Cover, a live equalizer, play/pause/skip, and the cover's color tints the notch. Hover the progress bar to see the time, hover a long title to read all of it.
 
 🎤 **Live lyrics.** Synced lyrics appear line by line, even in the small notch while you work.
 
 🔔 **Notifications, in the notch.** WhatsApp, Teams, Outlook… mirrored within half a second. Click one and it opens *that* chat or email, just like the real notification.
 
-⏱️ **Focus timer**, 💧 **water reminder**, ✅ **to-do list** with reminders, 📁 **Shelf** to park files you'll drag somewhere else, 📅 **calendar** reminders from your calendar link.
+📞 **Calls and meetings.** A call pill with mute for Teams, WhatsApp, Zoom and Meet; a meeting reminder with a quick camera check and a **Join** button.
 
-🔊 **Quick status:** volume, brightness, Caps Lock, keyboard language, charging, Wi-Fi, headphones, camera and mic in use, mic mute, screenshot preview, weather, one-click audio output switch.
+🧩 **Two things at once.** Music, a timer, a call or a download can sit side by side in the small notch; swipe to switch which one leads.
 
-🫥 **Stays out of the way.** It tucks into a thin line when there's a tab or button right under it, hides for full-screen video and games, and dozes off when you're idle.
+⏱️ **Focus timer**, 💧 **water reminder**, ✅ **to-do list** with reminders, 📅 **calendar** reminders from your calendar link.
+
+📁 **Shelf** to park files you'll drag somewhere else, 📋 **clipboard history** (text and images), ⬇️ **download progress** from your browser, ⚡ **shortcuts** page (lock, sleep, screenshot, your own apps and links), and drop a file on the notch to **share** it.
+
+🔊 **Quick status:** volume, brightness, Caps Lock, keyboard language, charging, Wi-Fi, headphones and earbuds battery, camera and mic in use, mic mute, screenshot preview, weather, one-click audio output switch.
+
+🖱️ **Gestures:** scroll on the notch for volume, swipe sideways to switch, press and hold to keep it open.
+
+🫥 **Stays out of the way.** It opens only when the cursor stops on it (not when you sweep past to a browser tab), tucks into a thin line when there's a tab or button right under it, hides for full-screen video and games, and dozes off when you're idle.
 
 </td>
 </tr>
@@ -117,7 +125,7 @@ Right-click the tray icon → **Exit**, or untick **Start with Windows**. Uninst
 
 <details><summary>My antivirus flagged it</summary>
 
-New, unsigned apps sometimes get flagged. Check the SHA-256 against the release page (above). Notchy listens only for volume, brightness, Caps Lock and language keys to show their overlays; it never records what you type.
+New, unsigned apps sometimes get flagged. Check the SHA-256 against the release page (above). Notchy listens only for volume, brightness, Caps Lock and language keys to show their overlays; it never records what you type. If you'd rather it didn't watch the keyboard at all, turn off the Caps Lock and keyboard-language peeks in Settings → **Keyboard & sistem** (applies after restarting Notchy).
 </details>
 
 ## Feedback
@@ -128,6 +136,7 @@ Found a bug or have an idea? [Open an issue](https://github.com/RamantyaDS/Notch
 
 - **~1–2% CPU at rest**, a few % while music animates.
 - **No account, no analytics.** Your to-dos, water log and settings stay in `%APPDATA%\Notchy`.
+- **Careful with clicks.** Programs and scripts on the Shelf or in Downloads are shown in Explorer, never run; links from notifications open only for web, mail and the usual chat/meeting apps.
 - It only goes online for lyrics ([LRCLIB](https://lrclib.net)), weather ([Open-Meteo](https://open-meteo.com)), your own calendar link if you add one, and checking for updates here on GitHub.
 
 ## Built with
@@ -153,7 +162,7 @@ Design notes and every decision behind the app are in [`notchy.md`](notchy.md) (
 <details>
 <summary>🇮🇩 Bahasa Indonesia</summary>
 
-**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), timer fokus, pengingat minum, to-do, Shelf file, kalender, dan status sistem. Membesar saat di-hover, menyingkir saat menghalangi.
+**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), timer fokus, pengingat minum, to-do, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, dan status sistem. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
 
 Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
 
