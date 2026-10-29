@@ -33,21 +33,24 @@ Stop-Process -Name notchy -ErrorAction SilentlyContinue
 try {
     npm run tauri build -- --no-bundle
     if ($LASTEXITCODE) { throw "Build failed." }
-    # The antivirus scans the fresh exe and holds it meanwhile (os error 1224 when
-    # packing it), so give it a moment and retry the packing alone.
+    # Portable: the plain exe, zipped before packing, because packing marks this
+    # very file as installed (and the installed kind would try to run an installer).
+    # The antivirus scans the fresh exe and holds it meanwhile, hence the retries.
+    $exe = "$root\src-tauri\target\release\notchy.exe"
+    if ([IO.File]::ReadAllText($exe, [Text.Encoding]::ASCII).Contains("__TAURI_BUNDLE_TYPE_VAR_NSS")) { throw "notchy.exe is marked as installed; not fit for the portable zip." }
+    $portable = "$root\src-tauri\target\release\portable\Notchy_${Version}_x64-portable.zip"
+    New-Item -ItemType Directory -Force (Split-Path $portable) | Out-Null
+    foreach ($try in 1..5) {
+        Start-Sleep -Seconds 20
+        try { Compress-Archive -Path $exe -DestinationPath $portable -Force; break }
+        catch { if ($try -eq 5) { throw } }
+    }
+    # Same antivirus hold (os error 1224 when packing), so retry the packing alone.
     foreach ($try in 1..5) {
         Start-Sleep -Seconds 20
         npx tauri bundle --bundles nsis
         if (-not $LASTEXITCODE) { break }
         if ($try -eq 5) { throw "Packing the installer failed." }
-    }
-    # Portable: the plain exe, not marked as installed, so it never tries to run an installer.
-    $exe = "$root\src-tauri\target\release\notchy.exe"
-    if ([IO.File]::ReadAllText($exe, [Text.Encoding]::ASCII).Contains("__TAURI_BUNDLE_TYPE_VAR_NSS")) { throw "notchy.exe is marked as installed; not fit for the portable zip." }
-    $portable = "$root\src-tauri\target\release\bundle\nsis\Notchy_${Version}_x64-portable.zip"
-    foreach ($try in 1..5) {
-        try { Compress-Archive -Path $exe -DestinationPath $portable -Force; break }
-        catch { if ($try -eq 5) { throw }; Start-Sleep -Seconds 20 }  # antivirus still scanning
     }
 } finally {
     Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "`"$root\src-tauri\target\release\notchy.exe`"" } | Out-Null
