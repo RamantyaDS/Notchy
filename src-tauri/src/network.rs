@@ -1,7 +1,7 @@
 //! Background monitor for real-time network download & upload speeds.
 //! Uses Windows IP Helper API (GetIfTable2) to query network interface octets.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 use windows::Win32::NetworkManagement::IpHelper::{FreeMibTable, GetIfTable2, MIB_IF_TABLE2};
@@ -9,6 +9,9 @@ use windows::Win32::NetworkManagement::Ndis::{IfOperStatusUp, IF_OPER_STATUS};
 
 static RUNNING: AtomicBool = AtomicBool::new(false);
 static MONITORING_ACTIVE: AtomicBool = AtomicBool::new(false);
+static ISLAND_ENABLED: AtomicBool = AtomicBool::new(false);
+static THRESHOLD_DOWN_BYTES: AtomicU64 = AtomicU64::new(500 * 1024);
+static THRESHOLD_UP_BYTES: AtomicU64 = AtomicU64::new(250 * 1024);
 
 #[derive(serde::Serialize, Clone, Copy, Debug, PartialEq)]
 pub struct NetworkSpeed {
@@ -16,9 +19,12 @@ pub struct NetworkSpeed {
     pub up: u64,
 }
 
-/// Enables or disables polling when network speed display is toggled in Settings.
-pub fn set_monitoring_active(active: bool) {
-    MONITORING_ACTIVE.store(active, Ordering::Relaxed);
+/// Updates network monitor configuration when settings are loaded or saved.
+pub fn update_settings(settings: &crate::settings::Settings) {
+    MONITORING_ACTIVE.store(settings.net_speed_island || settings.net_speed_status, Ordering::Relaxed);
+    ISLAND_ENABLED.store(settings.net_speed_island, Ordering::Relaxed);
+    THRESHOLD_DOWN_BYTES.store((settings.net_speed_threshold_down_kb as u64) * 1024, Ordering::Relaxed);
+    THRESHOLD_UP_BYTES.store((settings.net_speed_threshold_up_kb as u64) * 1024, Ordering::Relaxed);
 }
 
 /// Determines whether an interface row is a physical or primary data-link adapter
@@ -59,6 +65,53 @@ pub(crate) fn round_rate(bytes: u64) -> u64 {
     }
 }
 
+/// Determines whether current rates meet or exceed the configured thresholds.
+pub(crate) fn is_high_traffic(down_bytes: u64, up_bytes: u64, threshold_down: u64, threshold_up: u64) -> bool {
+    let down_active = if threshold_down == 0 {
+        down_bytes > 0
+    } else {
+        down_bytes >= threshold_down
+    };
+    let up_active = if threshold_up == 0 {
+        up_bytes > 0
+    } else {
+        up_bytes >= threshold_up
+    };
+    down_active || up_active
+}
+
+/// Determines whether a network-speed event should be emitted to WebView2.
+///
+/// Rules:
+/// - notch open: emit as now (live updates for the status row).
+/// - notch closed: emit only if `net_speed_island` is on AND the speed is at/above
+///   the threshold, plus one last emit when it drops back below (so the pill can disappear).
+///   With default settings (island off, status on), an idle closed notch receives ZERO events.
+pub(crate) fn should_emit_speed(
+    notch_open: bool,
+    island_enabled: bool,
+    is_high: bool,
+    was_high: bool,
+    rate_changed: bool,
+) -> bool {
+    if notch_open {
+        // Notch open: status row is visible on screen, emit live updates
+        true
+    } else if island_enabled {
+        // Notch closed and island enabled:
+        // Emit while speed is high (on rounded rate change or when first crossing above threshold),
+        // plus one last emit when it drops back below threshold so the pill can disappear.
+        if is_high {
+            rate_changed || !was_high
+        } else {
+            was_high
+        }
+    } else {
+        // Notch closed and island disabled (default): do not wake WebView2
+        false
+    }
+}
+
 /// Reads the current cumulative (InOctets, OutOctets) across active non-loopback, non-filter interfaces.
 fn read_total_octets() -> Option<(u64, u64)> {
     unsafe {
@@ -94,12 +147,14 @@ pub fn start(app: AppHandle) {
         let mut last_sample: Option<(u64, u64)> = None;
         let mut last_time = Instant::now();
         let mut last_emitted_rounded: Option<(u64, u64)> = None;
+        let mut was_high_traffic = false;
 
         loop {
             // When both toggles are off in Settings, sleep without querying Windows networking APIs.
             if !MONITORING_ACTIVE.load(Ordering::Relaxed) {
                 last_sample = None;
                 last_emitted_rounded = None;
+                was_high_traffic = false;
                 std::thread::sleep(Duration::from_millis(1500));
                 continue;
             }
@@ -120,9 +175,14 @@ pub fn start(app: AppHandle) {
 
                     let rounded = (round_rate(down_rate), round_rate(up_rate));
                     let notch_open = crate::is_notch_open();
+                    let island_enabled = ISLAND_ENABLED.load(Ordering::Relaxed);
+                    let thresh_down = THRESHOLD_DOWN_BYTES.load(Ordering::Relaxed);
+                    let thresh_up = THRESHOLD_UP_BYTES.load(Ordering::Relaxed);
 
-                    // Idle stays idle: only emit if the rounded rate actually changed or if the notch is open
-                    if last_emitted_rounded != Some(rounded) || notch_open {
+                    let is_high = is_high_traffic(down_rate, up_rate, thresh_down, thresh_up);
+                    let rate_changed = last_emitted_rounded != Some(rounded);
+
+                    if should_emit_speed(notch_open, island_enabled, is_high, was_high_traffic, rate_changed) {
                         let speed = NetworkSpeed {
                             down: down_rate,
                             up: up_rate,
@@ -130,6 +190,8 @@ pub fn start(app: AppHandle) {
                         let _ = app.emit("network-speed", speed);
                         last_emitted_rounded = Some(rounded);
                     }
+
+                    was_high_traffic = is_high;
                 }
             }
 
@@ -184,5 +246,63 @@ mod tests {
         assert_eq!(round_rate(mb), mb);
         assert_eq!(round_rate(mb + 10_000), mb);
         assert_eq!(round_rate(mb + 60_000), (11 * mb) / 10);
+    }
+
+    #[test]
+    fn test_is_high_traffic_logic() {
+        let thresh_down = 500 * 1024;
+        let thresh_up = 250 * 1024;
+
+        // Below threshold
+        assert!(!is_high_traffic(100 * 1024, 50 * 1024, thresh_down, thresh_up));
+        assert!(!is_high_traffic(0, 0, thresh_down, thresh_up));
+
+        // Download meets or exceeds threshold
+        assert!(is_high_traffic(thresh_down, 0, thresh_down, thresh_up));
+        assert!(is_high_traffic(thresh_down + 1, 0, thresh_down, thresh_up));
+
+        // Upload meets or exceeds threshold
+        assert!(is_high_traffic(0, thresh_up, thresh_down, thresh_up));
+        assert!(is_high_traffic(0, thresh_up + 1, thresh_down, thresh_up));
+
+        // Zero threshold: active on any traffic > 0, idle if 0
+        assert!(!is_high_traffic(0, 0, 0, 0));
+        assert!(is_high_traffic(10, 0, 0, 0));
+        assert!(is_high_traffic(0, 10, 0, 0));
+    }
+
+    #[test]
+    fn test_should_emit_speed_state_machine() {
+        // 1. Notch open: ALWAYS emits live updates for the status row
+        assert!(should_emit_speed(true, false, false, false, false));
+        assert!(should_emit_speed(true, true, true, true, false));
+        assert!(should_emit_speed(true, false, true, false, true));
+
+        // 2. Notch closed, island disabled (DEFAULT SETTINGS): NEVER emits (zero WebView2 wakeups)
+        assert!(!should_emit_speed(false, false, false, false, true));
+        assert!(!should_emit_speed(false, false, true, false, true));
+        assert!(!should_emit_speed(false, false, true, true, true));
+        assert!(!should_emit_speed(false, false, false, true, true));
+
+        // 3. Notch closed, island enabled:
+        // 3a. Idle / low traffic: does NOT emit
+        assert!(!should_emit_speed(false, true, false, false, true));
+        assert!(!should_emit_speed(false, true, false, false, false));
+
+        // 3b. Traffic becomes high (first crossing): EMITS to show island pill
+        assert!(should_emit_speed(false, true, true, false, false));
+        assert!(should_emit_speed(false, true, true, false, true));
+
+        // 3c. Traffic remains high: EMITS if rate changed, skips if rate unchanged
+        assert!(should_emit_speed(false, true, true, true, true));
+        assert!(!should_emit_speed(false, true, true, true, false));
+
+        // 3d. Traffic drops back below threshold: EMITS ONE LAST TIME so pill can disappear
+        assert!(should_emit_speed(false, true, false, true, false));
+        assert!(should_emit_speed(false, true, false, true, true));
+
+        // 3e. Next tick after drop (traffic stays below): does NOT emit anymore
+        assert!(!should_emit_speed(false, true, false, false, false));
+        assert!(!should_emit_speed(false, true, false, false, true));
     }
 }

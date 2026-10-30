@@ -733,7 +733,7 @@ pub fn run() {
             downloads::start(app.handle().clone());
             clipboard::start(app.handle().clone());
             let s = settings::get_settings();
-            network::set_monitoring_active(s.net_speed_island || s.net_speed_status);
+            network::update_settings(&s);
             network::start(app.handle().clone());
             Ok(())
         })

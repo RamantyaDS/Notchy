@@ -137,7 +137,7 @@ pub fn get_settings() -> Settings {
 pub fn save_settings(app: AppHandle, settings: Settings) -> Result<(), String> {
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     crate::store::write_safely(&path(), &json)?;
-    crate::network::set_monitoring_active(settings.net_speed_island || settings.net_speed_status);
+    crate::network::update_settings(&settings);
     let _ = app.emit("settings", &settings);
     Ok(())
 }
