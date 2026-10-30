@@ -3,7 +3,8 @@
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
   import { onMount, untrack } from "svelte";
-  import { fade } from "svelte/transition";
+  import { fade, fly } from "svelte/transition";
+  import { cubicOut } from "svelte/easing";
   import ClipboardPage, { type ClipEntry } from "$lib/ClipboardPage.svelte";
   import Island from "$lib/Island.svelte";
   import Mirror from "$lib/Mirror.svelte";
@@ -20,6 +21,8 @@
   import { Pomodoro, Shelf, Todo, Water, type Settings } from "$lib/productivity.svelte";
   import { fetchWeather, type Weather } from "$lib/weather";
   import { upcoming, type CalEvent } from "$lib/calendar";
+  import { ALL_PAGES, filterPages, PAGE_LABELS, resolvePageDirection, type PageName } from "$lib/pages";
+  import { formatSpeed, isHighTraffic, type NetworkSpeed } from "$lib/network";
 
   // Black box for the page: errors go to notchy.log, and a heartbeat tells Rust the
   // page still runs and draws (sent from an animation frame, which only comes while
@@ -67,11 +70,25 @@
   };
 
   // Pages of the open notch, switched with the dots or the mouse wheel.
-  const ALL_PAGES = ["now", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"] as const;
-  type PageName = (typeof ALL_PAGES)[number];
-  // The water page goes away when the water feature is turned off in Settings.
+  let musicEnabled = $state(true);
+  let pomodoroEnabled = $state(true);
   let waterEnabled = $state(true);
-  const pages = $derived(ALL_PAGES.filter((p) => waterEnabled || p !== "water"));
+  let todoEnabled = $state(true);
+  let shelfEnabled = $state(true);
+  let clipboardEnabled = $state(true);
+  let shortcutsEnabled = $state(true);
+
+  const pages = $derived(
+    filterPages(ALL_PAGES, {
+      musicEnabled,
+      pomodoroEnabled,
+      waterEnabled,
+      todoEnabled,
+      shelfEnabled,
+      clipboardEnabled,
+      shortcutsEnabled,
+    })
+  );
 
   type Power = { charging: boolean; percent: number; battery: boolean };
   type InUse = { camera: string[]; mic: string[] };
@@ -107,6 +124,11 @@
   // Things running at once, shown side by side in the closed notch.
   let call = $state<Call | null>(null);
   let download = $state<Download | null>(null);
+  let networkSpeed = $state<NetworkSpeed | null>(null);
+  let netSpeedIsland = $state(false);
+  let netSpeedStatus = $state(true);
+  let netSpeedThresholdDownKb = $state(500);
+  let netSpeedThresholdUpKb = $state(250);
   // Equalizer bar heights from the audio meter, while it runs.
   let levels = $state<number[] | null>(null);
   // Horizontal swipes cycle which activity leads.
@@ -246,7 +268,12 @@
     ...(call ? [{ kind: "call", call } as const] : []),
     ...(timerActive ? [{ kind: "timer" } as const] : []),
     ...(download ? [{ kind: "download", download } as const] : []),
-    ...(media?.playing ? [{ kind: "music", lyric: false } as const] : []),
+    ...(musicEnabled && media?.playing ? [{ kind: "music", lyric: false } as const] : []),
+    ...(netSpeedIsland &&
+    isHighTraffic(networkSpeed, netSpeedThresholdDownKb * 1024, netSpeedThresholdUpKb * 1024) &&
+    networkSpeed
+      ? [{ kind: "network", speed: networkSpeed } as const]
+      : []),
   ]);
   const view = $derived(
     mirror
@@ -429,24 +456,23 @@
     if (!open || typing || (e.target as HTMLElement).closest(".scroll, .lyrics")) return;
     if (Date.now() - lastWheel < 350 || Math.abs(e.deltaY) < 4) return;
     lastWheel = Date.now();
-    goPage(page + (e.deltaY > 0 ? 1 : -1));
+    const step = e.deltaY > 0 ? 1 : -1;
+    goPage(page + step, step);
   }
 
   // The page's name shows briefly after flipping, and while a dot is hovered.
-  const PAGE_LABELS: Record<PageName, string> = {
-    now: "Pemutar Musik",
-    pomodoro: "Fokus Pomodoro",
-    water: "Minum Air",
-    todo: "Catatan To-Do",
-    shelf: "Laci File",
-    clipboard: "Papan Klip",
-    shortcuts: "Pintasan",
-  };
   let hoveredPage = $state<PageName | null>(null);
   let showPageLabel = $state(false);
   let pageLabelTimer: ReturnType<typeof setTimeout> | undefined;
-  function goPage(i: number) {
-    page = (i + pages.length) % pages.length;
+  let pageDirection = $state<1 | -1>(1);
+
+  function goPage(target: number, step?: number) {
+    if (pages.length <= 1) return;
+    const next = (target + pages.length) % pages.length;
+    if (next === page && step === undefined) return;
+
+    pageDirection = resolvePageDirection(page, next, step);
+    page = next;
     showPageLabel = true;
     clearTimeout(pageLabelTimer);
     pageLabelTimer = setTimeout(() => (showPageLabel = false), 1200);
@@ -530,6 +556,7 @@
     const unlistenCall = listen<Call | null>("call", (e) => (call = e.payload));
     invoke<Call | null>("call_state").then((c) => (call = c));
     const unlistenDownload = listen<Download | null>("download", (e) => (download = e.payload));
+    const unlistenNetSpeed = listen<NetworkSpeed>("network-speed", (e) => (networkSpeed = e.payload));
     const unlistenLevel = listen<number[]>("audio-level", (e) => (levels = metering ? e.payload : null));
     const unlistenClip = listen<ClipEntry[]>("clipboard", (e) => (clipItems = e.payload));
     invoke<ClipEntry[]>("clipboard_list").then((c) => (clipItems = c));
@@ -586,6 +613,16 @@
       shortcuts: Shortcut[];
       mascot: boolean;
       minimalNotch: boolean;
+      musicEnabled?: boolean;
+      pomodoroEnabled?: boolean;
+      todoEnabled?: boolean;
+      shelfEnabled?: boolean;
+      clipboardEnabled?: boolean;
+      shortcutsEnabled?: boolean;
+      netSpeedIsland?: boolean;
+      netSpeedStatus?: boolean;
+      netSpeedThresholdDownKb?: number;
+      netSpeedThresholdUpKb?: number;
     };
     let weatherTimer: ReturnType<typeof setTimeout>;
     const loadWeather = async (settings?: AllSettings) => {
@@ -597,15 +634,26 @@
       weatherTimer = setTimeout(loadWeather, 30 * 60_000);
     };
     const applySettings = (s: AllSettings) => {
-      smallLyrics = s.smallLyrics;
+      smallLyrics = s.smallLyrics && s.musicEnabled !== false;
       mascot = s.mascot !== false;
       if (!mascot) dozing = false;
       minimalNotch = s.minimalNotch === true;
       shortcuts = s.shortcuts ?? [];
-      // Keep the same page in view when the water page appears or goes.
+      // Keep the same page in view when pages appear or go.
       const current = pages[page];
+      musicEnabled = s.musicEnabled !== false;
+      pomodoroEnabled = s.pomodoroEnabled !== false;
       waterEnabled = s.waterEnabled !== false;
-      page = Math.max(0, pages.indexOf(current));
+      todoEnabled = s.todoEnabled !== false;
+      shelfEnabled = s.shelfEnabled !== false;
+      clipboardEnabled = s.clipboardEnabled !== false;
+      shortcutsEnabled = s.shortcutsEnabled !== false;
+      netSpeedIsland = s.netSpeedIsland === true;
+      netSpeedStatus = s.netSpeedStatus !== false;
+      netSpeedThresholdDownKb = s.netSpeedThresholdDownKb ?? 500;
+      netSpeedThresholdUpKb = s.netSpeedThresholdUpKb ?? 250;
+      const newIdx = pages.indexOf(current);
+      page = newIdx !== -1 ? newIdx : Math.min(page, Math.max(0, pages.length - 1));
       pomo.configure(s);
       water.configure(s);
       loadWeather(s);
@@ -650,6 +698,7 @@
         unlistenOutside,
         unlistenCall,
         unlistenDownload,
+        unlistenNetSpeed,
         unlistenLevel,
         unlistenClip,
       ])
@@ -705,6 +754,13 @@
           <circle cx="10" cy="10" r="7.5" class="fill" pathLength="100" stroke-dasharray="{power.percent} 100" />
         </svg>
         <span>{power.percent}%{#if power.charging}&nbsp;⚡{/if}</span><span class="sep">·</span>
+      {/if}
+      {#if netSpeedStatus && networkSpeed}
+        <span class="net-status">
+          <span class="down">↓ {formatSpeed(networkSpeed.down)}</span>
+          <span class="up">↑ {formatSpeed(networkSpeed.up)}</span>
+        </span>
+        <span class="sep">·</span>
       {/if}
       <span>{date}</span><b>{time}</b>
     </div>
@@ -848,7 +904,11 @@
 
   {#if paged && !mirror && view !== "peek" && pages[page] !== "now"}
     {#key page}
-      <div class="layer on below" in:fade={{ duration: 260, delay: 160 }} out:fade={{ duration: 100 }}>
+      <div
+        class="layer on below"
+        in:fly={{ x: pageDirection * 48, duration: 220, delay: 50, easing: cubicOut }}
+        out:fly={{ x: -pageDirection * 48, duration: 120, easing: cubicOut }}
+      >
         {#if pages[page] === "pomodoro"}
           <TimerPage {pomo} now={nowMs} />
         {:else if pages[page] === "water"}
@@ -871,7 +931,7 @@
       <button
         class="arrow"
         class:next={step > 0}
-        onclick={() => goPage(page + step)}
+        onclick={() => goPage(page + step, step)}
         aria-label={step > 0 ? "Halaman berikutnya" : "Halaman sebelumnya"}
         in:fade={{ duration: 200, delay: 200 }}
       >
@@ -891,7 +951,7 @@
           aria-label={PAGE_LABELS[name]}
           class:on={i === page}
           onpointerenter={() => (hoveredPage = name)}
-          onclick={() => goPage(i)}
+          onclick={() => goPage(i, i >= page ? 1 : -1)}
         ></button>
       {/each}
     </div>
@@ -929,13 +989,14 @@
       0 16px 42px rgba(0, 0, 0, 0.4);
   }
 
-  /* "Ears": concave fillets that blend the notch seamlessly into the screen's top edge. */
+  /* "Ears": concave fillets that blend the notch seamlessly into the screen's top edge.
+     1px overlap prevents subpixel rasterization seams on high-DPI (125%, 150%) screens. */
   .notch::before,
   .notch::after {
     content: "";
     position: absolute;
     top: 0;
-    width: var(--e);
+    width: calc(var(--e) + 1px);
     height: var(--e);
     background-size: 100% 100%;
     background-repeat: no-repeat;
@@ -945,12 +1006,12 @@
       height 0.62s var(--spring);
   }
   .notch::before {
-    right: 100%;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 A100 100 0 0 1 100 100 L100 0 Z' fill='%23000'/%3E%3C/svg%3E");
+    right: calc(100% - 1px);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 101 100' preserveAspectRatio='none'%3E%3Cpath d='M0 0 A100 100 0 0 1 100 100 L101 100 L101 0 Z' fill='%23000'/%3E%3C/svg%3E");
   }
   .notch::after {
-    left: 100%;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M100 0 A100 100 0 0 0 0 100 L0 0 Z' fill='%23000'/%3E%3C/svg%3E");
+    left: calc(100% - 1px);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 101 100' preserveAspectRatio='none'%3E%3Cpath d='M101 0 A100 100 0 0 0 1 100 L0 100 L0 0 Z' fill='%23000'/%3E%3C/svg%3E");
   }
 
   /* A faint light rising from the bottom edge, for depth. */
@@ -1278,6 +1339,18 @@
   }
   .status .sep {
     opacity: 0.6;
+  }
+  .net-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+  }
+  .net-status .down {
+    color: #38bdf8;
+  }
+  .net-status .up {
+    color: #34d399;
   }
   .mini-ring {
     width: 12px;

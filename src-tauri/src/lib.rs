@@ -44,6 +44,7 @@ mod clipboard;
 mod downloads;
 mod health;
 mod media;
+mod network;
 mod notifications;
 mod settings;
 mod share;
@@ -107,6 +108,10 @@ fn hwnd(window: &WebviewWindow) -> HWND {
 fn set_notch_size(w: f64, h: f64) {
     *HIT_SIZE.lock().unwrap() = (w, h);
     update_hit_rect();
+}
+
+pub(crate) fn is_notch_open() -> bool {
+    HIT_SIZE.lock().map(|s| s.1 > 60.0).unwrap_or(false)
 }
 
 fn update_hit_rect() {
@@ -727,6 +732,9 @@ pub fn run() {
             calls::start(app.handle().clone());
             downloads::start(app.handle().clone());
             clipboard::start(app.handle().clone());
+            let s = settings::get_settings();
+            network::update_settings(&s);
+            network::start(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())

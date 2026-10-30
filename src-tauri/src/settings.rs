@@ -52,6 +52,18 @@ pub struct Settings {
     pub shortcuts: Vec<Shortcut>,
     /// Caps Lock and keyboard-language peeks (one keyboard hook, read at start).
     pub caps_lock_peek: bool,
+    /// Page toggles for the open notch.
+    pub music_enabled: bool,
+    pub pomodoro_enabled: bool,
+    pub todo_enabled: bool,
+    pub shelf_enabled: bool,
+    pub clipboard_enabled: bool,
+    pub shortcuts_enabled: bool,
+    /// Network speed indicators on/off and thresholds (in KB/s)
+    pub net_speed_island: bool,
+    pub net_speed_status: bool,
+    pub net_speed_threshold_down_kb: u32,
+    pub net_speed_threshold_up_kb: u32,
 }
 
 /// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
@@ -98,6 +110,16 @@ impl Default for Settings {
             small_lyrics: true,
             shortcuts: default_shortcuts(),
             caps_lock_peek: true,
+            music_enabled: true,
+            pomodoro_enabled: true,
+            todo_enabled: true,
+            shelf_enabled: true,
+            clipboard_enabled: true,
+            shortcuts_enabled: true,
+            net_speed_island: false,
+            net_speed_status: true,
+            net_speed_threshold_down_kb: 500,
+            net_speed_threshold_up_kb: 250,
         }
     }
 }
@@ -115,6 +137,7 @@ pub fn get_settings() -> Settings {
 pub fn save_settings(app: AppHandle, settings: Settings) -> Result<(), String> {
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     crate::store::write_safely(&path(), &json)?;
+    crate::network::update_settings(&settings);
     let _ = app.emit("settings", &settings);
     Ok(())
 }
@@ -189,4 +212,45 @@ pub fn open_window(app: &AppHandle) {
         .resizable(false)
         .center()
         .build();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_settings_default_thresholds() {
+        let s = Settings::default();
+        assert_eq!(s.net_speed_threshold_down_kb, 500);
+        assert_eq!(s.net_speed_threshold_up_kb, 250);
+        assert_eq!(s.net_speed_island, false);
+        assert_eq!(s.net_speed_status, true);
+    }
+
+    #[test]
+    fn test_settings_deserialize_backward_compatibility() {
+        // Deserializing older settings JSON without threshold fields uses defaults
+        let old_json = r#"{
+            "focusMinutes": 30,
+            "netSpeedIsland": true,
+            "netSpeedStatus": true
+        }"#;
+        let s: Settings = serde_json::from_str(old_json).expect("deserialize old json");
+        assert_eq!(s.focus_minutes, 30);
+        assert_eq!(s.net_speed_island, true);
+        assert_eq!(s.net_speed_status, true);
+        assert_eq!(s.net_speed_threshold_down_kb, 500);
+        assert_eq!(s.net_speed_threshold_up_kb, 250);
+    }
+
+    #[test]
+    fn test_settings_deserialize_custom_thresholds() {
+        let json = r#"{
+            "netSpeedThresholdDownKb": 1200,
+            "netSpeedThresholdUpKb": 600
+        }"#;
+        let s: Settings = serde_json::from_str(json).expect("deserialize custom thresholds");
+        assert_eq!(s.net_speed_threshold_down_kb, 1200);
+        assert_eq!(s.net_speed_threshold_up_kb, 600);
+    }
 }

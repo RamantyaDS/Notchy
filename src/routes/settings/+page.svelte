@@ -14,11 +14,21 @@
     waterTo: number;
     remindEvery: number;
     waterEnabled: boolean;
+    musicEnabled: boolean;
+    pomodoroEnabled: boolean;
+    todoEnabled: boolean;
+    shelfEnabled: boolean;
+    clipboardEnabled: boolean;
+    shortcutsEnabled: boolean;
     mirrorNotifications: boolean;
     calendarUrl: string;
     smallLyrics: boolean;
     shortcuts: Shortcut[];
     capsLockPeek: boolean;
+    netSpeedIsland?: boolean;
+    netSpeedStatus?: boolean;
+    netSpeedThresholdDownKb?: number;
+    netSpeedThresholdUpKb?: number;
   };
   type Shortcut = { name: string; action: string; target: string };
 
@@ -43,6 +53,30 @@
   }
 
   let settings = $state<Settings | null>(null);
+
+  type PageToggleKey =
+    | "musicEnabled"
+    | "pomodoroEnabled"
+    | "waterEnabled"
+    | "todoEnabled"
+    | "shelfEnabled"
+    | "clipboardEnabled"
+    | "shortcutsEnabled";
+
+  const PAGE_ITEMS: [PageToggleKey, string, string][] = [
+    ["musicEnabled", "Pemutar Musik", "Jam, pemutar media, lirik lagu"],
+    ["pomodoroEnabled", "Fokus Pomodoro", "Timer sesi fokus dan istirahat"],
+    ["waterEnabled", "Minum Air", "Pencatatan hidrasi harian & pengingat"],
+    ["todoEnabled", "Catatan To-Do", "Daftar to-do harian sederhana"],
+    ["shelfEnabled", "Laci File", "Tempat menaruh file/folder sementara"],
+    ["clipboardEnabled", "Papan Klip", "Riwayat salinan teks dan tangkapan layar"],
+    ["shortcutsEnabled", "Pintasan", "Tombol aksi cepat dan peluncur aplikasi"],
+  ];
+
+  const enabledPagesCount = $derived.by(() => {
+    const s = settings;
+    return s ? PAGE_ITEMS.filter(([key]) => s[key] !== false).length : 7;
+  });
   let query = $state("");
   let results = $state<Place[]>([]);
   let searching = $state(false);
@@ -91,8 +125,11 @@
       <input
         type="number"
         min="0"
-        value={settings[key] as number}
-        onchange={(e) => save({ [key]: Math.max(0, Math.round(Number(e.currentTarget.value))) })}
+        value={settings[key] ?? (key === "netSpeedThresholdDownKb" ? 500 : key === "netSpeedThresholdUpKb" ? 250 : 0)}
+        onchange={(e) => {
+          const val = Number(e.currentTarget.value);
+          save({ [key]: Math.max(0, Math.round(isNaN(val) ? 0 : val)) });
+        }}
       />
       <em>{unit}</em>
     </label>
@@ -102,6 +139,34 @@
 <main>
   <h1>Notchy</h1>
   {#if saved}<p class="saved">Tersimpan</p>{/if}
+
+  <section>
+    <h2>Halaman di notch</h2>
+    <p class="current">
+      Pilih menu/halaman yang ingin ditampilkan saat notch dibuka:
+      {#if enabledPagesCount <= 1}
+        <strong style="color: #fb923c;"> (Minimal 1 halaman harus aktif)</strong>
+      {/if}
+    </p>
+    {#if settings}
+      <div class="page-toggles">
+        {#each PAGE_ITEMS as [key, label, desc]}
+          <label class="field check" class:disabled={settings[key] !== false && enabledPagesCount <= 1}>
+            <input
+              type="checkbox"
+              checked={settings[key] !== false}
+              disabled={settings[key] !== false && enabledPagesCount <= 1}
+              onchange={(e) => save({ [key]: e.currentTarget.checked })}
+            />
+            <span class="page-label">
+              <strong>{label}</strong>
+              <small>{desc}</small>
+            </span>
+          </label>
+        {/each}
+      </div>
+    {/if}
+  </section>
 
   <section>
     <h2>Notifikasi</h2>
@@ -147,6 +212,43 @@
           onchange={(e) => save({ capsLockPeek: e.currentTarget.checked })}
         />
         <span>Tampilkan Caps Lock dan ganti bahasa keyboard di notch (berlaku setelah Notchy dibuka ulang)</span>
+      </label>
+    {/if}
+  </section>
+
+  <section>
+    <h2>Kecepatan Jaringan</h2>
+    <p class="current">
+      Pantau kecepatan unduh (download) dan unggah (upload) internet secara real-time.
+    </p>
+    {#if settings}
+      <label class="field check">
+        <input
+          type="checkbox"
+          checked={settings.netSpeedIsland === true}
+          onchange={(e) => save({ netSpeedIsland: e.currentTarget.checked })}
+        />
+        <span class="page-label">
+          <strong>Dynamic Island (Notch Tertutup)</strong>
+          <small>Otomatis melebar saat ada unduhan/unggahan berkecepatan tinggi (&ge; {settings.netSpeedThresholdDownKb ?? 500} KB/s)</small>
+        </span>
+      </label>
+      {#if settings.netSpeedIsland === true}
+        <div class="nested-fields">
+          {@render field("netSpeedThresholdDownKb", "Unduh minimum", "KB/s")}
+          {@render field("netSpeedThresholdUpKb", "Unggah minimum", "KB/s")}
+        </div>
+      {/if}
+      <label class="field check">
+        <input
+          type="checkbox"
+          checked={settings.netSpeedStatus !== false}
+          onchange={(e) => save({ netSpeedStatus: e.currentTarget.checked })}
+        />
+        <span class="page-label">
+          <strong>Baris Status (Notch Terbuka)</strong>
+          <small>Tampil di baris atas notch terbuka bersanding dengan baterai dan waktu</small>
+        </span>
       </label>
     {/if}
   </section>
@@ -396,6 +498,34 @@
   }
   .field.check input {
     width: auto;
+  }
+  .field.check.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .page-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0 14px;
+  }
+  .page-label {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .page-label strong {
+    font-size: 13px;
+    color: #eceff7;
+  }
+  .page-label small {
+    font-size: 11.5px;
+    color: #8c94a8;
+  }
+  .nested-fields {
+    margin-left: 28px;
+    margin-top: 4px;
+    margin-bottom: 8px;
   }
   input.wide {
     width: 100%;
