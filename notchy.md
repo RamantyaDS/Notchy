@@ -225,6 +225,21 @@ Pemicu: laptop kantor teman (akun admin.it) menolak installer dengan "Windows ca
 - Portable tidak membantu kalau AppLocker hanya mengizinkan Program Files, atau kalau antivirus memblokir semua exe yang belum dikenal. Untuk kasus itu: whitelist dari IT (pakai SHA-256 di catatan rilis), installer mode "both"/MSI, atau code signing (dibahas, belum dikerjakan).
 - Diuji 29 Okt 2026: build berlabel v0.2.2 dijalankan dari folder di luar `target` (lewat zip). Peek "Notchy v0.2.3 tersedia · Klik untuk unduh di GitHub" muncul, dan Notchy tetap jalan dari folder itu tanpa menjalankan installer.
 
+### J. PR #2 (Malik): kecepatan jaringan, sakelar halaman, animasi geser, 30 Okt 2026
+Di-merge sebagai 8f8f1fa, setelah tiga putaran review.
+- **Kecepatan jaringan** (`network.rs`, `GetIfTable2` tiap 1 detik): menjumlahkan antarmuka yang aktif, kecuali loopback dan filter driver NDIS (antivirus/VPN/QoS), supaya tidak terhitung dobel.
+  - **Baris status** (notch terbuka, default nyala) menampilkan ↓/↑.
+  - **Pil di notch tertutup** (`netSpeedIsland`, default **mati**) muncul kalau kecepatan ≥ batas. Batasnya bisa diatur, default 500/250 KB/s.
+- **Aturan kirim event** (permintaan review, supaya notch diam tetap diam):
+  - notch terbuka → kirim tiap detik;
+  - notch tertutup → hanya kalau pil nyala dan kecepatan di atas batas, plus sekali saat turun lagi;
+  - kedua sakelar mati → thread tidur tanpa memanggil `GetIfTable2`.
+  - Pengaturan disalin ke atomik saat start dan saat Settings disimpan.
+- **Sakelar halaman** di Settings → "Halaman di notch" (Musik, Pomodoro, Air, To-do, Shelf, Clipboard, Pintasan). Minimal satu halaman tetap aktif. Mematikan Musik juga mematikan lirik di notch kecil dan pil musik.
+- **Animasi geser** kiri/kanan sesuai arah saat ganti halaman. Telinga notch overlap 1 px supaya tidak ada celah di skala 125%/150%.
+- **Ditolak di review:** `release.yml` (build installer tanpa tanda tangan di setiap push) dan penghapusan cincin mengecas.
+- **Diuji 30 Okt 2026:** build dari main jalan. CPU saat diam 1,4% selama 60 detik (sebelumnya 1,7%), 277 MB. Baris status menampilkan ↓/↑ yang ter-update, tombol panah menggeser ke halaman berikutnya dengan nama halamannya, cincin mengecas tetap ada, log bersih. Belum dicoba langsung: pil jaringan di notch tertutup dan sakelar halaman di Settings.
+
 ---
 
 ## 6. Urutan pengerjaan
