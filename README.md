@@ -39,9 +39,11 @@ A small black island at the top of your screen that shows what's happening (musi
 
 📁 **Shelf** to park files you'll drag somewhere else, 📋 **clipboard history** (text and images), ⬇️ **download progress** from your browser, ⚡ **shortcuts** page (lock, sleep, screenshot, your own apps and links), and drop a file on the notch to **share** it.
 
-🔊 **Quick status:** volume, brightness, Caps Lock, keyboard language, charging, Wi-Fi, headphones and earbuds battery, camera and mic in use, mic mute, screenshot preview, weather, one-click audio output switch.
+🔊 **Quick status:** volume, brightness, Caps Lock, keyboard language, charging, Wi-Fi, headphones and earbuds battery, camera and mic in use, mic mute, screenshot preview, weather, one-click audio output switch, and live **network speed** (↓/↑) in the open notch, optionally also in the small notch during heavy downloads or uploads.
 
 🖱️ **Gestures:** scroll on the notch for volume, swipe sideways to switch, press and hold to keep it open.
+
+🎛️ **Only what you use.** Turn pages (music, timer, water, to-do, Shelf, clipboard, shortcuts) on or off in Settings.
 
 🫥 **Stays out of the way.** It opens only when the cursor stops on it (not when you sweep past to a browser tab), tucks into a thin line when there's a tab or button right under it, hides for full-screen video and games, and dozes off when you're idle.
 
@@ -162,7 +164,7 @@ Design notes and every decision behind the app are in [`notchy.md`](notchy.md) (
 <details>
 <summary>🇮🇩 Bahasa Indonesia</summary>
 
-**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), timer fokus, pengingat minum, to-do, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, dan status sistem. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
+**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), timer fokus, pengingat minum, to-do, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, kecepatan internet, dan status sistem. Halaman yang tidak dipakai bisa dimatikan di Settings. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
 
 Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
 
