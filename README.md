@@ -105,6 +105,11 @@ Company laptops often block programs that aren't on an approved list, with a mes
 Windows still shows its own banner. Turn on **Do not disturb** (Settings → Notifications, or the button in Notchy's Settings); notifications then appear only in the notch and still land in the notification center.
 </details>
 
+<details><summary>The volume icon shows twice (Windows' and Notchy's)</summary>
+
+Turn on **Sembunyikan overlay volume Windows** in Settings → **Keyboard & sistem** and restart Notchy. The volume keys are then handled by Notchy, so only its own volume peek appears. On some laptops the Fn volume keys are handled by the maker's driver, and Windows' overlay still shows there. The brightness overlay can't be hidden this way.
+</details>
+
 <details><summary>A song has no lyrics, or the lyrics are off</summary>
 
 Lyrics come from [LRCLIB](https://lrclib.net), a free community database. Some songs aren't there yet, and versions with a different length (live, remix) may not line up.

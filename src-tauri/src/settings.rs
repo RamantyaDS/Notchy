@@ -52,6 +52,8 @@ pub struct Settings {
     pub shortcuts: Vec<Shortcut>,
     /// Caps Lock and keyboard-language peeks (one keyboard hook, read at start).
     pub caps_lock_peek: bool,
+    /// Notchy handles the volume keys so only its own volume peek shows (read at start).
+    pub hide_volume_osd: bool,
     /// Page toggles for the open notch.
     pub music_enabled: bool,
     pub pomodoro_enabled: bool,
@@ -110,6 +112,7 @@ impl Default for Settings {
             small_lyrics: true,
             shortcuts: default_shortcuts(),
             caps_lock_peek: true,
+            hide_volume_osd: false,
             music_enabled: true,
             pomodoro_enabled: true,
             todo_enabled: true,

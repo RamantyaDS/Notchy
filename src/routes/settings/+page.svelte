@@ -25,6 +25,7 @@
     smallLyrics: boolean;
     shortcuts: Shortcut[];
     capsLockPeek: boolean;
+    hideVolumeOsd: boolean;
     netSpeedIsland?: boolean;
     netSpeedStatus?: boolean;
     netSpeedThresholdDownKb?: number;
@@ -212,6 +213,14 @@
           onchange={(e) => save({ capsLockPeek: e.currentTarget.checked })}
         />
         <span>Tampilkan Caps Lock dan ganti bahasa keyboard di notch (berlaku setelah Notchy dibuka ulang)</span>
+      </label>
+      <label class="field check">
+        <input
+          type="checkbox"
+          checked={settings.hideVolumeOsd}
+          onchange={(e) => save({ hideVolumeOsd: e.currentTarget.checked })}
+        />
+        <span>Sembunyikan overlay volume Windows: tombol volume diatur Notchy (berlaku setelah Notchy dibuka ulang)</span>
       </label>
     {/if}
   </section>
