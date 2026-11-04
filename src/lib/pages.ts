@@ -21,6 +21,21 @@ export const PAGE_LABELS: Record<PageName, string> = {
   shortcuts: "Pintasan",
 };
 
+import { t } from "./i18n";
+
+export function getPageLabel(page: PageName): string {
+  const map: Record<PageName, string> = {
+    now: "pages.music",
+    pomodoro: "pages.pomodoro",
+    water: "pages.water",
+    todo: "pages.todo",
+    shelf: "pages.shelf",
+    clipboard: "pages.clipboard",
+    shortcuts: "pages.shortcuts",
+  };
+  return t(map[page] || page);
+}
+
 /**
  * Filters the active pages based on user settings.
  * Ensures at least one page is returned (fallback to "now" if all are disabled).

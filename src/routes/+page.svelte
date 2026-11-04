@@ -23,7 +23,8 @@
   import { Pomodoro, Shelf, Todo, Water, type Settings } from "$lib/productivity.svelte";
   import { fetchWeather, type Weather } from "$lib/weather";
   import { upcoming, type CalEvent } from "$lib/calendar";
-  import { ALL_PAGES, filterPages, PAGE_LABELS, resolvePageDirection, type PageName } from "$lib/pages";
+  import { ALL_PAGES, filterPages, PAGE_LABELS, getPageLabel, resolvePageDirection, type PageName } from "$lib/pages";
+  import { setLocale, t } from "$lib/i18n";
   import { isHighTraffic, type NetworkSpeed } from "$lib/network";
   import { PeekManager } from "$lib/peekManager.svelte";
   import { setupNotchEvents } from "$lib/notchEvents";
@@ -437,6 +438,7 @@
     netSpeedThresholdUpKb?: number;
     springPhysics?: string;
     windowsAccentGlow?: boolean;
+    language?: string;
   };
 
   const loadCalendar = async () => {
@@ -509,6 +511,8 @@
       netSpeedThresholdUpKb = s.netSpeedThresholdUpKb ?? 250;
       springPhysics = s.springPhysics ?? "spring";
       windowsAccentGlow = s.windowsAccentGlow === true;
+      currentLanguage = s.language ?? "en";
+      setLocale(currentLanguage);
       const newIdx = pages.indexOf(current);
       page = newIdx !== -1 ? newIdx : Math.min(page, Math.max(0, pages.length - 1));
       pomo.configure(s);
@@ -628,8 +632,10 @@
     };
   });
 
-  const time = $derived(now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":"));
-  const date = $derived(now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" }));
+  let currentLanguage = $state<string>("en");
+  const locale = $derived(currentLanguage === "id" ? "id-ID" : "en-US");
+  const time = $derived(now.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }).replace(".", ":"));
+  const date = $derived(now.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" }));
 </script>
 
 <div
@@ -831,7 +837,7 @@
     {/each}
     {#if hoveredPage || showPageLabel}
       <div class="page-tooltip" transition:fade={{ duration: 150 }}>
-        {PAGE_LABELS[hoveredPage ?? pages[page]]}
+        {getPageLabel(hoveredPage ?? pages[page])}
       </div>
     {/if}
     <div class="pager" role="tablist" tabindex="-1" in:fade={{ duration: 200, delay: 200 }} onpointerleave={() => (hoveredPage = null)}>
@@ -839,7 +845,7 @@
         <button
           role="tab"
           aria-selected={i === page}
-          aria-label={PAGE_LABELS[name]}
+          aria-label={getPageLabel(name)}
           class:on={i === page}
           onpointerenter={() => (hoveredPage = name)}
           onclick={() => goPage(i, i >= page ? 1 : -1)}

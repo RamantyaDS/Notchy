@@ -73,6 +73,8 @@ pub struct Settings {
     pub spring_physics: String,
     /// false: Default Notchy neutral ambient glow; true: Windows DWM accent sync
     pub windows_accent_glow: bool,
+    /// Language preference: "en" (default) or "id"
+    pub language: String,
 }
 
 /// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
@@ -134,6 +136,7 @@ impl Default for Settings {
             monitor_placement: "primary".into(),
             spring_physics: "spring".into(),
             windows_accent_glow: false,
+            language: "en".into(),
         }
     }
 }
@@ -223,7 +226,7 @@ pub fn open_window(app: &AppHandle) {
     }
     let _ = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings".into()))
         .title("Notchy Settings")
-        .inner_size(460.0, 640.0)
+        .inner_size(480.0, 660.0)
         .resizable(false)
         .center()
         .build();
@@ -245,6 +248,7 @@ mod tests {
         assert!(!s.windows_accent_glow);
         assert_eq!(s.net_speed_island, false);
         assert!(s.net_speed_status);
+        assert_eq!(s.language, "en");
     }
 
     #[test]
@@ -266,6 +270,7 @@ mod tests {
         assert_eq!(s.monitor_placement, "primary");
         assert_eq!(s.spring_physics, "spring");
         assert!(!s.windows_accent_glow);
+        assert_eq!(s.language, "en");
     }
 
     #[test]

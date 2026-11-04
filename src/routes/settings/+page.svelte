@@ -3,9 +3,11 @@
   import { onMount } from "svelte";
   import { fade, slide } from "svelte/transition";
   import { searchCity, type Place } from "$lib/weather";
+  import { t, setLocale, getLocale } from "$lib/i18n";
 
   type City = { name: string; latitude: number; longitude: number };
   type Settings = {
+    language?: string;
     weatherCity: City | null;
     focusMinutes: number;
     breakMinutes: number;
@@ -98,11 +100,17 @@
 
   onMount(async () => {
     settings = await invoke<Settings>("get_settings");
+    if (settings?.language) {
+      setLocale(settings.language);
+    }
     accentColor = await invoke<string>("get_accent_color").catch(() => "#38bdf8");
   });
 
   async function save(patch: Partial<Settings> = {}) {
     if (!settings) return;
+    if (patch.language) {
+      setLocale(patch.language);
+    }
     settings = { ...settings, ...patch };
     await invoke("save_settings", { settings });
     saved = true;
@@ -153,7 +161,7 @@
       <input
         type="text"
         bind:value={searchQuery}
-        placeholder="Cari pengaturan (layar, bluetooth, spring, pomodoro...)"
+        placeholder={t("settings.searchPlaceholder")}
       />
       {#if searchQuery}
         <button class="clear-search" onclick={() => (searchQuery = "")}>✕</button>
@@ -161,8 +169,8 @@
     </div>
   </header>
 
-  <!-- Tab Bar -->
-  <div class="tabs-nav" role="tablist" aria-label="Kategori Pengaturan">
+  <!-- Tab Bar (Minimalist 4-Column Grid, No Overflow) -->
+  <div class="tabs-nav" role="tablist" aria-label={t("settings.title")}>
     <button
       class="tab-btn"
       class:active={activeTab === "display"}
@@ -170,8 +178,8 @@
       role="tab"
       aria-selected={activeTab === "display"}
     >
-      <span class="tab-icon">🎨</span>
-      <span class="tab-text">Tampilan & Layar</span>
+      <span class="tab-icon">🖥️</span>
+      <span class="tab-text">{t("tabs.display")}</span>
     </button>
     <button
       class="tab-btn"
@@ -180,8 +188,8 @@
       role="tab"
       aria-selected={activeTab === "system"}
     >
-      <span class="tab-icon">⚡</span>
-      <span class="tab-text">Sistem & Indikator</span>
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-text">{t("tabs.system")}</span>
     </button>
     <button
       class="tab-btn"
@@ -191,7 +199,7 @@
       aria-selected={activeTab === "productivity"}
     >
       <span class="tab-icon">⏱️</span>
-      <span class="tab-text">Produktivitas</span>
+      <span class="tab-text">{t("tabs.focus")}</span>
     </button>
     <button
       class="tab-btn"
@@ -200,8 +208,8 @@
       role="tab"
       aria-selected={activeTab === "media"}
     >
-      <span class="tab-icon">🌦️</span>
-      <span class="tab-text">Cuaca & Media</span>
+      <span class="tab-icon">🎵</span>
+      <span class="tab-text">{t("tabs.media")}</span>
     </button>
   </div>
 
@@ -216,6 +224,32 @@
       <!-- TAB 1: TAMPILAN & LAYAR -->
       {#if activeTab === "display" || searchQuery}
         <div class="tab-panel" in:fade={{ duration: 180 }}>
+          {#if matches("Language Bahasa Inggris Indonesia English")}
+            <section class="setting-card">
+              <div class="card-header">
+                <div class="card-icon">🌐</div>
+                <div class="card-info">
+                  <h3>{t("settings.language")}</h3>
+                  <p>{t("settings.languageDesc")}</p>
+                </div>
+              </div>
+              <div class="control-row">
+                <select
+                  class="select-input"
+                  value={settings.language ?? "en"}
+                  onchange={(e) => {
+                    const lang = e.currentTarget.value;
+                    setLocale(lang);
+                    save({ language: lang });
+                  }}
+                >
+                  <option value="en">{t("settings.langEn")}</option>
+                  <option value="id">{t("settings.langId")}</option>
+                </select>
+              </div>
+            </section>
+          {/if}
+
           {#if matches("Layar Multi-Monitor Penempatan Posisi Display Primary Secondary Kursor")}
             <section class="setting-card">
               <div class="card-header">
@@ -974,17 +1008,17 @@
     font-size: 12px;
   }
 
-  /* Tabs */
+  /* Tabs (Minimalist 4-Column Grid, Zero Scroll) */
   .tabs-nav {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 4px;
     background: rgba(22, 27, 34, 0.6);
     padding: 4px;
     border-radius: 10px;
     border: 1px solid rgba(240, 246, 252, 0.08);
-    margin-bottom: 22px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    margin-bottom: 20px;
+    overflow: hidden;
   }
 
   .tabs-nav::-webkit-scrollbar {
@@ -992,22 +1026,21 @@
   }
 
   .tab-btn {
-    flex: 1 1 0;
-    min-width: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 8px 10px;
-    border-radius: 8px;
+    gap: 3px;
+    padding: 7px 4px;
+    border-radius: 7px;
     border: none;
     background: transparent;
     color: #8b949e;
-    font-size: 12.5px;
+    font-size: 11.5px;
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.18s ease;
+    transition: all 0.16s ease;
   }
 
   .tab-btn:hover {
@@ -1224,9 +1257,9 @@
   }
 
   .nested-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .input-inline {

@@ -5,6 +5,7 @@
 
 <script lang="ts">
   import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+  import { t } from "./i18n";
 
   // onOpen: the peek was clicked through (opens the app / closes the peek).
   // onAction: one of its buttons was clicked (e.g. "camera", "join").
@@ -87,32 +88,32 @@
               ? { icon: "code", title: "Versi pengembang", detail: "Update lewat build, bukan updater" }
               : { icon: "alert", tone: "#f87171", title: "Gagal mengecek update", detail: "Cek koneksi internet" };
       case "camera":
-        return { icon: "camera", tone: "#34d399", title: "Kamera dipakai", detail: p.app };
+        return { icon: "camera", tone: "#34d399", title: t("peek.cameraInUse"), detail: p.app };
       case "mic-in-use":
-        return { icon: "mic", tone: "#fb923c", title: "Mikrofon dipakai", detail: p.app };
+        return { icon: "mic", tone: "#fb923c", title: t("peek.micInUse"), detail: p.app };
       case "timer":
         return p.phase === "break"
-          ? { icon: "timer", tone: "#34d399", title: "Waktunya istirahat", detail: "Sesi fokus selesai" }
-          : { icon: "timer", tone: "#fb7185", title: "Istirahat selesai", detail: "Siap fokus lagi?" };
+          ? { icon: "timer", tone: "#34d399", title: t("peek.timeForBreak"), detail: t("peek.focusDone") }
+          : { icon: "timer", tone: "#fb7185", title: t("peek.breakDone"), detail: t("peek.readyToFocus") };
       case "water":
         return {
           icon: "drop",
           tone: "#38bdf8",
-          title: "Waktunya minum",
-          detail: `${(p.today / 1000).toLocaleString("id-ID")} dari ${(p.goal / 1000).toLocaleString("id-ID")} L hari ini`,
+          title: t("peek.timeToDrink"),
+          detail: `${(p.today / 1000).toFixed(1)} / ${(p.goal / 1000).toFixed(1)} L`,
         };
       case "todo":
-        return { icon: "check", tone: "#fb923c", title: p.text, detail: `Pengingat ${p.time}` };
+        return { icon: "check", tone: "#fb923c", title: p.text, detail: `Reminder ${p.time}` };
       case "calendar": {
-        const at = new Date(p.start).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":");
-        return { icon: "calendar", tone: "#fb923c", title: p.title, detail: p.before ? `Mulai ${p.before} menit lagi · ${at}` : `Dimulai sekarang · ${at}` };
+        const at = new Date(p.start).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }).replace(".", ":");
+        return { icon: "calendar", tone: "#fb923c", title: p.title, detail: p.before ? `${p.before}m · ${at}` : `Now · ${at}` };
       }
       case "bluetooth":
         return {
           icon: p.category === "audio" ? "headphones" : p.category === "hid" ? "keyboard" : "bluetooth",
           tone: p.low ? "#f87171" : "#34d399",
-          title: p.low ? "Baterai perangkat lemah" : `${p.name} tersambung`,
-          detail: p.battery != null ? `Baterai: ${p.battery}%` : (p.low ? p.name : "Perangkat Bluetooth"),
+          title: p.low ? t("peek.bluetoothLow", { device: p.name }) : t("peek.bluetoothConnected", { device: p.name }),
+          detail: p.battery != null ? `${t("peek.battery")}: ${p.battery}%` : (p.low ? p.name : t("peek.bluetoothDevice")),
           ring: p.battery ?? undefined,
           value: p.battery != null ? `${p.battery}%` : undefined,
         };
