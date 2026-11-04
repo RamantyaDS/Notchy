@@ -22,8 +22,9 @@ use crate::{log_line, peek};
 static READY: Mutex<Option<(Update, Vec<u8>)>> = Mutex::new(None);
 
 fn is_dev_build() -> bool {
-    let exe = std::env::current_exe().unwrap_or_default();
-    exe.to_string_lossy().to_lowercase().contains(r"\target\")
+    // Fitur auto-update dinonaktifkan pada branch dev:
+    // Update dilakukan melalui build baru, bukan updater otomatis.
+    true
 }
 
 /// Only the copy inside the installer is marked as installed (see notchy.md §9).
