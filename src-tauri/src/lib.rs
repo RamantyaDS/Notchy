@@ -39,6 +39,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 mod audio;
+mod bluetooth;
 mod calls;
 mod clipboard;
 mod downloads;
@@ -319,15 +320,44 @@ fn start_mouse_hook() {
     });
 }
 
-/// Centers the window at the top of the primary monitor.
-fn place_window(window: &WebviewWindow) {
-    let (Ok(Some(monitor)), Ok(size)) = (window.primary_monitor(), window.outer_size()) else { return };
+/// Centers the window at the top of the selected monitor based on settings.
+pub(crate) fn place_window(window: &WebviewWindow) {
+    let Ok(monitors) = window.available_monitors() else { return };
+    let Ok(size) = window.outer_size() else { return };
+    let settings = crate::settings::get_settings();
+    let primary = window.primary_monitor().ok().flatten();
+
+    let target_monitor = match settings.monitor_placement.as_str() {
+        "secondary" => {
+            let prim_pos = primary.as_ref().map(|p| *p.position());
+            monitors.iter().find(|m| prim_pos.is_none_or(|pos| *m.position() != pos)).cloned().or(primary)
+        }
+        "follow-cursor" => {
+            let cx = CURSOR_X.load(Ordering::Relaxed);
+            let cy = CURSOR_Y.load(Ordering::Relaxed);
+            monitors.iter().find(|m| {
+                let pos = m.position();
+                let m_size = m.size();
+                cx >= pos.x && cx < pos.x + m_size.width as i32 &&
+                cy >= pos.y && cy < pos.y + m_size.height as i32
+            }).cloned().or(primary)
+        }
+        _ => primary,
+    };
+
+    let Some(monitor) = target_monitor.or_else(|| monitors.into_iter().next()) else { return };
     let target = PhysicalPosition::new(
         monitor.position().x + (monitor.size().width as i32 - size.width as i32) / 2,
         monitor.position().y,
     );
     if window.outer_position().ok() != Some(target) {
         let _ = window.set_position(target);
+    }
+}
+
+pub fn place_window_for_settings(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        place_window(&w);
     }
 }
 
@@ -671,6 +701,7 @@ pub fn run() {
             audio::list_outputs,
             audio::next_output,
             system::power_state,
+            system::get_accent_color,
             system::in_use_state,
             system::open_screenshot,
             settings::get_settings,
@@ -735,6 +766,7 @@ pub fn run() {
             let s = settings::get_settings();
             network::update_settings(&s);
             network::start(app.handle().clone());
+            bluetooth::start(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())

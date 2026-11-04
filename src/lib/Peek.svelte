@@ -19,6 +19,8 @@
     micOff: "M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V6a3 3 0 0 0-5.7-1.3M19 11a7 7 0 0 1-1.2 3.9M5 11a7 7 0 0 0 10.6 6M12 18v3M3 3l18 18",
     caps: "M12 4 4 13h4v5h8v-5h4zM8 21h8",
     keyboard: "M3 6h18v12H3zM7 10h.01M11 10h.01M15 10h.01M7 14h10",
+    mouse: "M12 2a6 6 0 0 0-6 6v8a6 6 0 0 0 12 0V8a6 6 0 0 0-6-6zm0 2a4 4 0 0 1 4 4v2H8V8a4 4 0 0 1 4-4z",
+    bluetooth: "M7 7l10 10-5 5V2l5 5L7 17",
     bolt: "M13 2 4 14h7l-1 8 9-12h-7z",
     battery: "M3 8h15v8H3zM21 11v2M6 11v2",
     wifi: "M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0M12 19.5h.01",
@@ -105,6 +107,15 @@
         const at = new Date(p.start).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":");
         return { icon: "calendar", tone: "#fb923c", title: p.title, detail: p.before ? `Mulai ${p.before} menit lagi · ${at}` : `Dimulai sekarang · ${at}` };
       }
+      case "bluetooth":
+        return {
+          icon: p.category === "audio" ? "headphones" : p.category === "hid" ? "keyboard" : "bluetooth",
+          tone: p.low ? "#f87171" : "#34d399",
+          title: p.low ? "Baterai perangkat lemah" : `${p.name} tersambung`,
+          detail: p.battery != null ? `Baterai: ${p.battery}%` : (p.low ? p.name : "Perangkat Bluetooth"),
+          ring: p.battery ?? undefined,
+          value: p.battery != null ? `${p.battery}%` : undefined,
+        };
       default:
         return null;
     }

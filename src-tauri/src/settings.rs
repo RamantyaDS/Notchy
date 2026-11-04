@@ -64,6 +64,15 @@ pub struct Settings {
     pub net_speed_status: bool,
     pub net_speed_threshold_down_kb: u32,
     pub net_speed_threshold_up_kb: u32,
+    /// Bluetooth battery monitor toggle & threshold
+    pub bluetooth_peek: bool,
+    pub bluetooth_low_threshold: u32,
+    /// Monitor placement: "primary", "secondary", "follow-cursor"
+    pub monitor_placement: String,
+    /// Spring animation preset: "spring", "snappy", "smooth", "off"
+    pub spring_physics: String,
+    /// false: Default Notchy neutral ambient glow; true: Windows DWM accent sync
+    pub windows_accent_glow: bool,
 }
 
 /// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
@@ -120,6 +129,11 @@ impl Default for Settings {
             net_speed_status: true,
             net_speed_threshold_down_kb: 500,
             net_speed_threshold_up_kb: 250,
+            bluetooth_peek: true,
+            bluetooth_low_threshold: 20,
+            monitor_placement: "primary".into(),
+            spring_physics: "spring".into(),
+            windows_accent_glow: false,
         }
     }
 }
@@ -138,6 +152,7 @@ pub fn save_settings(app: AppHandle, settings: Settings) -> Result<(), String> {
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     crate::store::write_safely(&path(), &json)?;
     crate::network::update_settings(&settings);
+    crate::place_window_for_settings(&app);
     let _ = app.emit("settings", &settings);
     Ok(())
 }
@@ -223,8 +238,13 @@ mod tests {
         let s = Settings::default();
         assert_eq!(s.net_speed_threshold_down_kb, 500);
         assert_eq!(s.net_speed_threshold_up_kb, 250);
+        assert!(s.bluetooth_peek);
+        assert_eq!(s.bluetooth_low_threshold, 20);
+        assert_eq!(s.monitor_placement, "primary");
+        assert_eq!(s.spring_physics, "spring");
+        assert!(!s.windows_accent_glow);
         assert_eq!(s.net_speed_island, false);
-        assert_eq!(s.net_speed_status, true);
+        assert!(s.net_speed_status);
     }
 
     #[test]
@@ -237,10 +257,15 @@ mod tests {
         }"#;
         let s: Settings = serde_json::from_str(old_json).expect("deserialize old json");
         assert_eq!(s.focus_minutes, 30);
-        assert_eq!(s.net_speed_island, true);
-        assert_eq!(s.net_speed_status, true);
+        assert!(s.net_speed_island);
+        assert!(s.net_speed_status);
         assert_eq!(s.net_speed_threshold_down_kb, 500);
         assert_eq!(s.net_speed_threshold_up_kb, 250);
+        assert!(s.bluetooth_peek);
+        assert_eq!(s.bluetooth_low_threshold, 20);
+        assert_eq!(s.monitor_placement, "primary");
+        assert_eq!(s.spring_physics, "spring");
+        assert!(!s.windows_accent_glow);
     }
 
     #[test]

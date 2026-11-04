@@ -107,6 +107,27 @@ static LAST_POWER: Mutex<Option<Power>> = Mutex::new(None);
 static LAST_BRIGHTNESS: Mutex<Option<u32>> = Mutex::new(None);
 
 #[tauri::command]
+pub fn get_dwm_accent_color() -> String {
+    let root = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(dwm) = root.open_subkey(r"Software\Microsoft\Windows\DWM") {
+        if let Ok(color) = dwm.get_value::<u32, _>("ColorizationColor") {
+            let r = ((color >> 16) & 0xFF) as u8;
+            let g = ((color >> 8) & 0xFF) as u8;
+            let b = (color & 0xFF) as u8;
+            return format!("#{r:02x}{g:02x}{b:02x}");
+        }
+    }
+    "#38bdf8".to_string()
+}
+
+#[tauri::command]
+pub fn get_accent_color() -> String {
+    get_dwm_accent_color()
+}
+
+const WM_DWMCOLORIZATIONCOLORCHANGED: u32 = 0x0320;
+
+#[tauri::command]
 pub fn power_state() -> Power {
     read_power()
 }
@@ -138,6 +159,12 @@ unsafe extern "system" fn power_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpara
             }
         }
         return LRESULT(1);
+    }
+    if msg == WM_DWMCOLORIZATIONCOLORCHANGED {
+        if let Some(app) = APP.get() {
+            let _ = app.emit("accent-color", get_dwm_accent_color());
+        }
+        return LRESULT(0);
     }
     unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
