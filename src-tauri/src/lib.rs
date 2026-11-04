@@ -87,6 +87,15 @@ static HIT_R: AtomicI32 = AtomicI32::new(0);
 static HIT_B: AtomicI32 = AtomicI32::new(0);
 static HIT_INSIDE: AtomicBool = AtomicBool::new(false);
 
+/// Active monitor physical boundaries (left, top, right, bottom).
+/// Used to immediately detect monitor transitions when follow-cursor is active.
+static ACTIVE_MON_L: AtomicI32 = AtomicI32::new(0);
+static ACTIVE_MON_T: AtomicI32 = AtomicI32::new(0);
+static ACTIVE_MON_R: AtomicI32 = AtomicI32::new(0);
+static ACTIVE_MON_B: AtomicI32 = AtomicI32::new(0);
+static FOLLOW_CURSOR: AtomicBool = AtomicBool::new(false);
+static MONITOR_TRANSITION_PENDING: AtomicBool = AtomicBool::new(false);
+
 fn hit_rect() -> (i32, i32, i32, i32) {
     (HIT_L.load(Ordering::Relaxed), HIT_T.load(Ordering::Relaxed), HIT_R.load(Ordering::Relaxed), HIT_B.load(Ordering::Relaxed))
 }
@@ -143,6 +152,21 @@ fn on_mouse_move(x: i32, y: i32) {
     if !EYES_PENDING.swap(true, Ordering::Relaxed) {
         if let Some(tx) = EYES_TX.get() {
             let _ = tx.send(());
+        }
+    }
+
+    // Instant zero-delay monitor transition check when follow-cursor is active
+    if FOLLOW_CURSOR.load(Ordering::Relaxed) {
+        let l_mon = ACTIVE_MON_L.load(Ordering::Relaxed);
+        let r_mon = ACTIVE_MON_R.load(Ordering::Relaxed);
+        let t_mon = ACTIVE_MON_T.load(Ordering::Relaxed);
+        let b_mon = ACTIVE_MON_B.load(Ordering::Relaxed);
+        if r_mon > l_mon && (x < l_mon || x >= r_mon || y < t_mon || y >= b_mon) {
+            if !MONITOR_TRANSITION_PENDING.swap(true, Ordering::Relaxed) {
+                if let Some(tx) = WATCH_TX.get() {
+                    let _ = tx.send(());
+                }
+            }
         }
     }
 
@@ -346,16 +370,28 @@ pub(crate) fn place_window(window: &WebviewWindow) {
     };
 
     let Some(monitor) = target_monitor.or_else(|| monitors.into_iter().next()) else { return };
+
+    let m_pos = monitor.position();
+    let m_size = monitor.size();
+    ACTIVE_MON_L.store(m_pos.x, Ordering::Relaxed);
+    ACTIVE_MON_T.store(m_pos.y, Ordering::Relaxed);
+    ACTIVE_MON_R.store(m_pos.x + m_size.width as i32, Ordering::Relaxed);
+    ACTIVE_MON_B.store(m_pos.y + m_size.height as i32, Ordering::Relaxed);
+    MONITOR_TRANSITION_PENDING.store(false, Ordering::Relaxed);
+
     let target = PhysicalPosition::new(
         monitor.position().x + (monitor.size().width as i32 - size.width as i32) / 2,
         monitor.position().y,
     );
     if window.outer_position().ok() != Some(target) {
         let _ = window.set_position(target);
+        update_hit_rect();
     }
 }
 
 pub fn place_window_for_settings(app: &AppHandle) {
+    let s = crate::settings::get_settings();
+    FOLLOW_CURSOR.store(s.monitor_placement == "follow-cursor", Ordering::Relaxed);
     if let Some(w) = app.get_webview_window("main") {
         place_window(&w);
     }
@@ -594,10 +630,8 @@ fn start_watcher(window: WebviewWindow) {
                 let _ = window.emit("notch-tucked", tucked);
             }
 
-            if timed_out || hide == visible {
-                place_window(&window);
-                update_hit_rect();
-            }
+            place_window(&window);
+            update_hit_rect();
         }
     });
 }
@@ -764,6 +798,7 @@ pub fn run() {
             downloads::start(app.handle().clone());
             clipboard::start(app.handle().clone());
             let s = settings::get_settings();
+            FOLLOW_CURSOR.store(s.monitor_placement == "follow-cursor", Ordering::Relaxed);
             network::update_settings(&s);
             network::start(app.handle().clone());
             bluetooth::start(app.handle().clone());

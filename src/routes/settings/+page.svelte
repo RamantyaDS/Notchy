@@ -977,30 +977,36 @@
   /* Tabs */
   .tabs-nav {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     background: rgba(22, 27, 34, 0.6);
     padding: 4px;
     border-radius: 10px;
     border: 1px solid rgba(240, 246, 252, 0.08);
     margin-bottom: 22px;
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .tab-btn {
-    flex: 1;
-    min-width: 120px;
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 9px 14px;
+    gap: 6px;
+    padding: 8px 10px;
     border-radius: 8px;
     border: none;
     background: transparent;
     color: #8b949e;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 500;
     cursor: pointer;
+    white-space: nowrap;
     transition: all 0.18s ease;
   }
 

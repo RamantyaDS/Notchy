@@ -35,7 +35,7 @@
     </span>
     <span class="sep">·</span>
   {/if}
-  <span>{date}</span><b>{time}</b>
+  <span>{date}</span><span class="sep">·</span><b>{time}</b>
 </div>
 
 <style>
@@ -47,7 +47,8 @@
     height: 16px;
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 6px;
     font-size: 11px;
     color: #8c94a8;
     pointer-events: none;

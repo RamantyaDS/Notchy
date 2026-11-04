@@ -1152,12 +1152,23 @@
 
   .page-tooltip {
     position: absolute;
-    bottom: 22px;
+    bottom: 28px;
     left: 50%;
     transform: translateX(-50%);
+    background: rgba(15, 18, 26, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 999px;
+    padding: 2px 12px;
     font-size: 11px;
-    color: #8c94a8;
+    font-weight: 600;
+    color: #f0f6fc;
+    letter-spacing: 0.01em;
     pointer-events: none;
+    z-index: 50;
+    white-space: nowrap;
   }
 
   .pin {
