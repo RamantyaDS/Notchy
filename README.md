@@ -47,9 +47,15 @@ A small black island at the top of your screen that shows what's happening (musi
 
 🖥️ **More than one screen?** Keep the notch on the main screen, the second one, or let it follow your cursor from screen to screen.
 
-👀 **Eyes and feel.** The mascot's eyes can wake up only when you're idle or follow your cursor all the time; pick how bouncy the notch feels, and optionally let its glow follow your Windows accent color.
+👀 **Mascot Personality & 5 Eye Styles.** Pick between Classic Minimalist, Anime Sparkle ✨, Retro 8-Bit Pixel 👾, Cat Eyes 🐱, and Cartoon Pupil 👀. Pupils glide in dual-layer 3D parallax, dilate with curiosity when you draw near, and shock into pinpoint dots (😲) on incoming alerts. The eyes can wake up only when idle or track your cursor continuously.
 
-🌐 **English or Indonesian**, switchable in Settings. Clock follows your Windows 12/24-hour setting.
+🔋 **Energized Charging Mode.** A balanced 3-column layout during charge: dynamic emerald radial battery gauge on the left, an energized mascot in the center with a gentle breathing aura, and a crisp tabular clock on the right. Celebrates with smiling eyes at 100%.
+
+🎶 **Music Head-Bop.** During song intros, solos, or instrumental sections without lyrics, the mascot gently bobs its head to the rhythm inside the Dynamic Island pill, crossfading seamlessly when lyrics resume.
+
+🕹️ **Playful Micro-Gestures.** Rub your cursor back and forth across the closed notch to tickle Notchy (`✨ ha!`), shake your mouse quickly for dizzy spiral eyes, or catch it winking. Supports `prefers-reduced-motion` for accessibility.
+
+🌐 **English or Indonesian**, switchable in Settings. Clock follows your Windows 12/24-hour setting. Pick how bouncy the notch feels, and optionally let its glow follow your Windows accent color.
 
 🫥 **Stays out of the way.** It opens only when the cursor stops on it (not when you sweep past to a browser tab), tucks into a thin line when there's a tab or button right under it, hides for full-screen video and games, and dozes off when you're idle.
 
@@ -128,7 +134,7 @@ Anything that shows up in Windows' media controls (the box above the volume slid
 
 <details><summary>My laptop has a thick top bezel / I don't like the eyes</summary>
 
-Right-click the tray icon: **Notch minimal** turns the idle notch into a thin black line, and **Mata (maskot)** turns the eyes off. Things like music, alerts and hover still work.
+Right-click the tray icon: **Notch minimal** turns the idle notch into a thin black line, and **Mata (maskot)** turns the eyes off. You can also customize Notchy's look in Settings with 5 different eye styles (Classic, Anime ✨, Pixel 👾, Cat 🐱, Cartoon 👀). Things like music, alerts and hover still work.
 </details>
 
 <details><summary>How do I quit, or stop it starting with Windows?</summary>
@@ -138,7 +144,7 @@ Right-click the tray icon → **Exit**, or untick **Start with Windows**. Uninst
 
 <details><summary>My antivirus flagged it</summary>
 
-New, unsigned apps sometimes get flagged. Check the SHA-256 against the release page (above). Notchy listens only for volume, brightness, Caps Lock and language keys to show their overlays; it never records what you type. If you'd rather it didn't watch the keyboard at all, turn off **Keyboard & Caps Lock Peek** and **Hide Windows Volume Overlay** in Settings → **System** (applies after restarting Notchy).
+New, unsigned apps sometimes get flagged. Check the SHA-256 against the release page (above). Notchy listens only for volume, brightness, Caps Lock and language keys to show their overlays; it never records what you type. If you'd rather it didn't watch the keyboard at all, turn off the Caps Lock and keyboard-language peeks in Settings → **Keyboard & sistem** (applies after restarting Notchy).
 </details>
 
 ## Feedback
@@ -175,7 +181,7 @@ Design notes and every decision behind the app are in [`notchy.md`](notchy.md) (
 <details>
 <summary>🇮🇩 Bahasa Indonesia</summary>
 
-**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), timer fokus, pengingat minum, to-do, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, kecepatan internet, dan status sistem. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, dan notch bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
+**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), timer fokus, pengingat minum, to-do, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, kecepatan internet, dan status sistem. Dilengkapi 5 tema gaya mata maskot (Classic, Anime Sparkle ✨, Retro Pixel 👾, Cat Eyes 🐱, dan Cartoon Pupil 👀) dengan pupil dinamis 3D parallax yang melirik kursor, mode mengecas simetris 3 kolom beranimasi aura hijau, head-bop maskot saat jeda musik, serta gesture geli & kaget. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, dan notch bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
 
 Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
 

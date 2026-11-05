@@ -20,6 +20,7 @@
     waterReminders: boolean;
     mascot: boolean;
     mascotMode?: string;
+    mascotTheme?: string;
     minimalNotch: boolean;
     mirrorNotifications: boolean;
     calendarUrl: string;
@@ -391,6 +392,26 @@
                       >
                         <option value="idle">{tr("settings.mascotModeIdle")}</option>
                         <option value="always">{tr("settings.mascotModeAlways")}</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div class="nested-control" transition:slide={{ duration: 160 }}>
+                    <label class="input-inline">
+                      <div class="toggle-text">
+                        <strong>{tr("settings.mascotThemeTitle")}</strong>
+                        <small>{tr("settings.mascotThemeDesc")}</small>
+                      </div>
+                      <select
+                        class="select-input"
+                        value={settings.mascotTheme ?? "classic"}
+                        onchange={(e) => save({ mascotTheme: e.currentTarget.value })}
+                      >
+                        <option value="classic">{tr("settings.mascotThemeClassic")}</option>
+                        <option value="anime">{tr("settings.mascotThemeAnime")}</option>
+                        <option value="pixel">{tr("settings.mascotThemePixel")}</option>
+                        <option value="cat">{tr("settings.mascotThemeCat")}</option>
+                        <option value="cartoon">{tr("settings.mascotThemeCartoon")}</option>
                       </select>
                     </label>
                   </div>

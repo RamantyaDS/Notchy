@@ -93,11 +93,23 @@
   let open = $state(false);
   let tucked = $state(false);
   let blink = $state(false);
+  let wink = $state<"left" | "right" | null>(null);
+  let dizzy = $state(false);
+  let celebrating = $state(false);
   let dozing = $state(false);
   let greeting = $state(false);
   let mascot = $state(true);
   let mascotMode = $state("idle");
+  let mascotTheme = $state("classic");
   let activeEyes = $state(false);
+  let shocked = $state(false);
+  let shockedTimer: ReturnType<typeof setTimeout> | undefined;
+  let tickled = $state(false);
+  let tickleTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastTickleX = 0;
+  let lastTickleDir = 0;
+  let tickleSwitches = 0;
+  let lastTickleTime = 0;
   let minimalNotch = $state(false);
   let look = $state<[number, number, number]>([0, 0, 0]);
   let hovered = $state(false);
@@ -424,6 +436,27 @@
       clearTimeout(pressTimer);
       pressTimer = undefined;
     }
+    if (!open && !paged && mascot) {
+      const dx = e.clientX - lastTickleX;
+      const dir = Math.sign(dx);
+      const nowTime = Date.now();
+      if (dir !== 0 && dir !== lastTickleDir && Math.abs(dx) > 3) {
+        if (nowTime - lastTickleTime < 340) {
+          tickleSwitches++;
+          if (tickleSwitches >= 4 && !tickled) {
+            tickled = true;
+            tickleSwitches = 0;
+            clearTimeout(tickleTimer);
+            tickleTimer = setTimeout(() => (tickled = false), 1500);
+          }
+        } else {
+          tickleSwitches = 1;
+        }
+        lastTickleTime = nowTime;
+        lastTickleDir = dir;
+      }
+      lastTickleX = e.clientX;
+    }
   }
   function pressUp() {
     clearTimeout(pressTimer);
@@ -436,6 +469,7 @@
     shortcuts: Shortcut[];
     mascot: boolean;
     mascotMode?: string;
+    mascotTheme?: string;
     minimalNotch: boolean;
     musicEnabled?: boolean;
     pomodoroEnabled?: boolean;
@@ -488,9 +522,9 @@
       clearTimeout(sleepTimer);
       clearTimeout(activeEyesTimer);
       if (mascot) {
-        if (mascotMode === "always") {
+        if (mascotMode === "always" || charging) {
           sleepTimer = setTimeout(() => {
-            if (mascot && mascotMode === "always") dozing = true;
+            if (mascot && (mascotMode === "always" || charging)) dozing = true;
           }, 30_000);
         } else {
           activeEyes = false;
@@ -518,6 +552,7 @@
       smallLyrics = s.smallLyrics && s.musicEnabled !== false;
       mascot = s.mascot !== false;
       mascotMode = s.mascotMode ?? "idle";
+      mascotTheme = s.mascotTheme ?? "classic";
       if (!mascot) {
         dozing = false;
         activeEyes = false;
@@ -552,6 +587,12 @@
     invoke<string>("get_accent_color").then((c) => (accentColor = c)).catch(() => {});
     invoke<AllSettings>("get_settings").then(applySettings);
 
+    let lastLx = 0;
+    let dirChanges = 0;
+    let lastDirChangeMs = 0;
+    let lastSign = 0;
+    let dizzyTimeout: ReturnType<typeof setTimeout>;
+
     setupNotchEvents({
       onNotchHover: (h) => {
         hovered = h;
@@ -582,8 +623,27 @@
       onClipboard: (clips) => (clipItems = clips),
       onEyesLook: (l) => {
         look = l;
+        const dx = l[0] - lastLx;
+        const sign = Math.sign(dx);
+        const nowMsTime = Date.now();
+        if (sign !== 0 && sign !== lastSign && Math.abs(dx) > 0.22 && l[2] > 0.3) {
+          if (nowMsTime - lastDirChangeMs < 480) {
+            dirChanges++;
+            if (dirChanges >= 5 && !dizzy) {
+              dizzy = true;
+              dirChanges = 0;
+              clearTimeout(dizzyTimeout);
+              dizzyTimeout = setTimeout(() => (dizzy = false), 2200);
+            }
+          } else {
+            dirChanges = 1;
+          }
+          lastDirChangeMs = nowMsTime;
+          lastSign = sign;
+        }
+        lastLx = l[0];
         if (mascot) {
-          if (mascotMode === "always") {
+          if (mascotMode === "always" || charging) {
             if (dozing) {
               dozing = false;
               greeting = true;
@@ -592,7 +652,7 @@
             }
             clearTimeout(sleepTimer);
             sleepTimer = setTimeout(() => {
-              if (mascot && mascotMode === "always") dozing = true;
+              if (mascot && (mascotMode === "always" || charging)) dozing = true;
             }, 30_000);
           } else if (activeEyes) {
             if (dozing) {
@@ -627,6 +687,11 @@
         if (!m) lyricsOn = false;
       },
       onPeek: (p) => {
+        if (mascot && (p.kind === "notification" || p.kind === "meeting" || p.kind === "download-done" || p.kind === "screenshot")) {
+          shocked = true;
+          clearTimeout(shockedTimer);
+          shockedTimer = setTimeout(() => (shocked = false), 600);
+        }
         peekMgr.show(p, hovered);
         if (p.kind === "screenshot") shelf.add([p.path]);
       },
@@ -692,12 +757,19 @@
     };
     schedule();
 
+    let winkTimer: ReturnType<typeof setTimeout>;
     const scheduleBlink = () => {
       blinkTimer = setTimeout(() => {
-        blink = true;
-        setTimeout(() => (blink = false), 180);
+        const rand = Math.random();
+        if (rand < 0.28 && !dozing && !dizzy && !greeting) {
+          wink = rand < 0.14 ? "left" : "right";
+          winkTimer = setTimeout(() => (wink = null), 240);
+        } else {
+          blink = true;
+          setTimeout(() => (blink = false), 180);
+        }
         scheduleBlink();
-      }, 3500 + Math.random() * 3000);
+      }, 3200 + Math.random() * 3000);
     };
     scheduleBlink();
 
@@ -706,6 +778,8 @@
       unlistenDrop.then((f) => f());
       peekMgr.clearTimer();
       clearTimeout(pressTimer);
+      clearTimeout(shockedTimer);
+      clearTimeout(tickleTimer);
       clearTimeout(weatherTimer);
       clearInterval(calendarPoll);
       calendarTimers.forEach(clearTimeout);
@@ -713,6 +787,8 @@
       clearTimeout(pageLabelTimer);
       clearTimeout(tick);
       clearTimeout(blinkTimer);
+      clearTimeout(winkTimer);
+      clearTimeout(dizzyTimeout);
       clearTimeout(sleepTimer);
       clearTimeout(greetTimer);
       clearTimeout(scrollVolumeTimer);
@@ -749,6 +825,8 @@
   class:accent-synced={windowsAccentGlow && !!accentColor}
   class:accent-default={!windowsAccentGlow}
   class:has-peek={!!peekMgr.peek}
+  class:shocked
+  class:tickled
   class:monitor-leaving={monitorTransition === "leaving"}
   class:monitor-entering={monitorTransition === "entering"}
   style:--tint={tint}
@@ -774,7 +852,24 @@
   {/if}
 
   <div class="layer rest" class:on={view === "rest"}>
-    <RestEyes {weather} {greeting} {dozing} {blink} {look} {time} {mascot} {mascotMode} {activeEyes} />
+    <RestEyes
+      {weather}
+      {greeting}
+      {dozing}
+      {blink}
+      {wink}
+      {dizzy}
+      musicPlaying={!!media?.playing}
+      {celebrating}
+      {look}
+      {time}
+      {mascot}
+      {mascotMode}
+      {mascotTheme}
+      {activeEyes}
+      {shocked}
+      {tickled}
+    />
   </div>
 
   {#if island.main}
@@ -792,6 +887,19 @@
         active={view === "island"}
         camera={inUse.camera.length > 0}
         mic={inUse.mic.length > 0 && !call}
+        {mascot}
+        {mascotMode}
+        {mascotTheme}
+        {activeEyes}
+        {dozing}
+        {blink}
+        {wink}
+        {dizzy}
+        {celebrating}
+        {look}
+        {greeting}
+        {shocked}
+        {tickled}
       />
     </div>
   {/if}
@@ -802,6 +910,32 @@
       <circle cx="10" cy="10" r="8" class="fill" pathLength="100" stroke-dasharray="{power.percent} 100" />
       <path d="M10.6 5.5 7.5 10.6h2.4l-.5 3.9 3.1-5.1h-2.4z" />
     </svg>
+
+    {#if mascot}
+      <div class="charge-eyes">
+        <RestEyes
+          weather={null}
+          {greeting}
+          {dozing}
+          {blink}
+          {wink}
+          {dizzy}
+          musicPlaying={!!media?.playing}
+          {celebrating}
+          {look}
+          {time}
+          {mascot}
+          {mascotMode}
+          {mascotTheme}
+          {activeEyes}
+          {shocked}
+          {tickled}
+          charging={true}
+          batteryPercent={power.percent}
+        />
+      </div>
+    {/if}
+
     <span class="charge-time">{time}</span>
   </div>
 
@@ -1087,6 +1221,35 @@
     background: linear-gradient(90deg, #34d399 var(--battery), rgba(52, 211, 153, 0.28) var(--battery));
   }
 
+  .notch.shocked {
+    animation: shocked-hop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes shocked-hop {
+    0% {
+      transform: translateX(-50%) translateY(0);
+    }
+    35% {
+      transform: translateX(-50%) translateY(-5px) scale(1.02);
+    }
+    70% {
+      transform: translateX(-50%) translateY(1px);
+    }
+    100% {
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+  .notch.tickled {
+    animation: notch-tickle-wiggle 0.11s ease-in-out infinite alternate;
+  }
+  @keyframes notch-tickle-wiggle {
+    0% {
+      transform: translateX(calc(-50% - 2.5px));
+    }
+    100% {
+      transform: translateX(calc(-50% + 2.5px));
+    }
+  }
+
   .layer {
     position: absolute;
     inset: 0;
@@ -1108,13 +1271,20 @@
   }
 
   .charge {
-    flex-direction: row;
-    gap: 16px;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .ring {
+  .charge .ring {
+    position: absolute;
+    left: 14px;
+    top: 5px;
     width: 20px;
     height: 20px;
     transform: rotate(-90deg);
+    flex-shrink: 0;
   }
   .ring circle {
     fill: none;
@@ -1129,9 +1299,27 @@
     transform: rotate(90deg);
     transform-origin: 10px 10px;
   }
+  .charge-eyes {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
   .charge-time {
-    font-size: 14px;
-    font-weight: 700;
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    color: #e6edf3;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    line-height: 1;
   }
 
   .dots {

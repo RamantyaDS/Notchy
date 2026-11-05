@@ -41,6 +41,8 @@ pub struct Settings {
     pub mascot: bool,
     /// Mascot tracking mode: "idle" (wait 120s idle) or "always" (continuous follow)
     pub mascot_mode: String,
+    /// Mascot eye style theme: "classic", "anime", "pixel", "cat", "cartoon"
+    pub mascot_theme: String,
     /// A closed, idle notch is just a thin black line (for thick top bezels).
     pub minimal_notch: bool,
     /// Show new Windows notifications in the notch.
@@ -137,6 +139,7 @@ impl Default for Settings {
             water_reminders: true,
             mascot: true,
             mascot_mode: "idle".into(),
+            mascot_theme: "classic".into(),
             minimal_notch: false,
             mirror_notifications: true,
             calendar_url: String::new(),
