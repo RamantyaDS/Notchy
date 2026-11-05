@@ -203,6 +203,11 @@ fn watch_battery(app: AppHandle, id: String) {
 /// volume callback then shows the usual volume peek.
 #[tauri::command]
 pub async fn volume_step(up: bool) {
+    step(up);
+}
+
+/// Also used for the volume keys when Notchy handles them instead of Windows.
+pub fn step(up: bool) {
     let guard = ENDPOINTS.lock().unwrap();
     if let Some((volume, _)) = guard.as_ref().and_then(|e| e.output.as_ref()) {
         unsafe {
@@ -212,6 +217,17 @@ pub async fn volume_step(up: bool) {
                 let _ = volume.SetMute(false, std::ptr::null());
             }
             let _ = volume.SetMasterVolumeLevelScalar(next, std::ptr::null());
+        }
+    }
+}
+
+/// The mute key, when Notchy handles the volume keys.
+pub fn toggle_mute() {
+    let guard = ENDPOINTS.lock().unwrap();
+    if let Some((volume, _)) = guard.as_ref().and_then(|e| e.output.as_ref()) {
+        unsafe {
+            let muted = volume.GetMute().map(|m| m.as_bool()).unwrap_or(false);
+            let _ = volume.SetMute(!muted, std::ptr::null());
         }
     }
 }

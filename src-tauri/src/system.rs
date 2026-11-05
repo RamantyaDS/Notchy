@@ -23,7 +23,9 @@ use windows::Win32::System::Power::{
 use windows::Win32::System::SystemServices::{
     GUID_ACDC_POWER_SOURCE, GUID_BATTERY_PERCENTAGE_REMAINING, GUID_VIDEO_CURRENT_MONITOR_BRIGHTNESS,
 };
-use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, GetKeyboardLayout, VK_CAPITAL};
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    GetKeyState, GetKeyboardLayout, VK_CAPITAL, VK_VOLUME_MUTE, VK_VOLUME_UP,
+};
 use windows::Win32::UI::Shell::{SHGetKnownFolderPath, FOLDERID_Screenshots, KF_FLAG_DEFAULT};
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, CreateWindowExW, DefWindowProcW, GetForegroundWindow, GetWindowThreadProcessId,
@@ -77,7 +79,10 @@ pub fn install_on_hook_thread() {
         for guid in [&GUID_ACDC_POWER_SOURCE, &GUID_BATTERY_PERCENTAGE_REMAINING, &GUID_VIDEO_CURRENT_MONITOR_BRIGHTNESS] {
             let _ = RegisterPowerSettingNotification(HANDLE(hwnd.0), guid, DEVICE_NOTIFY_WINDOW_HANDLE);
         }
-        if crate::settings::get_settings().caps_lock_peek {
+        let settings = crate::settings::get_settings();
+        CAPS_PEEK.store(settings.caps_lock_peek, Ordering::Relaxed);
+        VOLUME_KEYS.store(settings.hide_volume_osd, Ordering::Relaxed);
+        if settings.caps_lock_peek || settings.hide_volume_osd {
             let _ = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), None, 0);
         }
     }
@@ -173,13 +178,30 @@ unsafe extern "system" fn power_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpara
 
 static KEY_TX: OnceLock<mpsc::Sender<bool>> = OnceLock::new();
 static KEY_PENDING: AtomicBool = AtomicBool::new(false);
+static CAPS_PEEK: AtomicBool = AtomicBool::new(false);
+/// Volume keys are kept from Windows (so its own overlay stays hidden) and the
+/// volume is changed here instead, like scrolling on the notch.
+static VOLUME_KEYS: AtomicBool = AtomicBool::new(false);
+static VOLUME_TX: OnceLock<mpsc::Sender<u32>> = OnceLock::new();
 
 /// Only looks at *which* key went up to spot Caps Lock; nothing typed is kept.
 unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     let up = wparam.0 as u32 == WM_KEYUP || wparam.0 as u32 == WM_SYSKEYUP;
-    if code >= 0 && up {
-        let info = unsafe { &*(lparam.0 as *const KBDLLHOOKSTRUCT) };
-        let caps = info.vkCode == VK_CAPITAL.0 as u32;
+    let info = unsafe { &*(lparam.0 as *const KBDLLHOOKSTRUCT) };
+    let vk = info.vkCode;
+    if code >= 0
+        && VOLUME_KEYS.load(Ordering::Relaxed)
+        && (VK_VOLUME_MUTE.0 as u32..=VK_VOLUME_UP.0 as u32).contains(&vk)
+        && let Some(tx) = VOLUME_TX.get()
+    {
+        // Held keys repeat their key-down, so each one is a step.
+        if !up {
+            let _ = tx.send(vk);
+        }
+        return LRESULT(1);
+    }
+    if code >= 0 && up && CAPS_PEEK.load(Ordering::Relaxed) {
+        let caps = vk == VK_CAPITAL.0 as u32;
         if (caps || !KEY_PENDING.swap(true, Ordering::Relaxed)) && let Some(tx) = KEY_TX.get() {
             let _ = tx.send(caps);
         }
@@ -200,6 +222,18 @@ fn foreground_layout() -> (isize, String) {
 }
 
 fn start_keyboard_worker() {
+    let (tx, rx) = mpsc::channel::<u32>();
+    VOLUME_TX.set(tx).ok();
+    std::thread::spawn(move || {
+        let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
+        for vk in rx {
+            match vk {
+                v if v == VK_VOLUME_MUTE.0 as u32 => crate::audio::toggle_mute(),
+                v => crate::audio::step(v == VK_VOLUME_UP.0 as u32),
+            }
+        }
+    });
+
     let (tx, rx) = mpsc::channel::<bool>();
     KEY_TX.set(tx).ok();
     std::thread::spawn(move || {

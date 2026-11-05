@@ -26,6 +26,7 @@
     smallLyrics: boolean;
     shortcuts: Shortcut[];
     capsLockPeek: boolean;
+    hideVolumeOsd?: boolean;
     musicEnabled: boolean;
     pomodoroEnabled: boolean;
     todoEnabled: boolean;
@@ -573,6 +574,26 @@
                     type="checkbox"
                     checked={settings.capsLockPeek}
                     onchange={(e) => save({ capsLockPeek: e.currentTarget.checked })}
+                  />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </section>
+          {/if}
+
+          {#if matches("Volume Overlay OSD Suara Windows Sembunyikan Hide Volume Audio")}
+            <section class="setting-card">
+              <div class="card-header">
+                <div class="card-icon">🔊</div>
+                <div class="card-info">
+                  <h3>{tr("settings.hideVolumeOsdTitle")}</h3>
+                  <p>{tr("settings.hideVolumeOsdDesc")}</p>
+                </div>
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    checked={settings.hideVolumeOsd}
+                    onchange={(e) => save({ hideVolumeOsd: e.currentTarget.checked })}
                   />
                   <span class="slider"></span>
                 </label>

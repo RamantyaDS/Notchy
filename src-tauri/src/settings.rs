@@ -54,6 +54,8 @@ pub struct Settings {
     pub shortcuts: Vec<Shortcut>,
     /// Caps Lock and keyboard-language peeks (one keyboard hook, read at start).
     pub caps_lock_peek: bool,
+    /// Notchy handles the volume keys so only its own volume peek shows (read at start).
+    pub hide_volume_osd: bool,
     /// Page toggles for the open notch.
     pub music_enabled: bool,
     pub pomodoro_enabled: bool,
@@ -124,6 +126,7 @@ impl Default for Settings {
             small_lyrics: true,
             shortcuts: default_shortcuts(),
             caps_lock_peek: true,
+            hide_volume_osd: false,
             music_enabled: true,
             pomodoro_enabled: true,
             todo_enabled: true,
@@ -244,6 +247,7 @@ mod tests {
         let s = Settings::default();
         assert_eq!(s.net_speed_threshold_down_kb, 500);
         assert_eq!(s.net_speed_threshold_up_kb, 250);
+        assert!(!s.hide_volume_osd);
         assert!(s.bluetooth_peek);
         assert_eq!(s.bluetooth_low_threshold, 20);
         assert_eq!(s.monitor_placement, "primary");
@@ -264,6 +268,7 @@ mod tests {
         }"#;
         let s: Settings = serde_json::from_str(old_json).expect("deserialize old json");
         assert_eq!(s.focus_minutes, 30);
+        assert!(!s.hide_volume_osd);
         assert!(s.net_speed_island);
         assert!(s.net_speed_status);
         assert_eq!(s.net_speed_threshold_down_kb, 500);

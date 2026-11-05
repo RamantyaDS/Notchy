@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.2.5 (29 Oktober 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
+**Status:** v0.2.7 (3 November 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
 
 ---
 
@@ -41,7 +41,7 @@ Notchy dianggap berhasil kalau:
 | Lirik | Diambil dari frontend (`fetch` ke LRCLIB, CORS diizinkan) untuk **setiap lagu** selama opsi "baris lirik di notch kecil" aktif (default aktif; kalau dimatikan, hanya saat panel lirik dibuka). Yang ditemukan di-cache di `localStorage`, yang tidak ditemukan tidak di-cache. Judul dibersihkan dulu: buang "(Official…)", "lyric official" tanpa kurung, "- Topic"; untuk "A - B", sisi yang sama dengan artis dari player dianggap artis (menangani "Judul - Artis" maupun "Artis - Judul"). | Privasi: judul + artis + durasi terkirim ke LRCLIB; bisa dimatikan di Settings |
 | Baris lirik di notch kecil | Notch ringkas 380×30 menampilkan baris yang sedang dinyanyikan; frontend tidak berdetak, tapi memasang timer tepat ke awal baris berikutnya. Saat tidak ada lirik atau bagian instrumental ("♪"), yang tampil jam. | Hemat CPU |
 | Notch menyingkir | Hanya saat jendela aktif menutupi area notch **dan** ada elemen yang bisa diklik tepat di bawahnya (tab, tombol, kolom teks, link, item menu...), dicek lewat UI Automation di 5 titik selebar notch. Tab strip atau title bar yang kosong tidak dihitung, jadi notch tetap berukuran normal. Hasil cek dipakai ulang hingga 3 detik selama jendela tidak berubah, dan dicek ulang setelah klik mouse. Saat menyingkir, notch mengecil jadi **garis putih tipis 90×6** (tidak hilang). Saat mengecas, garis itu hijau dan terisi sesuai persen baterai. Area hover = garis itu, jadi tab di bawahnya tetap bisa diklik. Dideteksi lewat `SetWinEventHook` (foreground, minimize, location change) plus cek ulang tiap 1 detik. | Permintaan pengguna |
-| Status sistem | Semua lewat event: callback volume (`IAudioEndpointVolumeCallback`), perangkat audio (`IMMNotificationClient`), `RegisterPowerSettingNotification` (charger, baterai, kecerahan), keyboard hook (hanya melihat tombol Caps Lock dan perubahan layout; isi ketikan tidak dibaca), `NetworkStatusChanged`, `RegNotifyChangeKeyValue` pada ConsentStore (kamera/mic), dan pemantau folder Screenshots. Ditampilkan sebagai "peek" 310×60 selama ~2 detik. | Tanpa polling. Overlay volume bawaan Windows masih ikut muncul; menyembunyikannya belum dikerjakan. |
+| Status sistem | Semua lewat event: callback volume (`IAudioEndpointVolumeCallback`), perangkat audio (`IMMNotificationClient`), `RegisterPowerSettingNotification` (charger, baterai, kecerahan), keyboard hook (hanya melihat tombol Caps Lock dan perubahan layout; isi ketikan tidak dibaca), `NetworkStatusChanged`, `RegNotifyChangeKeyValue` pada ConsentStore (kamera/mic), dan pemantau folder Screenshots. Ditampilkan sebagai "peek" 310×60 selama ~2 detik. | Tanpa polling. Overlay volume bawaan Windows bisa disembunyikan lewat opsi "Sembunyikan overlay volume Windows" (default mati): keyboard hook menahan tombol Volume +/−/Mute dan Notchy mengubah volume sendiri (langkah 2%, sama seperti scroll di notch). Menyembunyikan jendela overlay langsung (cara HideVolumeOSD) tidak jalan di Windows 11. Overlay kecerahan tetap muncul karena tombolnya tidak lewat keyboard. |
 | Settings | Jendela terpisah dari menu tray: mirror notifikasi (on/off + tombol ke pengaturan Do Not Disturb), baris lirik di notch kecil, link kalender ICS, durasi Pomodoro, pengaturan minum air, kota cuaca. | Disimpan di `%APPDATA%\Notchy\settings.json` |
 | Mengetik di notch | `begin_typing`/`end_typing`: notch sementara dibuat focusable dan diambil alih fokusnya lewat `AttachThreadInput` + `SetForegroundWindow`; setelah selesai, fokus dikembalikan ke aplikasi sebelumnya | Windows hanya mengizinkan aplikasi yang menerima input terakhir mengambil fokus, sedangkan klik di notch diterima proses WebView2 |
 | Data produktivitas | `todo.json`, `water.json` (7 hari terakhir), `shelf.json` di `%APPDATA%\Notchy`; pengingat memakai timer di frontend | Tanpa server |
@@ -66,7 +66,7 @@ Notchy dianggap berhasil kalau:
 
 - [ ] Shortcut keyboard untuk membuka notch.
 - [ ] Ikon aplikasi: masih ikon bawaan Tauri. Kandidat: wordmark "notchy" + pil notch dari video promo.
-- [ ] Overlay volume bawaan Windows masih ikut muncul bersama peek volume Notchy.
+- [x] Overlay volume bawaan Windows masih ikut muncul bersama peek volume Notchy. Sekarang ada opsi untuk menyembunyikannya (lihat Status sistem). Overlay kecerahan belum.
 
 ---
 
@@ -225,6 +225,21 @@ Pemicu: laptop kantor teman (akun admin.it) menolak installer dengan "Windows ca
 - Portable tidak membantu kalau AppLocker hanya mengizinkan Program Files, atau kalau antivirus memblokir semua exe yang belum dikenal. Untuk kasus itu: whitelist dari IT (pakai SHA-256 di catatan rilis), installer mode "both"/MSI, atau code signing (dibahas, belum dikerjakan).
 - Diuji 29 Okt 2026: build berlabel v0.2.2 dijalankan dari folder di luar `target` (lewat zip). Peek "Notchy v0.2.3 tersedia · Klik untuk unduh di GitHub" muncul, dan Notchy tetap jalan dari folder itu tanpa menjalankan installer.
 
+### J. PR #2 (Malik): kecepatan jaringan, sakelar halaman, animasi geser, 30 Okt 2026
+Di-merge sebagai 8f8f1fa, setelah tiga putaran review.
+- **Kecepatan jaringan** (`network.rs`, `GetIfTable2` tiap 1 detik): menjumlahkan antarmuka yang aktif, kecuali loopback dan filter driver NDIS (antivirus/VPN/QoS), supaya tidak terhitung dobel.
+  - **Baris status** (notch terbuka, default nyala) menampilkan ↓/↑.
+  - **Pil di notch tertutup** (`netSpeedIsland`, default **mati**) muncul kalau kecepatan ≥ batas. Batasnya bisa diatur, default 500/250 KB/s.
+- **Aturan kirim event** (permintaan review, supaya notch diam tetap diam):
+  - notch terbuka → kirim tiap detik;
+  - notch tertutup → hanya kalau pil nyala dan kecepatan di atas batas, plus sekali saat turun lagi;
+  - kedua sakelar mati → thread tidur tanpa memanggil `GetIfTable2`.
+  - Pengaturan disalin ke atomik saat start dan saat Settings disimpan.
+- **Sakelar halaman** di Settings → "Halaman di notch" (Musik, Pomodoro, Air, To-do, Shelf, Clipboard, Pintasan). Minimal satu halaman tetap aktif. Mematikan Musik juga mematikan lirik di notch kecil dan pil musik.
+- **Animasi geser** kiri/kanan sesuai arah saat ganti halaman. Telinga notch overlap 1 px supaya tidak ada celah di skala 125%/150%.
+- **Ditolak di review:** `release.yml` (build installer tanpa tanda tangan di setiap push) dan penghapusan cincin mengecas.
+- **Diuji 30 Okt 2026:** build dari main jalan. CPU saat diam 1,4% selama 60 detik (sebelumnya 1,7%), 277 MB. Baris status menampilkan ↓/↑ yang ter-update, tombol panah menggeser ke halaman berikutnya dengan nama halamannya, cincin mengecas tetap ada, log bersih. Belum dicoba langsung: pil jaringan di notch tertutup dan sakelar halaman di Settings.
+
 ---
 
 ## 6. Urutan pengerjaan
@@ -298,6 +313,8 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.2.3 | 26 Okt 2026 | Paket polesan (bagian 5G): baris status di notch terbuka, halaman Air/To-do/Timer dirapikan, peek bercincin baterai, notch minimal, mata menyapa, sakelar Mata dan Notch minimal di tray; SHA-256 di catatan rilis; FAQ dan link masukan di README |
 | v0.2.4 | 29 Okt 2026 | Bagian dari PR #1 Malik (bagian 5H): program tidak dijalankan dari Shelf/Unduhan, filter link notifikasi, CSP, simpan file aman, tooltip nama halaman dan waktu lagu, badge Clipboard, setting Caps Lock & bahasa keyboard; CI. Versi portable (bagian 5I) |
 | v0.2.5 | 29 Okt 2026 | PR #1 versi akhir dari Malik: notch tanpa garis tepi (bayangan lembut), buka setelah kursor diam 90 ms, tutup 220 ms, judul lagu tidak melompat saat di-hover. Saat rilis, zip portable gagal (antivirus mengunci exe, dan `Compress-Archive` hanya melaporkan error tanpa berhenti), lalu skrip berhenti setelah push tag tapi sebelum GitHub Release dibuat. Pemulihan: zip dibuat dari salinan exe yang penandanya dikembalikan ke `UNK`, lalu rilis dibuat manual. Sejak itu `release.ps1` memakai `-ErrorAction Stop` dan memastikan zip ada sebelum commit |
+| v0.2.6 | 30 Okt 2026 | PR #2 dari Malik: kecepatan internet (↓/↑ di baris status, opsional di notch kecil), sakelar halaman di Settings, animasi geser sesuai arah, celah sudut notch di layar 125%/150%. |
+| v0.2.7 | 3 Nov 2026 | Opsi "Sembunyikan overlay volume Windows" (Settings → Keyboard & sistem, default mati): tombol volume ditahan keyboard hook dan diatur Notchy, jadi overlay Windows tidak dobel dengan peek Notchy. |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.

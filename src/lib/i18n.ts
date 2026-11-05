@@ -76,6 +76,8 @@ export const translations = {
 
     "settings.capsLockTitle": "Keyboard & Caps Lock Peek",
     "settings.capsLockDesc": "Show Caps Lock status and keyboard input language switching in the notch.",
+    "settings.hideVolumeOsdTitle": "Hide Windows Volume Overlay",
+    "settings.hideVolumeOsdDesc": "Volume keys are handled by Notchy so only its volume peek appears (effective after restarting Notchy).",
 
     // Productivity
     "settings.activePagesTitle": "Active Pages in Open Notch",
@@ -331,6 +333,8 @@ export const translations = {
 
     "settings.capsLockTitle": "Keyboard & Caps Lock Peek",
     "settings.capsLockDesc": "Tampilkan indikator Caps Lock dan pergantian layout bahasa keyboard di notch.",
+    "settings.hideVolumeOsdTitle": "Sembunyikan Overlay Volume Windows",
+    "settings.hideVolumeOsdDesc": "Tombol volume diatur Notchy sehingga hanya peek volume Notchy yang muncul (berlaku setelah Notchy dibuka ulang).",
 
     // Productivity
     "settings.activePagesTitle": "Daftar Halaman di Notch Terbuka",
