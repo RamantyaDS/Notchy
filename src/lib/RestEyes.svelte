@@ -42,9 +42,11 @@
 
 <style>
   .rest-time {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
   }
   .weather {
     position: absolute;

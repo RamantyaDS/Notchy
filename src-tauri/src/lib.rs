@@ -4,11 +4,12 @@ use std::time::{Duration, Instant};
 
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST,
+    GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST,
+    MONITOR_DEFAULTTOPRIMARY,
 };
 use windows::Win32::Foundation::POINT;
 use windows::Win32::System::Com::{
@@ -126,17 +127,23 @@ pub(crate) fn is_notch_open() -> bool {
 
 fn update_hit_rect() {
     let Some(window) = main_window() else { return };
-    let geometry = match (window.is_visible(), window.outer_position(), window.outer_size()) {
-        (Ok(true), Ok(pos), Ok(size)) => Some((pos, size, window.scale_factor().unwrap_or(1.0))),
-        _ => None,
+    let h = hwnd(&window);
+    let mut rect = RECT::default();
+    let geometry = unsafe {
+        if IsWindowVisible(h).as_bool() && GetWindowRect(h, &mut rect).is_ok() {
+            let scale = GetDpiForWindow(h) as f64 / 96.0;
+            Some((rect.left, rect.top, rect.right - rect.left, scale))
+        } else {
+            None
+        }
     };
     let notch = *HIT_SIZE.lock().unwrap();
     let (l, t, r, b) = match geometry {
-        Some((pos, size, scale)) => {
+        Some((win_x, win_y, win_w, scale)) => {
             let w = (notch.0 * scale) as i32;
             let h = (notch.1 * scale) as i32;
-            let left = pos.x + (size.width as i32 - w) / 2;
-            (left, pos.y, left + w, pos.y + h)
+            let left = win_x + (win_w - w) / 2;
+            (left, win_y, left + w, win_y + h)
         }
         None => (0, 0, 0, 0),
     };
@@ -161,7 +168,7 @@ fn on_mouse_move(x: i32, y: i32) {
         let r_mon = ACTIVE_MON_R.load(Ordering::Relaxed);
         let t_mon = ACTIVE_MON_T.load(Ordering::Relaxed);
         let b_mon = ACTIVE_MON_B.load(Ordering::Relaxed);
-        if r_mon > l_mon && (x < l_mon || x >= r_mon || y < t_mon || y >= b_mon) {
+        if r_mon > l_mon && (x < l_mon || x >= r_mon || y >= b_mon || (y < t_mon && t_mon != 0)) {
             if !MONITOR_TRANSITION_PENDING.swap(true, Ordering::Relaxed) {
                 if let Some(tx) = WATCH_TX.get() {
                     let _ = tx.send(());
@@ -346,46 +353,77 @@ fn start_mouse_hook() {
 
 /// Centers the window at the top of the selected monitor based on settings.
 pub(crate) fn place_window(window: &WebviewWindow) {
-    let Ok(monitors) = window.available_monitors() else { return };
-    let Ok(size) = window.outer_size() else { return };
     let settings = crate::settings::get_settings();
-    let primary = window.primary_monitor().ok().flatten();
+    let h = hwnd(window);
+    let dpi = unsafe { GetDpiForWindow(h) };
+    let scale = if dpi > 0 { dpi as f64 / 96.0 } else { 1.0 };
+    let win_w = (600.0 * scale).round() as i32;
+    let win_h = (200.0 * scale).round() as i32;
 
-    let target_monitor = match settings.monitor_placement.as_str() {
-        "secondary" => {
-            let prim_pos = primary.as_ref().map(|p| *p.position());
-            monitors.iter().find(|m| prim_pos.is_none_or(|pos| *m.position() != pos)).cloned().or(primary)
+    let (mon_l, mon_t, mon_w) = unsafe {
+        let mut info = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
+        let hmon = match settings.monitor_placement.as_str() {
+            "secondary" => {
+                let prim_mon = MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY);
+                let Ok(monitors) = window.available_monitors() else { return };
+                let sec = monitors.into_iter().find(|m| {
+                    let pos = m.position();
+                    let mh = MonitorFromPoint(POINT { x: pos.x, y: pos.y }, MONITOR_DEFAULTTONEAREST);
+                    mh != prim_mon
+                });
+                if let Some(m) = sec {
+                    let pos = m.position();
+                    MonitorFromPoint(POINT { x: pos.x, y: pos.y }, MONITOR_DEFAULTTONEAREST)
+                } else {
+                    prim_mon
+                }
+            }
+            "follow-cursor" => {
+                let pt = POINT {
+                    x: CURSOR_X.load(Ordering::Relaxed),
+                    y: CURSOR_Y.load(Ordering::Relaxed),
+                };
+                MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST)
+            }
+            _ => MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY),
+        };
+
+        if !GetMonitorInfoW(hmon, &mut info).as_bool() {
+            return;
         }
-        "follow-cursor" => {
-            let cx = CURSOR_X.load(Ordering::Relaxed);
-            let cy = CURSOR_Y.load(Ordering::Relaxed);
-            monitors.iter().find(|m| {
-                let pos = m.position();
-                let m_size = m.size();
-                cx >= pos.x && cx < pos.x + m_size.width as i32 &&
-                cy >= pos.y && cy < pos.y + m_size.height as i32
-            }).cloned().or(primary)
-        }
-        _ => primary,
+
+        let m = info.rcMonitor;
+        ACTIVE_MON_L.store(m.left, Ordering::Relaxed);
+        ACTIVE_MON_T.store(m.top, Ordering::Relaxed);
+        ACTIVE_MON_R.store(m.right, Ordering::Relaxed);
+        ACTIVE_MON_B.store(m.bottom, Ordering::Relaxed);
+        MONITOR_TRANSITION_PENDING.store(false, Ordering::Relaxed);
+
+        (m.left, m.top, m.right - m.left)
     };
 
-    let Some(monitor) = target_monitor.or_else(|| monitors.into_iter().next()) else { return };
+    let target_x = mon_l + (mon_w - win_w) / 2;
+    let target_y = mon_t;
 
-    let m_pos = monitor.position();
-    let m_size = monitor.size();
-    ACTIVE_MON_L.store(m_pos.x, Ordering::Relaxed);
-    ACTIVE_MON_T.store(m_pos.y, Ordering::Relaxed);
-    ACTIVE_MON_R.store(m_pos.x + m_size.width as i32, Ordering::Relaxed);
-    ACTIVE_MON_B.store(m_pos.y + m_size.height as i32, Ordering::Relaxed);
-    MONITOR_TRANSITION_PENDING.store(false, Ordering::Relaxed);
-
-    let target = PhysicalPosition::new(
-        monitor.position().x + (monitor.size().width as i32 - size.width as i32) / 2,
-        monitor.position().y,
-    );
-    if window.outer_position().ok() != Some(target) {
-        let _ = window.set_position(target);
-        update_hit_rect();
+    unsafe {
+        let mut cur = RECT::default();
+        let need_move = if GetWindowRect(h, &mut cur).is_ok() {
+            cur.left != target_x || cur.top != target_y || (cur.right - cur.left) != win_w
+        } else {
+            true
+        };
+        if need_move {
+            let _ = SetWindowPos(
+                h,
+                Some(HWND_TOPMOST),
+                target_x,
+                target_y,
+                win_w,
+                win_h,
+                SWP_NOACTIVATE,
+            );
+            update_hit_rect();
+        }
     }
 }
 
@@ -603,19 +641,18 @@ fn start_watcher(window: WebviewWindow) {
             let timed_out = rx.recv_timeout(Duration::from_secs(1)).is_err();
             while rx.try_recv().is_ok() {}
 
+            // Immediately reposition window to active monitor with zero latency
+            place_window(&window);
+
             let h = hwnd(&window);
             let hide = fullscreen_app_running();
             let visible = unsafe { IsWindowVisible(h).as_bool() };
-            // Both directions go through ShowWindow: Tauri's hide() is a no-op here
-            // because Tauri never saw the window being shown.
             if hide && visible {
                 unsafe { let _ = ShowWindow(h, SW_HIDE); }
             } else if !hide && !visible {
                 unsafe { let _ = ShowWindow(h, SW_SHOWNOACTIVATE); }
             }
             if !hide && below_ordinary_window(h) {
-                // The notch can end up under ordinary windows while keeping its topmost
-                // flag (21 Oct 2026, with Outlook in front): it's there, just covered.
                 unsafe {
                     let _ = SetWindowPos(h, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
                 }
@@ -629,9 +666,6 @@ fn start_watcher(window: WebviewWindow) {
             if TUCKED.swap(tucked, Ordering::Relaxed) != tucked {
                 let _ = window.emit("notch-tucked", tucked);
             }
-
-            place_window(&window);
-            update_hit_rect();
         }
     });
 }

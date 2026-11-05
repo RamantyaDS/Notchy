@@ -151,7 +151,7 @@
   let calendarTimers: ReturnType<typeof setTimeout>[] = [];
 
   const nextEvent = $derived(events.find((e) => !e.allDay && e.end > now.getTime()));
-  const clockOf = (t: number) => new Date(t).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":");
+  const clockOf = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: systemHour12 }).replace(".", ":");
 
   // Output device for the switch button in the open notch.
   type Output = { id: string; name: string; headphones: boolean; current: boolean };
@@ -299,7 +299,9 @@
   const size = $derived(
     view === "island" && island.main
       ? { ...SIZES.island, w: islandWidth(island.main, island.side) + islandDots }
-      : SIZES[view as keyof typeof SIZES] ?? SIZES.rest,
+      : view === "rest" && weather
+        ? { ...SIZES.rest, w: 170 }
+        : SIZES[view as keyof typeof SIZES] ?? SIZES.rest,
   );
   const closedView = $derived(view === "rest" || view === "island" || view === "charging");
   const withStatus = $derived(paged && !mirror && view !== "peek" && view !== "clock");
@@ -633,9 +635,20 @@
   });
 
   let currentLanguage = $state<string>("en");
-  const locale = $derived(currentLanguage === "id" ? "id-ID" : "en-US");
-  const time = $derived(now.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }).replace(".", ":"));
-  const date = $derived(now.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" }));
+  const dateLocale = $derived(currentLanguage === "id" ? "id-ID" : "en-US");
+  const date = $derived(now.toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" }));
+
+  // Follow system clock preference (12h AM/PM vs 24h as set in Windows OS), never forced by UI language
+  const systemHour12 = typeof Intl !== "undefined"
+    ? new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hour12
+    : false;
+  const time = $derived(
+    now.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: systemHour12,
+    }).replace(".", ":")
+  );
 </script>
 
 <div
@@ -982,7 +995,7 @@
 
   .charge {
     flex-direction: row;
-    gap: 34px;
+    gap: 16px;
   }
   .ring {
     width: 20px;
