@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.2.7 (3 November 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
+**Status:** v0.2.8 (5 November 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
 
 ---
 
@@ -240,6 +240,19 @@ Di-merge sebagai 8f8f1fa, setelah tiga putaran review.
 - **Ditolak di review:** `release.yml` (build installer tanpa tanda tangan di setiap push) dan penghapusan cincin mengecas.
 - **Diuji 30 Okt 2026:** build dari main jalan. CPU saat diam 1,4% selama 60 detik (sebelumnya 1,7%), 277 MB. Baris status menampilkan ↓/↑ yang ter-update, tombol panah menggeser ke halaman berikutnya dengan nama halamannya, cincin mengecas tetap ada, log bersih. Belum dicoba langsung: pil jaringan di notch tertutup dan sakelar halaman di Settings.
 
+### K. PR #3 (Malik): multi-monitor, maskot, dua bahasa, Settings baru, 5 Nov 2026
+Di-merge sebagai a1950a3, setelah dua putaran review. Build lokal kode PR ditolak classifier, jadi alurnya: merge di GitHub, build `main`, tes, baru rilis.
+- **Multi-monitor** (`monitorPlacement`): layar utama (default), layar kedua, atau ikuti kursor. Monitor dicari dengan `MonitorFromPoint`; saat pindah layar notch menutup, berpindah tanpa terlihat, lalu membuka di layar tujuan.
+- **Maskot** (`mascotMode`): `idle` (default, seperti dulu) atau `always` (mata selalu melirik kursor, jam kecil di kanan).
+- **Animasi pegas** (`springPhysics`): spring (default), snappy, smooth, off.
+- **Warna aksen Windows** untuk glow notch (`windowsAccentGlow`, default mati): dibaca ulang dari registry DWM tiap notch dibuka.
+- **Peek Bluetooth** (`bluetoothPeek`, default mati): `DeviceWatcher` AEP dengan properti `IsConnected`/`BatteryLifePercent`; event sebelum `EnumerationCompleted` diabaikan supaya tidak spam saat start.
+- **Dua bahasa** EN/ID (`i18n.ts`). Pengguna lama (field `language` tidak ada di `settings.json`) tetap `id` lewat `#[serde(default = "legacy_language")]`; instalasi baru ikut bahasa Windows, cadangan `id`. Jam ikut format 12/24 jam Windows.
+- **Settings** dirombak jadi tab Layar/Sistem/Fokus/Media dengan pencarian.
+- **Diminta di review dan sudah dibereskan:** `createUpdaterArtifacts` sempat diubah ke `false` (akan mematikan update otomatis), bahasa default sempat `en`, Bluetooth sempat default nyala tanpa properti yang benar, `release.yml` kini hanya `workflow_dispatch`, job CI frontend pindah ke Ubuntu supaya tidak antre runner Windows.
+- **Catatan kecil yang belum diubah:** handler `Updated` Bluetooth membaca `settings.json` dari disk tiap event.
+- **Diuji 5 Nov 2026:** CPU saat diam 1,1% selama 60 detik (menit pertama setelah start ~4,9% karena memuat), 261 MB. Pengguna lama tetap bahasa Indonesia, opsi overlay volume tetap jalan, tampilan notch dan Settings dicek langsung oleh pemilik. Multi-monitor belum dites (cuma satu layar).
+
 ---
 
 ## 6. Urutan pengerjaan
@@ -315,6 +328,7 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.2.5 | 29 Okt 2026 | PR #1 versi akhir dari Malik: notch tanpa garis tepi (bayangan lembut), buka setelah kursor diam 90 ms, tutup 220 ms, judul lagu tidak melompat saat di-hover. Saat rilis, zip portable gagal (antivirus mengunci exe, dan `Compress-Archive` hanya melaporkan error tanpa berhenti), lalu skrip berhenti setelah push tag tapi sebelum GitHub Release dibuat. Pemulihan: zip dibuat dari salinan exe yang penandanya dikembalikan ke `UNK`, lalu rilis dibuat manual. Sejak itu `release.ps1` memakai `-ErrorAction Stop` dan memastikan zip ada sebelum commit |
 | v0.2.6 | 30 Okt 2026 | PR #2 dari Malik: kecepatan internet (↓/↑ di baris status, opsional di notch kecil), sakelar halaman di Settings, animasi geser sesuai arah, celah sudut notch di layar 125%/150%. |
 | v0.2.7 | 3 Nov 2026 | Opsi "Sembunyikan overlay volume Windows" (Settings → Keyboard & sistem, default mati): tombol volume ditahan keyboard hook dan diatur Notchy, jadi overlay Windows tidak dobel dengan peek Notchy. |
+| v0.2.8 | 5 Nov 2026 | PR #3 dari Malik: multi-monitor (ikuti kursor), mode maskot selalu aktif, animasi pegas, warna aksen Windows, peek Bluetooth (default mati), dua bahasa EN/ID, Settings bertab. |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.

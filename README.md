@@ -39,11 +39,17 @@ A small black island at the top of your screen that shows what's happening (musi
 
 📁 **Shelf** to park files you'll drag somewhere else, 📋 **clipboard history** (text and images), ⬇️ **download progress** from your browser, ⚡ **shortcuts** page (lock, sleep, screenshot, your own apps and links), and drop a file on the notch to **share** it.
 
-🔊 **Quick status:** volume, brightness, Caps Lock, keyboard language, charging, Wi-Fi, headphones and earbuds battery, camera and mic in use, mic mute, screenshot preview, weather, one-click audio output switch, and live **network speed** (↓/↑) in the open notch, optionally also in the small notch during heavy downloads or uploads.
+🔊 **Quick status:** volume, brightness, Caps Lock, keyboard language, charging, Wi-Fi, headphones and earbuds battery, optional Bluetooth connect and low-battery alerts (mouse, keyboard, earbuds), camera and mic in use, mic mute, screenshot preview, weather, one-click audio output switch, and live **network speed** (↓/↑) in the open notch, optionally also in the small notch during heavy downloads or uploads.
 
 🖱️ **Gestures:** scroll on the notch for volume, swipe sideways to switch, press and hold to keep it open.
 
 🎛️ **Only what you use.** Turn pages (music, timer, water, to-do, Shelf, clipboard, shortcuts) on or off in Settings.
+
+🖥️ **More than one screen?** Keep the notch on the main screen, the second one, or let it follow your cursor from screen to screen.
+
+👀 **Eyes and feel.** The mascot's eyes can wake up only when you're idle or follow your cursor all the time; pick how bouncy the notch feels, and optionally let its glow follow your Windows accent color.
+
+🌐 **English or Indonesian**, switchable in Settings. Clock follows your Windows 12/24-hour setting.
 
 🫥 **Stays out of the way.** It opens only when the cursor stops on it (not when you sweep past to a browser tab), tucks into a thin line when there's a tab or button right under it, hides for full-screen video and games, and dozes off when you're idle.
 
@@ -107,7 +113,7 @@ Windows still shows its own banner. Turn on **Do not disturb** (Settings → Not
 
 <details><summary>The volume icon shows twice (Windows' and Notchy's)</summary>
 
-Turn on **Sembunyikan overlay volume Windows** in Settings → **Keyboard & sistem** and restart Notchy. The volume keys are then handled by Notchy, so only its own volume peek appears. On some laptops the Fn volume keys are handled by the maker's driver, and Windows' overlay still shows there. The brightness overlay can't be hidden this way.
+Turn on **Hide Windows Volume Overlay** in Settings → **System** and restart Notchy. The volume keys are then handled by Notchy, so only its own volume peek appears. On some laptops the Fn volume keys are handled by the maker's driver, and Windows' overlay still shows there. The brightness overlay can't be hidden this way.
 </details>
 
 <details><summary>A song has no lyrics, or the lyrics are off</summary>
@@ -132,7 +138,7 @@ Right-click the tray icon → **Exit**, or untick **Start with Windows**. Uninst
 
 <details><summary>My antivirus flagged it</summary>
 
-New, unsigned apps sometimes get flagged. Check the SHA-256 against the release page (above). Notchy listens only for volume, brightness, Caps Lock and language keys to show their overlays; it never records what you type. If you'd rather it didn't watch the keyboard at all, turn off the Caps Lock and keyboard-language peeks in Settings → **Keyboard & sistem** (applies after restarting Notchy).
+New, unsigned apps sometimes get flagged. Check the SHA-256 against the release page (above). Notchy listens only for volume, brightness, Caps Lock and language keys to show their overlays; it never records what you type. If you'd rather it didn't watch the keyboard at all, turn off **Keyboard & Caps Lock Peek** and **Hide Windows Volume Overlay** in Settings → **System** (applies after restarting Notchy).
 </details>
 
 ## Feedback
@@ -169,7 +175,7 @@ Design notes and every decision behind the app are in [`notchy.md`](notchy.md) (
 <details>
 <summary>🇮🇩 Bahasa Indonesia</summary>
 
-**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), timer fokus, pengingat minum, to-do, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, kecepatan internet, dan status sistem. Halaman yang tidak dipakai bisa dimatikan di Settings. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
+**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), timer fokus, pengingat minum, to-do, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, kecepatan internet, dan status sistem. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, dan notch bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
 
 Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
 
