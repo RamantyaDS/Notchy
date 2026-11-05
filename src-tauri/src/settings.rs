@@ -105,6 +105,18 @@ pub fn default_shortcuts() -> Vec<Shortcut> {
         .to_vec()
 }
 
+fn default_language() -> String {
+    unsafe {
+        let langid = windows::Win32::Globalization::GetUserDefaultUILanguage();
+        // Primary language ID in low 10 bits: LANG_ENGLISH = 0x09
+        if (langid & 0x03FF) == 0x09 {
+            "en".into()
+        } else {
+            "id".into() // Default fallback to Indonesian as requested by Ramantya
+        }
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -142,7 +154,7 @@ impl Default for Settings {
             monitor_placement: "primary".into(),
             spring_physics: "spring".into(),
             windows_accent_glow: false,
-            language: "en".into(),
+            language: default_language(),
         }
     }
 }
@@ -255,7 +267,7 @@ mod tests {
         assert!(!s.windows_accent_glow);
         assert_eq!(s.net_speed_island, false);
         assert!(s.net_speed_status);
-        assert_eq!(s.language, "en");
+        assert!(s.language == "en" || s.language == "id");
     }
 
     #[test]
@@ -278,7 +290,7 @@ mod tests {
         assert_eq!(s.monitor_placement, "primary");
         assert_eq!(s.spring_physics, "spring");
         assert!(!s.windows_accent_glow);
-        assert_eq!(s.language, "en");
+        assert!(s.language == "en" || s.language == "id");
     }
 
     #[test]

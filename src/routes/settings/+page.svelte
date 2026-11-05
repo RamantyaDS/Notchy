@@ -161,7 +161,7 @@
       </div>
       <div>
         <h1 class="app-title">{tr("settings.title")}</h1>
-        <span class="version-tag">v0.2.5 · {tr("settings.subtitle")}</span>
+        <span class="version-tag">{tr("settings.subtitle")}</span>
       </div>
     </div>
 

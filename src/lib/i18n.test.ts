@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { getLocale, setLocale, t, translations } from "./i18n";
 
 describe("i18n bilingual localization", () => {
-  it("defaults to English locale", () => {
-    setLocale(undefined);
+  it("defaults to English when explicitly set", () => {
+    setLocale("en");
     expect(getLocale()).toBe("en");
     expect(t("tabs.display")).toBe("Display");
     expect(t("tabs.system")).toBe("System");

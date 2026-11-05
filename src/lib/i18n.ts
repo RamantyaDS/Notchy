@@ -521,11 +521,18 @@ export const translations = {
 
 export type TranslationKey = keyof typeof translations.en;
 
-let activeLocale: Locale = "en";
+export function detectDefaultLocale(): Locale {
+  if (typeof navigator !== "undefined" && navigator.language) {
+    if (navigator.language.toLowerCase().startsWith("en")) return "en";
+  }
+  return "id"; // Default fallback to "id" as requested by Ramantya
+}
+
+let activeLocale: Locale = detectDefaultLocale();
 const listeners = new Set<(loc: Locale) => void>();
 
 export function setLocale(locale: Locale | string | undefined) {
-  const next: Locale = locale === "id" ? "id" : "en";
+  const next: Locale = locale === "en" ? "en" : locale === "id" ? "id" : detectDefaultLocale();
   activeLocale = next;
   for (const fn of listeners) {
     try {
