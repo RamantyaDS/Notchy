@@ -842,7 +842,7 @@
         class="arrow"
         class:next={step > 0}
         onclick={() => goPage(page + step, step)}
-        aria-label={step > 0 ? "Halaman berikutnya" : "Halaman sebelumnya"}
+        aria-label={step > 0 ? t("main.nextPage") : t("main.prevPage")}
         in:fade={{ duration: 200, delay: 200 }}
       >
         <svg viewBox="0 0 24 24"><path d={step > 0 ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} /></svg>

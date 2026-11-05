@@ -2,6 +2,7 @@
   // Camera check before a call: a small live preview in the notch. The camera
   // is opened only while this is shown and released (light off) when it closes.
   import { onDestroy, onMount } from "svelte";
+  import { t } from "./i18n";
 
   let { title = "", link = "", onDone, onJoin }: { title?: string; link?: string; onDone: () => void; onJoin: () => void } = $props();
 
@@ -14,7 +15,7 @@
       stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 360 }, audio: false });
       video.srcObject = stream;
     } catch (e) {
-      error = (e as DOMException)?.name === "NotAllowedError" ? "Akses kamera ditolak" : "Kamera tidak bisa dibuka";
+      error = (e as DOMException)?.name === "NotAllowedError" ? t("mirror.camDenied") : t("mirror.camError");
     }
   });
   onDestroy(() => stream?.getTracks().forEach((t) => t.stop()));
@@ -26,11 +27,11 @@
     {#if error}<span class="err">{error}</span>{/if}
   </div>
   <div class="side">
-    <div class="title"><span class="live"></span>Cek kamera</div>
-    <div class="detail">{title || "Pastikan wajah terlihat jelas"}</div>
+    <div class="title"><span class="live"></span>{t("mirror.title")}</div>
+    <div class="detail">{title || t("mirror.detail")}</div>
     <div class="actions">
-      <button class="primary" onclick={onDone}>Selesai</button>
-      {#if link}<button onclick={onJoin}>Join</button>{/if}
+      <button class="primary" onclick={onDone}>{t("mirror.done")}</button>
+      {#if link}<button onclick={onJoin}>{t("mirror.join")}</button>{/if}
     </div>
   </div>
 </div>

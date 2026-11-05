@@ -1,6 +1,7 @@
 <script lang="ts">
   import { formatTime } from "./media";
   import type { Pomodoro } from "./productivity.svelte";
+  import { t } from "./i18n";
 
   let { pomo, now }: { pomo: Pomodoro; now: number } = $props();
 
@@ -21,18 +22,18 @@
   <div class="info">
     <div class="line">
       <span class="time">{formatTime(Math.ceil(left))}</span>
-      <button class="reset" onclick={() => pomo.reset()} aria-label="Ulang" title="Ulang">↺</button>
+      <button class="reset" onclick={() => pomo.reset()} aria-label={t("timer.reset")} title={t("timer.reset")}>↺</button>
     </div>
     <div class="phase">
-      {focus ? "Fokus" : "Istirahat"} · {focus ? pomo.focusMin : pomo.breakMin} menit
+      {focus ? t("timer.focus") : t("timer.break")} · {focus ? pomo.focusMin : pomo.breakMin} {t("timer.minutesUnit")}
     </div>
     <!-- Quick starts on either side of the main button. -->
     <div class="buttons">
-      <button onclick={() => pomo.begin("break")} title="Mulai istirahat sekarang">☕ Istirahat {pomo.breakMin}</button>
+      <button onclick={() => pomo.begin("break")} title={t("timer.startBreakTitle")}>{t("timer.startBreak", { min: pomo.breakMin })}</button>
       <button class="main" onclick={() => (pomo.running ? pomo.pause() : pomo.start())}>
-        {pomo.running ? "❚❚ Jeda" : left < pomo.length() ? "▶ Lanjut" : "▶ Mulai"}
+        {pomo.running ? t("timer.pause") : left < pomo.length() ? t("timer.resume") : t("timer.start")}
       </button>
-      <button onclick={() => pomo.begin("focus")} title="Mulai fokus sekarang">◎ Fokus {pomo.focusMin}</button>
+      <button onclick={() => pomo.begin("focus")} title={t("timer.startFocusTitle")}>{t("timer.startFocus", { min: pomo.focusMin })}</button>
     </div>
   </div>
 </div>

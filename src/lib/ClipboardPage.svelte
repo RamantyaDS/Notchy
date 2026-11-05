@@ -1,6 +1,7 @@
 <script lang="ts">
   // Recent copies (kept in memory by Rust, gone after a restart). Click to copy again.
   import { invoke } from "@tauri-apps/api/core";
+  import { t } from "./i18n";
 
   export type ClipEntry = { id: number; kind: "text" | "image"; preview: string; width?: number; height?: number };
 
@@ -18,24 +19,24 @@
 <div class="page">
   <div class="header">
     <span class="title">Clipboard</span>
-    <span class="hint">{items.length ? `${items.length} terakhir · klik untuk salin` : "Belum ada yang disalin"}</span>
-    {#if items.length}<button class="clear" onclick={() => invoke("clipboard_clear")}>Bersihkan</button>{/if}
+    <span class="hint">{items.length ? t("clipboard.recentHint", { count: items.length }) : t("clipboard.emptyHint")}</span>
+    {#if items.length}<button class="clear" onclick={() => invoke("clipboard_clear")}>{t("clipboard.clear")}</button>{/if}
   </div>
 
   {#if items.length === 0}
-    <div class="empty">Teks dan gambar yang kamu copy muncul di sini.<br />Isi dari password manager tidak disimpan.</div>
+    <div class="empty">{@html t("clipboard.emptyDesc")}</div>
   {:else}
     <div class="list scroll">
       {#each items as item (item.id)}
-        <button class="item" class:done={copied === item.id} onclick={() => copy(item)} title={item.kind === "text" ? item.preview : "Gambar"}>
-          <span class="kind" class:img={item.kind === "image"}>{item.kind === "image" ? "Gambar" : "Teks"}</span>
+        <button class="item" class:done={copied === item.id} onclick={() => copy(item)} title={item.kind === "text" ? item.preview : t("clipboard.image")}>
+          <span class="kind" class:img={item.kind === "image"}>{item.kind === "image" ? t("clipboard.image") : t("clipboard.text")}</span>
           {#if item.kind === "image"}
             <img src={item.preview} alt="" />
             <span class="text">{item.width} × {item.height}</span>
           {:else}
             <span class="text">{item.preview}</span>
           {/if}
-          {#if copied === item.id}<span class="ok">✓ Tersalin!</span>{/if}
+          {#if copied === item.id}<span class="ok">{t("clipboard.copied")}</span>{/if}
         </button>
       {/each}
     </div>

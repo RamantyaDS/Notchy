@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { fade, slide } from "svelte/transition";
   import { searchCity, type Place } from "$lib/weather";
-  import { t, setLocale, getLocale } from "$lib/i18n";
+  import { t, setLocale, getLocale, subscribeLocale } from "$lib/i18n";
 
   type City = { name: string; latitude: number; longitude: number };
   type Settings = {
@@ -44,21 +44,22 @@
 
   type Shortcut = { name: string; action: string; target: string };
 
-  const ACTIONS: [string, string][] = [
-    ["lock", "Kunci layar"],
-    ["sleep", "Sleep"],
-    ["screenshot", "Screenshot"],
-    ["downloads", "Buka Downloads"],
-    ["camera", "Cek kamera"],
-    ["open", "Buka aplikasi / file / folder / link / skrip"],
-  ];
+  let currentLang = $state(getLocale());
+  $effect(() => subscribeLocale((l) => (currentLang = l)));
 
-  const DEFAULT_SHORTCUTS: Shortcut[] = [
-    { name: "Kunci", action: "lock", target: "" },
-    { name: "Sleep", action: "sleep", target: "" },
-    { name: "Screenshot", action: "screenshot", target: "" },
-    { name: "Downloads", action: "downloads", target: "" },
-    { name: "Kamera", action: "camera", target: "" },
+  // Localized resolver reactive to language changes
+  const tr = (key: string, params?: Record<string, string | number>) => {
+    void currentLang;
+    return t(key, params);
+  };
+
+  const ACTION_ITEMS: [string, string][] = [
+    ["lock", "actions.lock"],
+    ["sleep", "actions.sleep"],
+    ["screenshot", "actions.screenshot"],
+    ["downloads", "actions.downloads"],
+    ["camera", "actions.camera"],
+    ["open", "actions.open"],
   ];
 
   type TabKey = "display" | "system" | "productivity" | "media";
@@ -84,13 +85,13 @@
     | "shortcutsEnabled";
 
   const PAGE_ITEMS: [PageToggleKey, string, string][] = [
-    ["musicEnabled", "Pemutar Musik", "Jam, pemutar media, lirik lagu berjalan"],
-    ["pomodoroEnabled", "Fokus Pomodoro", "Timer sesi fokus dan istirahat"],
-    ["waterEnabled", "Minum Air", "Pencatatan hidrasi harian & pengingat berkala"],
-    ["todoEnabled", "Catatan To-Do", "Daftar to-do harian sederhana di notch"],
-    ["shelfEnabled", "Laci File (Shelf)", "Tempat menaruh file/folder sementara"],
-    ["clipboardEnabled", "Papan Klip", "Riwayat salinan teks dan tangkapan layar"],
-    ["shortcutsEnabled", "Pintasan Cepat", "Tombol aksi cepat dan peluncur aplikasi"],
+    ["musicEnabled", "pageItems.music", "pageItems.musicDesc"],
+    ["pomodoroEnabled", "pageItems.pomodoro", "pageItems.pomodoroDesc"],
+    ["waterEnabled", "pageItems.water", "pageItems.waterDesc"],
+    ["todoEnabled", "pageItems.todo", "pageItems.todoDesc"],
+    ["shelfEnabled", "pageItems.shelf", "pageItems.shelfDesc"],
+    ["clipboardEnabled", "pageItems.clipboard", "pageItems.clipboardDesc"],
+    ["shortcutsEnabled", "pageItems.shortcuts", "pageItems.shortcutsDesc"],
   ];
 
   const enabledPagesCount = $derived.by(() => {
@@ -134,6 +135,16 @@
     if (!searchQuery.trim()) return true;
     return text.toLowerCase().includes(searchQuery.trim().toLowerCase());
   }
+
+  function defaultShortcuts(): Shortcut[] {
+    return [
+      { name: tr("shortcuts.lock"), action: "lock", target: "" },
+      { name: tr("shortcuts.sleep"), action: "sleep", target: "" },
+      { name: tr("shortcuts.screenshot"), action: "screenshot", target: "" },
+      { name: tr("shortcuts.downloads"), action: "downloads", target: "" },
+      { name: tr("shortcuts.camera"), action: "camera", target: "" },
+    ];
+  }
 </script>
 
 <div class="settings-shell">
@@ -147,8 +158,8 @@
         </svg>
       </div>
       <div>
-        <h1 class="app-title">Notchy Settings</h1>
-        <span class="version-tag">v0.2.5 · Fluent Experience</span>
+        <h1 class="app-title">{tr("settings.title")}</h1>
+        <span class="version-tag">v0.2.5 · {tr("settings.subtitle")}</span>
       </div>
     </div>
 
@@ -161,7 +172,7 @@
       <input
         type="text"
         bind:value={searchQuery}
-        placeholder={t("settings.searchPlaceholder")}
+        placeholder={tr("settings.searchPlaceholder")}
       />
       {#if searchQuery}
         <button class="clear-search" onclick={() => (searchQuery = "")}>✕</button>
@@ -170,7 +181,7 @@
   </header>
 
   <!-- Tab Bar (Minimalist 4-Column Grid, No Overflow) -->
-  <div class="tabs-nav" role="tablist" aria-label={t("settings.title")}>
+  <div class="tabs-nav" role="tablist" aria-label={tr("settings.title")}>
     <button
       class="tab-btn"
       class:active={activeTab === "display"}
@@ -179,7 +190,7 @@
       aria-selected={activeTab === "display"}
     >
       <span class="tab-icon">🖥️</span>
-      <span class="tab-text">{t("tabs.display")}</span>
+      <span class="tab-text">{tr("tabs.display")}</span>
     </button>
     <button
       class="tab-btn"
@@ -189,7 +200,7 @@
       aria-selected={activeTab === "system"}
     >
       <span class="tab-icon">⚙️</span>
-      <span class="tab-text">{t("tabs.system")}</span>
+      <span class="tab-text">{tr("tabs.system")}</span>
     </button>
     <button
       class="tab-btn"
@@ -199,7 +210,7 @@
       aria-selected={activeTab === "productivity"}
     >
       <span class="tab-icon">⏱️</span>
-      <span class="tab-text">{t("tabs.focus")}</span>
+      <span class="tab-text">{tr("tabs.focus")}</span>
     </button>
     <button
       class="tab-btn"
@@ -209,7 +220,7 @@
       aria-selected={activeTab === "media"}
     >
       <span class="tab-icon">🎵</span>
-      <span class="tab-text">{t("tabs.media")}</span>
+      <span class="tab-text">{tr("tabs.media")}</span>
     </button>
   </div>
 
@@ -218,10 +229,10 @@
     {#if !settings}
       <div class="loading-state">
         <div class="spinner"></div>
-        <p>Memuat konfigurasi Notchy...</p>
+        <p>{tr("settings.loading")}</p>
       </div>
     {:else}
-      <!-- TAB 1: TAMPILAN & LAYAR -->
+      <!-- TAB 1: TAMPILAN & LAYAR / DISPLAY -->
       {#if activeTab === "display" || searchQuery}
         <div class="tab-panel" in:fade={{ duration: 180 }}>
           {#if matches("Language Bahasa Inggris Indonesia English")}
@@ -229,8 +240,8 @@
               <div class="card-header">
                 <div class="card-icon">🌐</div>
                 <div class="card-info">
-                  <h3>{t("settings.language")}</h3>
-                  <p>{t("settings.languageDesc")}</p>
+                  <h3>{tr("settings.language")}</h3>
+                  <p>{tr("settings.languageDesc")}</p>
                 </div>
               </div>
               <div class="control-row">
@@ -243,20 +254,20 @@
                     save({ language: lang });
                   }}
                 >
-                  <option value="en">{t("settings.langEn")}</option>
-                  <option value="id">{t("settings.langId")}</option>
+                  <option value="en">{tr("settings.langEn")}</option>
+                  <option value="id">{tr("settings.langId")}</option>
                 </select>
               </div>
             </section>
           {/if}
 
-          {#if matches("Layar Multi-Monitor Penempatan Posisi Display Primary Secondary Kursor")}
+          {#if matches("Layar Multi-Monitor Penempatan Posisi Display Primary Secondary Kursor Screen Cursor Placement")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">🖥️</div>
                 <div class="card-info">
-                  <h3>Penempatan Multi-Monitor</h3>
-                  <p>Tentukan di layar mana Notchy ditempatkan secara otomatis.</p>
+                  <h3>{tr("settings.monitorTitle")}</h3>
+                  <p>{tr("settings.monitorDesc")}</p>
                 </div>
               </div>
               <div class="control-row">
@@ -265,21 +276,21 @@
                   value={settings.monitorPlacement ?? "primary"}
                   onchange={(e) => save({ monitorPlacement: e.currentTarget.value })}
                 >
-                  <option value="primary">Layar Utama (Primary Monitor)</option>
-                  <option value="secondary">Layar Sekunder (Secondary Monitor)</option>
-                  <option value="follow-cursor">Ikuti Kursor / Mouse Aktif</option>
+                  <option value="primary">{tr("settings.monitorPrimary")}</option>
+                  <option value="secondary">{tr("settings.monitorSecondary")}</option>
+                  <option value="follow-cursor">{tr("settings.monitorFollow")}</option>
                 </select>
               </div>
             </section>
           {/if}
 
-          {#if matches("Animasi Spring Physics Pegas Kecepatan Transisi Organik Bouncy")}
+          {#if matches("Animasi Spring Physics Pegas Kecepatan Transisi Organik Bouncy Animation Transition")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">🌀</div>
                 <div class="card-info">
-                  <h3>Animasi Dynamic Island (Spring Physics)</h3>
-                  <p>Kurva fisika pegas adaptif saat Dynamic Island melebar dan merespons interaksi.</p>
+                  <h3>{tr("settings.springTitle")}</h3>
+                  <p>{tr("settings.springDesc")}</p>
                 </div>
               </div>
               <div class="control-row">
@@ -288,24 +299,24 @@
                   value={settings.springPhysics ?? "spring"}
                   onchange={(e) => save({ springPhysics: e.currentTarget.value })}
                 >
-                  <option value="spring">Spring Organik (Bouncy iOS / macOS Style)</option>
-                  <option value="snappy">Snappy (Cepat & Responsif)</option>
-                  <option value="smooth">Smooth (Halus & Elegan)</option>
-                  <option value="off">Mati (Tanpa Efek Pegas)</option>
+                  <option value="spring">{tr("settings.springOrganic")}</option>
+                  <option value="snappy">{tr("settings.springSnappy")}</option>
+                  <option value="smooth">{tr("settings.springSmooth")}</option>
+                  <option value="off">{tr("settings.springOff")}</option>
                 </select>
               </div>
             </section>
           {/if}
 
-          {#if matches("Sinkronisasi Warna Aksen Windows Dynamic Accent DWM Glow Border")}
+          {#if matches("Sinkronisasi Warna Aksen Windows Dynamic Accent DWM Glow Border Theme")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">✨</div>
                 <div class="card-info">
-                  <h3>Sinkronisasi Warna Aksen Windows (Dynamic Accent)</h3>
-                  <p>Efek highlight border glow elegan saat ada notifikasi aktif atau peek informasi.</p>
+                  <h3>{tr("settings.accentTitle")}</h3>
+                  <p>{tr("settings.accentDesc")}</p>
                 </div>
-                <label class="switch" title="Toggle On/Off Windows Accent Sync">
+                <label class="switch" title="Toggle Windows Accent Sync">
                   <input
                     type="checkbox"
                     checked={settings.windowsAccentGlow === true}
@@ -322,8 +333,8 @@
                     style:background={settings.windowsAccentGlow ? accentColor : "rgba(255,255,255,0.3)"}
                   ></span>
                   <span class="accent-mode-text">
-                    Mode saat ini:
-                    <strong>{settings.windowsAccentGlow ? "Sinkronisasi Windows Accent DWM" : "Default Notchy (Netral)"}</strong>
+                    {tr("settings.accentCurrentMode")}
+                    <strong>{settings.windowsAccentGlow ? tr("settings.accentDwmActive") : tr("settings.accentDefaultNeutral")}</strong>
                     {#if settings.windowsAccentGlow}
                       <code class="color-hex">{accentColor}</code>
                     {/if}
@@ -331,28 +342,28 @@
                 </div>
                 <p class="accent-hint">
                   {settings.windowsAccentGlow
-                    ? "Warna glow border otomatis mengikuti tema aksen yang dipilih di Personalization Windows."
-                    : "Warna glow border menggunakan tema monokrom ambient default Notchy."}
+                    ? tr("settings.accentHintActive")
+                    : tr("settings.accentHintDefault")}
                 </p>
               </div>
             </section>
           {/if}
 
-          {#if matches("Mascot Mata Ekspresif Minimal Notch Bezel Tipis")}
+          {#if matches("Mascot Mata Ekspresif Minimal Notch Bezel Tipis Eyes Thin Character")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">👀</div>
                 <div class="card-info">
-                  <h3>Ekspresi Maskot & Gaya Notch</h3>
-                  <p>Karakter mata interaktif saat idle dan opsi tampilan tipis.</p>
+                  <h3>{tr("settings.mascotStyleTitle")}</h3>
+                  <p>{tr("settings.mascotStyleDesc")}</p>
                 </div>
               </div>
 
               <div class="toggle-list">
                 <div class="toggle-item">
                   <div class="toggle-text">
-                    <strong>Mata Maskot Aktif</strong>
-                    <small>Mata ekspresif keluar dan melihat ke arah kursor saat laptop idle.</small>
+                    <strong>{tr("settings.mascotTitle")}</strong>
+                    <small>{tr("settings.mascotDesc")}</small>
                   </div>
                   <label class="switch">
                     <input
@@ -366,8 +377,8 @@
 
                 <div class="toggle-item">
                   <div class="toggle-text">
-                    <strong>Notch Minimal</strong>
-                    <small>Bentuk garis tipis 5px saat idle (sangat cocok untuk laptop ber-bezel tebal).</small>
+                    <strong>{tr("settings.minimalTitle")}</strong>
+                    <small>{tr("settings.minimalDesc")}</small>
                   </div>
                   <label class="switch">
                     <input
@@ -384,16 +395,16 @@
         </div>
       {/if}
 
-      <!-- TAB 2: SISTEM & INDIKATOR -->
+      <!-- TAB 2: SISTEM & INDIKATOR / SYSTEM -->
       {#if activeTab === "system" || searchQuery}
         <div class="tab-panel" in:fade={{ duration: 180 }}>
-          {#if matches("Bluetooth Baterai Headset TWS Mouse Keyboard Perangkat Device")}
+          {#if matches("Bluetooth Baterai Headset TWS Mouse Keyboard Perangkat Device Battery")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">🎧</div>
                 <div class="card-info">
-                  <h3>Status Baterai Bluetooth (TWS / Mouse / Keyboard)</h3>
-                  <p>Dynamic Island otomatis melebar saat perangkat Bluetooth tersambung atau baterai menipis.</p>
+                  <h3>{tr("settings.bluetoothTitle")}</h3>
+                  <p>{tr("settings.bluetoothDesc")}</p>
                 </div>
                 <label class="switch">
                   <input
@@ -408,7 +419,7 @@
               {#if settings.bluetoothPeek !== false}
                 <div class="nested-control" transition:slide={{ duration: 160 }}>
                   <label class="input-inline">
-                    <span>Ambang batas baterai rendah (Low Battery Alert):</span>
+                    <span>{tr("settings.bluetoothLowThreshold")}</span>
                     <div class="number-unit">
                       <input
                         type="number"
@@ -428,21 +439,21 @@
             </section>
           {/if}
 
-          {#if matches("Kecepatan Jaringan Network Speed Download Upload Internet")}
+          {#if matches("Kecepatan Jaringan Network Speed Download Upload Internet Traffic")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">🚀</div>
                 <div class="card-info">
-                  <h3>Pemantau Kecepatan Jaringan</h3>
-                  <p>Pantau traffic unduh (download) dan unggah (upload) internet secara real-time.</p>
+                  <h3>{tr("settings.netSpeedMonitorTitle")}</h3>
+                  <p>{tr("settings.netSpeedMonitorDesc")}</p>
                 </div>
               </div>
 
               <div class="toggle-list">
                 <div class="toggle-item">
                   <div class="toggle-text">
-                    <strong>Dynamic Island (Notch Tertutup)</strong>
-                    <small>Otomatis melebar saat ada unduhan/unggahan berkecepatan tinggi.</small>
+                    <strong>{tr("settings.netSpeedIslandTitle")}</strong>
+                    <small>{tr("settings.netSpeedIslandDesc")}</small>
                   </div>
                   <label class="switch">
                     <input
@@ -457,7 +468,7 @@
                 {#if settings.netSpeedIsland}
                   <div class="nested-grid" transition:slide={{ duration: 160 }}>
                     <label class="input-inline">
-                      <span>Batas unduh (download) minimum:</span>
+                      <span>{tr("settings.netDownThreshold")}</span>
                       <div class="number-unit">
                         <input
                           type="number"
@@ -469,7 +480,7 @@
                       </div>
                     </label>
                     <label class="input-inline">
-                      <span>Batas unggah (upload) minimum:</span>
+                      <span>{tr("settings.netUpThreshold")}</span>
                       <div class="number-unit">
                         <input
                           type="number"
@@ -485,8 +496,8 @@
 
                 <div class="toggle-item">
                   <div class="toggle-text">
-                    <strong>Baris Status (Notch Terbuka)</strong>
-                    <small>Tampil di baris atas notch terbuka bersanding dengan baterai dan jam.</small>
+                    <strong>{tr("settings.netSpeedStatusTitle")}</strong>
+                    <small>{tr("settings.netSpeedStatusDesc")}</small>
                   </div>
                   <label class="switch">
                     <input
@@ -501,13 +512,13 @@
             </section>
           {/if}
 
-          {#if matches("Notifikasi Windows Do Not Disturb DND Teams WhatsApp Email")}
+          {#if matches("Notifikasi Windows Do Not Disturb DND Teams WhatsApp Email Notification")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">🔔</div>
                 <div class="card-info">
-                  <h3>Notifikasi Windows</h3>
-                  <p>Tampilkan pop-up notifikasi Windows (WhatsApp, Slack, Teams, email) di notch.</p>
+                  <h3>{tr("settings.mirrorTitle")}</h3>
+                  <p>{tr("settings.mirrorDesc")}</p>
                 </div>
                 <label class="switch">
                   <input
@@ -520,22 +531,22 @@
               </div>
               <div class="action-footer">
                 <span class="tip-text">
-                  Tips: Nyalakan <strong>Do not disturb</strong> di Windows agar notifikasi tidak muncul ganda.
+                  {tr("settings.mirrorTip")}
                 </span>
                 <button class="btn-secondary" onclick={() => invoke("open_dnd_settings")}>
-                  Buka Pengaturan Windows DND
+                  {tr("settings.openDnd")}
                 </button>
               </div>
             </section>
           {/if}
 
-          {#if matches("Keyboard Caps Lock Peek Bahasa Input")}
+          {#if matches("Keyboard Caps Lock Peek Bahasa Input Language Layout")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">⌨️</div>
                 <div class="card-info">
-                  <h3>Keyboard & Caps Lock Peek</h3>
-                  <p>Tampilkan indikator Caps Lock dan pergantian layout bahasa keyboard di notch.</p>
+                  <h3>{tr("settings.capsLockTitle")}</h3>
+                  <p>{tr("settings.capsLockDesc")}</p>
                 </div>
                 <label class="switch">
                   <input
@@ -551,26 +562,26 @@
         </div>
       {/if}
 
-      <!-- TAB 3: PRODUKTIVITAS -->
+      <!-- TAB 3: PRODUKTIVITAS / PRODUCTIVITY -->
       {#if activeTab === "productivity" || searchQuery}
         <div class="tab-panel" in:fade={{ duration: 180 }}>
-          {#if matches("Halaman Menu Notch Aktif Pomodoro Air Todo Shelf Clipboard Shortcuts")}
+          {#if matches("Halaman Menu Notch Aktif Pomodoro Air Todo Shelf Clipboard Shortcuts Pages Focus")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">📑</div>
                 <div class="card-info">
-                  <h3>Daftar Halaman di Notch Terbuka</h3>
+                  <h3>{tr("settings.activePagesTitle")}</h3>
                   <p>
-                    Pilih menu yang dapat diakses saat notch dibuka.
+                    {tr("settings.activePagesDesc")}
                     {#if enabledPagesCount <= 1}
-                      <strong class="warn-text"> (Minimal 1 halaman harus aktif)</strong>
+                      <strong class="warn-text"> {tr("settings.activePagesMinWarn")}</strong>
                     {/if}
                   </p>
                 </div>
               </div>
 
               <div class="pages-grid">
-                {#each PAGE_ITEMS as [key, label, desc]}
+                {#each PAGE_ITEMS as [key, titleKey, descKey]}
                   <label class="page-checkbox-card" class:disabled={settings[key] !== false && enabledPagesCount <= 1}>
                     <input
                       type="checkbox"
@@ -579,8 +590,8 @@
                       onchange={(e) => save({ [key]: e.currentTarget.checked })}
                     />
                     <div class="page-checkbox-content">
-                      <strong>{label}</strong>
-                      <small>{desc}</small>
+                      <strong>{tr(titleKey)}</strong>
+                      <small>{tr(descKey)}</small>
                     </div>
                   </label>
                 {/each}
@@ -588,18 +599,18 @@
             </section>
           {/if}
 
-          {#if matches("Pomodoro Fokus Istirahat Timer Menit")}
+          {#if matches("Pomodoro Fokus Istirahat Timer Menit Focus Break Minutes")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">⏳</div>
                 <div class="card-info">
-                  <h3>Timer Fokus Pomodoro</h3>
-                  <p>Sesuaikan durasi siklus kerja produktif dan istirahat.</p>
+                  <h3>{tr("settings.pomodoroTitle")}</h3>
+                  <p>{tr("settings.pomodoroDesc")}</p>
                 </div>
               </div>
               <div class="inline-fields-row">
                 <label class="input-inline">
-                  <span>Sesi Fokus:</span>
+                  <span>{tr("settings.focusSession")}</span>
                   <div class="number-unit">
                     <input
                       type="number"
@@ -607,11 +618,11 @@
                       value={settings.focusMinutes}
                       onchange={(e) => save({ focusMinutes: Math.max(1, Number(e.currentTarget.value) || 25) })}
                     />
-                    <em>menit</em>
+                    <em>{tr("settings.minutes")}</em>
                   </div>
                 </label>
                 <label class="input-inline">
-                  <span>Sesi Istirahat:</span>
+                  <span>{tr("settings.shortBreak")}</span>
                   <div class="number-unit">
                     <input
                       type="number"
@@ -619,20 +630,20 @@
                       value={settings.breakMinutes}
                       onchange={(e) => save({ breakMinutes: Math.max(1, Number(e.currentTarget.value) || 5) })}
                     />
-                    <em>menit</em>
+                    <em>{tr("settings.minutes")}</em>
                   </div>
                 </label>
               </div>
             </section>
           {/if}
 
-          {#if matches("Minum Air Hidrasi Glass Target Pengingat ml")}
+          {#if matches("Minum Air Hidrasi Glass Target Pengingat ml Water Hydration Drink Reminder")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">💧</div>
                 <div class="card-info">
-                  <h3>Pengingat Minum Air</h3>
-                  <p>Pencatatan hidrasi harian dengan pengingat ramah saat fokus bekerja.</p>
+                  <h3>{tr("settings.waterTitle")}</h3>
+                  <p>{tr("settings.waterDesc")}</p>
                 </div>
                 <label class="switch">
                   <input
@@ -647,7 +658,7 @@
               {#if settings.waterEnabled}
                 <div class="water-grid" transition:slide={{ duration: 160 }}>
                   <label class="input-inline">
-                    <span>Sekali minum:</span>
+                    <span>{tr("settings.glassSize")}</span>
                     <div class="number-unit">
                       <input
                         type="number"
@@ -660,7 +671,7 @@
                     </div>
                   </label>
                   <label class="input-inline">
-                    <span>Target harian:</span>
+                    <span>{tr("settings.waterTarget")}</span>
                     <div class="number-unit">
                       <input
                         type="number"
@@ -673,7 +684,7 @@
                     </div>
                   </label>
                   <label class="input-inline">
-                    <span>Mulai jam:</span>
+                    <span>{tr("settings.waterFrom")}</span>
                     <div class="number-unit">
                       <input
                         type="number"
@@ -686,7 +697,7 @@
                     </div>
                   </label>
                   <label class="input-inline">
-                    <span>Sampai jam:</span>
+                    <span>{tr("settings.waterTo")}</span>
                     <div class="number-unit">
                       <input
                         type="number"
@@ -699,7 +710,7 @@
                     </div>
                   </label>
                   <label class="input-inline">
-                    <span>Ingatkan tiap:</span>
+                    <span>{tr("settings.remindEvery")}</span>
                     <div class="number-unit">
                       <input
                         type="number"
@@ -707,7 +718,7 @@
                         value={settings.remindEvery}
                         onchange={(e) => save({ remindEvery: Math.max(0, Number(e.currentTarget.value)) })}
                       />
-                      <em>menit (0 = mati)</em>
+                      <em>{tr("settings.minutesOff")}</em>
                     </div>
                   </label>
                 </div>
@@ -715,13 +726,13 @@
             </section>
           {/if}
 
-          {#if matches("Kalender Calendar Google Outlook ICS Rapat Meeting")}
+          {#if matches("Kalender Calendar Google Outlook ICS Rapat Meeting Schedule")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">📅</div>
                 <div class="card-info">
-                  <h3>Sinkronisasi Kalender (ICS)</h3>
-                  <p>Tempel URL rahasia format iCal (.ics) dari Google Calendar atau Outlook.</p>
+                  <h3>{tr("settings.calendarTitle")}</h3>
+                  <p>{tr("settings.calendarDesc")}</p>
                 </div>
               </div>
               <div class="input-block">
@@ -732,18 +743,18 @@
                   placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
                   onchange={(e) => save({ calendarUrl: e.currentTarget.value.trim() })}
                 />
-                <small class="hint-muted">Alamat ICS hanya disimpan lokal di komputer ini.</small>
+                <small class="hint-muted">{tr("settings.calendarHint")}</small>
               </div>
             </section>
           {/if}
 
-          {#if matches("Pintasan Shortcuts Cepat Launcher Tombol App File")}
+          {#if matches("Pintasan Shortcuts Cepat Launcher Tombol App File Quick Action")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">⚡</div>
                 <div class="card-info">
-                  <h3>Pintasan Cepat (Maksimal 8)</h3>
-                  <p>Peluncur cepat aplikasi (.exe), folder, link web, atau file skrip otomatisasi.</p>
+                  <h3>{tr("settings.shortcutsTitle")}</h3>
+                  <p>{tr("settings.shortcutsDesc")}</p>
                 </div>
               </div>
 
@@ -753,7 +764,7 @@
                     <input
                       class="shortcut-name"
                       value={s.name}
-                      placeholder="Nama tombol"
+                      placeholder={tr("settings.shortcutNamePlaceholder")}
                       onchange={(e) => editShortcut(i, { name: e.currentTarget.value.trim() })}
                     />
                     <select
@@ -761,14 +772,14 @@
                       value={s.action}
                       onchange={(e) => editShortcut(i, { action: e.currentTarget.value })}
                     >
-                      {#each ACTIONS as [val, lbl]}
-                        <option value={val}>{lbl}</option>
+                      {#each ACTION_ITEMS as [val, lblKey]}
+                        <option value={val}>{tr(lblKey)}</option>
                       {/each}
                     </select>
                     <button
                       class="btn-delete"
                       onclick={() => save({ shortcuts: settings!.shortcuts.filter((_, j) => j !== i) })}
-                      title="Hapus pintasan"
+                      title={tr("settings.deleteShortcut")}
                     >
                       ✕
                     </button>
@@ -777,7 +788,7 @@
                         <input
                           class="text-input target-input"
                           value={s.target}
-                          placeholder="C:\Tools\script.bat atau https://github.com..."
+                          placeholder={tr("settings.shortcutTargetPlaceholder")}
                           onchange={(e) => editShortcut(i, { target: e.currentTarget.value.trim() })}
                         />
                       </div>
@@ -790,13 +801,13 @@
                 {#if settings.shortcuts.length < 8}
                   <button
                     class="btn-secondary"
-                    onclick={() => save({ shortcuts: [...settings!.shortcuts, { name: "Baru", action: "open", target: "" }] })}
+                    onclick={() => save({ shortcuts: [...settings!.shortcuts, { name: tr("shortcuts.title"), action: "open", target: "" }] })}
                   >
-                    + Tambah Pintasan
+                    {tr("settings.addShortcut")}
                   </button>
                 {/if}
-                <button class="btn-link" onclick={() => save({ shortcuts: DEFAULT_SHORTCUTS })}>
-                  Kembalikan ke Default
+                <button class="btn-link" onclick={() => save({ shortcuts: defaultShortcuts() })}>
+                  {tr("settings.restoreDefaults")}
                 </button>
               </div>
             </section>
@@ -804,16 +815,16 @@
         </div>
       {/if}
 
-      <!-- TAB 4: CUACA & MEDIA -->
+      <!-- TAB 4: CUACA & MEDIA / MEDIA -->
       {#if activeTab === "media" || searchQuery}
         <div class="tab-panel" in:fade={{ duration: 180 }}>
-          {#if matches("Musik Music Lirik Lyrics LRCLIB Lagu Player")}
+          {#if matches("Musik Music Lirik Lyrics LRCLIB Lagu Player Song")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">🎵</div>
                 <div class="card-info">
-                  <h3>Pemutar Musik & Lirik Berjalan</h3>
-                  <p>Tampilkan baris lirik real-time dari LRCLIB pada Dynamic Island saat lagu berputar.</p>
+                  <h3>{tr("settings.lyricsTitle")}</h3>
+                  <p>{tr("settings.lyricsDesc")}</p>
                 </div>
                 <label class="switch">
                   <input
@@ -827,25 +838,25 @@
             </section>
           {/if}
 
-          {#if matches("Cuaca Weather Lokasi City Suhu Derajat")}
+          {#if matches("Cuaca Weather Lokasi City Suhu Derajat Forecast Temperature")}
             <section class="setting-card">
               <div class="card-header">
                 <div class="card-icon">⛅</div>
                 <div class="card-info">
-                  <h3>Lokasi Cuaca</h3>
-                  <p>Sumber lokasi untuk prakiraan cuaca pada notch dan layar jam.</p>
+                  <h3>{tr("settings.weatherTitle")}</h3>
+                  <p>{tr("settings.weatherDesc")}</p>
                 </div>
               </div>
 
               <div class="weather-current-box">
-                <span class="weather-label">Lokasi Saat Ini:</span>
+                <span class="weather-label">{tr("settings.currentLocation")}</span>
                 {#if settings.weatherCity}
                   <strong class="weather-city-name">{settings.weatherCity.name}</strong>
                   <button class="btn-link" onclick={() => save({ weatherCity: null })}>
-                    (Ganti ke Lokasi Windows Otomatis)
+                    {tr("settings.switchToAutoLocation")}
                   </button>
                 {:else}
-                  <strong class="weather-city-name">Lokasi Windows (Otomatis)</strong>
+                  <strong class="weather-city-name">{tr("settings.windowsLocationAuto")}</strong>
                 {/if}
               </div>
 
@@ -854,10 +865,10 @@
                   type="text"
                   class="text-input"
                   bind:value={cityQuery}
-                  placeholder="Ketik nama kota, contoh: Jakarta, Surabaya, Tokyo..."
+                  placeholder={tr("settings.searchCityPlaceholder")}
                 />
                 <button type="submit" class="btn-primary" disabled={searchingCity}>
-                  {searchingCity ? "Mencari..." : "Cari Kota"}
+                  {searchingCity ? tr("settings.searchingCity") : tr("settings.searchCityBtn")}
                 </button>
               </form>
 
@@ -887,7 +898,7 @@
       <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
       </svg>
-      <span>Pengaturan tersimpan otomatis</span>
+      <span>{tr("settings.savedToast")}</span>
     </div>
   {/if}
 </div>

@@ -78,15 +78,15 @@
             }
           : { icon: "speaker", title: "Audio keluar lewat", detail: p.name };
       case "earbuds-low":
-        return { icon: "headphones", tone: "#fb923c", title: "Baterai earbuds lemah", detail: p.name, ring: p.battery, value: `${p.battery}%` };
+        return { icon: "headphones", tone: "#fb923c", title: t("peek.earbudsLow"), detail: p.name, ring: p.battery, value: `${p.battery}%` };
       case "update-info":
         return p.state === "checking"
-          ? { icon: "sync", tone: "#38bdf8", title: "Mengecek update…", detail: `Notchy v${p.version}` }
+          ? { icon: "sync", tone: "#38bdf8", title: t("peek.checkingUpdate"), detail: `Notchy v${p.version}` }
           : p.state === "latest"
-            ? { icon: "done", tone: "#34d399", title: "Sudah versi terbaru", detail: `Notchy v${p.version}` }
+            ? { icon: "done", tone: "#34d399", title: t("peek.latestVersion"), detail: `Notchy v${p.version}` }
             : p.state === "dev"
-              ? { icon: "code", title: "Versi pengembang", detail: "Update lewat build, bukan updater" }
-              : { icon: "alert", tone: "#f87171", title: "Gagal mengecek update", detail: "Cek koneksi internet" };
+              ? { icon: "code", title: t("peek.devVersion"), detail: t("peek.devVersionDetail") }
+              : { icon: "alert", tone: "#f87171", title: t("peek.updateFailed"), detail: t("peek.updateFailedDetail") };
       case "camera":
         return { icon: "camera", tone: "#34d399", title: t("peek.cameraInUse"), detail: p.app };
       case "mic-in-use":
@@ -144,15 +144,15 @@
   </button>
 {:else if peek.kind === "screenshot"}
   <div class="shot">
-    <button class="thumb" onclick={() => open(false)} aria-label="Buka screenshot">
+    <button class="thumb" onclick={() => open(false)} aria-label={t("peek.openScreenshot")}>
       <img src={convertFileSrc(peek.path)} alt="" />
     </button>
     <div class="text">
-      <div class="title">Screenshot tersimpan</div>
+      <div class="title">{t("peek.screenshotSaved")}</div>
       <div class="detail">{peek.name}</div>
       <div class="actions">
-        <button onclick={() => open(false)}>Buka</button>
-        <button onclick={() => open(true)}>Lihat di folder</button>
+        <button onclick={() => open(false)}>{t("peek.open")}</button>
+        <button onclick={() => open(true)}>{t("peek.showInFolder")}</button>
       </div>
     </div>
   </div>
@@ -164,7 +164,7 @@
     </span>
     <div class="text">
       <div class="title one">{peek.name}</div>
-      <div class="detail">Selesai diunduh · klik untuk buka</div>
+      <div class="detail">{t("peek.downloadDone")}</div>
     </div>
   </button>
 {:else if peek.kind === "meeting"}
@@ -175,7 +175,7 @@
     </span>
     <div class="text">
       <div class="title one">{peek.title}</div>
-      <div class="detail">Mulai 2 menit lagi</div>
+      <div class="detail">{t("peek.meetingIn2Min")}</div>
     </div>
     <div class="actions inline">
       <button onclick={() => onAction?.("camera")}>Cek kamera</button>

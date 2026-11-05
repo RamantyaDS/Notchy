@@ -23,7 +23,7 @@ use windows::Win32::UI::Accessibility::{
     UIA_MenuItemControlTypeId, UIA_RadioButtonControlTypeId, UIA_SplitButtonControlTypeId,
     UIA_TabItemControlTypeId,
 };
-use windows::Win32::UI::HiDpi::GetDpiForWindow;
+use windows::Win32::UI::HiDpi::{GetDpiForMonitor, GetDpiForWindow, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::Shell::{
     SHQueryUserNotificationState, QUNS_BUSY, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN,
 };
@@ -96,6 +96,7 @@ static ACTIVE_MON_R: AtomicI32 = AtomicI32::new(0);
 static ACTIVE_MON_B: AtomicI32 = AtomicI32::new(0);
 static FOLLOW_CURSOR: AtomicBool = AtomicBool::new(false);
 static MONITOR_TRANSITION_PENDING: AtomicBool = AtomicBool::new(false);
+static CURRENT_HMON: AtomicIsize = AtomicIsize::new(0);
 
 fn hit_rect() -> (i32, i32, i32, i32) {
     (HIT_L.load(Ordering::Relaxed), HIT_T.load(Ordering::Relaxed), HIT_R.load(Ordering::Relaxed), HIT_B.load(Ordering::Relaxed))
@@ -164,15 +165,13 @@ fn on_mouse_move(x: i32, y: i32) {
 
     // Instant zero-delay monitor transition check when follow-cursor is active
     if FOLLOW_CURSOR.load(Ordering::Relaxed) {
-        let l_mon = ACTIVE_MON_L.load(Ordering::Relaxed);
-        let r_mon = ACTIVE_MON_R.load(Ordering::Relaxed);
-        let t_mon = ACTIVE_MON_T.load(Ordering::Relaxed);
-        let b_mon = ACTIVE_MON_B.load(Ordering::Relaxed);
-        if r_mon > l_mon && (x < l_mon || x >= r_mon || y >= b_mon || (y < t_mon && t_mon != 0)) {
-            if !MONITOR_TRANSITION_PENDING.swap(true, Ordering::Relaxed) {
-                if let Some(tx) = WATCH_TX.get() {
-                    let _ = tx.send(());
-                }
+        let pt = POINT { x, y };
+        let hmon = unsafe { MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST) };
+        let prev = CURRENT_HMON.load(Ordering::Relaxed);
+        if prev != 0 && hmon.0 as isize != prev {
+            CURRENT_HMON.store(hmon.0 as isize, Ordering::Relaxed);
+            if let Some(tx) = WATCH_TX.get() {
+                let _ = tx.send(());
             }
         }
     }
@@ -355,13 +354,8 @@ fn start_mouse_hook() {
 pub(crate) fn place_window(window: &WebviewWindow) {
     let settings = crate::settings::get_settings();
     let h = hwnd(window);
-    let dpi = unsafe { GetDpiForWindow(h) };
-    let scale = if dpi > 0 { dpi as f64 / 96.0 } else { 1.0 };
-    let win_w = (600.0 * scale).round() as i32;
-    let win_h = (200.0 * scale).round() as i32;
 
-    let (mon_l, mon_t, mon_w) = unsafe {
-        let mut info = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
+    let (hmon, mon_l, mon_t, mon_w) = unsafe {
         let hmon = match settings.monitor_placement.as_str() {
             "secondary" => {
                 let prim_mon = MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY);
@@ -388,10 +382,12 @@ pub(crate) fn place_window(window: &WebviewWindow) {
             _ => MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY),
         };
 
+        let mut info = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
         if !GetMonitorInfoW(hmon, &mut info).as_bool() {
             return;
         }
 
+        CURRENT_HMON.store(hmon.0 as isize, Ordering::Relaxed);
         let m = info.rcMonitor;
         ACTIVE_MON_L.store(m.left, Ordering::Relaxed);
         ACTIVE_MON_T.store(m.top, Ordering::Relaxed);
@@ -399,9 +395,22 @@ pub(crate) fn place_window(window: &WebviewWindow) {
         ACTIVE_MON_B.store(m.bottom, Ordering::Relaxed);
         MONITOR_TRANSITION_PENDING.store(false, Ordering::Relaxed);
 
-        (m.left, m.top, m.right - m.left)
+        (hmon, m.left, m.top, m.right - m.left)
     };
 
+    let mut dpi_x = 96;
+    let mut dpi_y = 96;
+    let scale = unsafe {
+        if GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &mut dpi_x, &mut dpi_y).is_ok() && dpi_x > 0 {
+            dpi_x as f64 / 96.0
+        } else {
+            let dpi = GetDpiForWindow(h);
+            if dpi > 0 { dpi as f64 / 96.0 } else { 1.0 }
+        }
+    };
+
+    let win_w = (600.0 * scale).round() as i32;
+    let win_h = (200.0 * scale).round() as i32;
     let target_x = mon_l + (mon_w - win_w) / 2;
     let target_y = mon_t;
 
@@ -671,22 +680,47 @@ fn start_watcher(window: WebviewWindow) {
 }
 
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
+    let current = settings::get_settings();
+    let is_id = current.language == "id";
+
     let autostart = CheckMenuItem::with_id(
         app,
         "autostart",
-        "Start with Windows",
+        if is_id { "Start dengan Windows" } else { "Start with Windows" },
         true,
         app.autolaunch().is_enabled().unwrap_or(false),
         None::<&str>,
     )?;
-    let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
-    let current = settings::get_settings();
-    let mascot = CheckMenuItem::with_id(app, "mascot", "Mata (maskot)", true, current.mascot, None::<&str>)?;
-    let minimal = CheckMenuItem::with_id(app, "minimal", "Notch minimal", true, current.minimal_notch, None::<&str>)?;
-    let reload = MenuItem::with_id(app, "reload", "Muat ulang notch", true, None::<&str>)?;
-    let update =
-        MenuItem::with_id(app, "update", format!("Cek update (v{})", env!("CARGO_PKG_VERSION")), true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", if is_id { "Pengaturan…" } else { "Settings…" }, true, None::<&str>)?;
+    let mascot = CheckMenuItem::with_id(
+        app,
+        "mascot",
+        if is_id { "Mata (maskot)" } else { "Mascot (eyes)" },
+        true,
+        current.mascot,
+        None::<&str>,
+    )?;
+    let minimal = CheckMenuItem::with_id(
+        app,
+        "minimal",
+        if is_id { "Notch minimal" } else { "Minimal notch" },
+        true,
+        current.minimal_notch,
+        None::<&str>,
+    )?;
+    let reload = MenuItem::with_id(app, "reload", if is_id { "Muat ulang notch" } else { "Reload notch" }, true, None::<&str>)?;
+    let update = MenuItem::with_id(
+        app,
+        "update",
+        if is_id {
+            format!("Cek update (v{})", env!("CARGO_PKG_VERSION"))
+        } else {
+            format!("Check for updates (v{})", env!("CARGO_PKG_VERSION"))
+        },
+        true,
+        None::<&str>,
+    )?;
+    let quit = MenuItem::with_id(app, "quit", if is_id { "Keluar" } else { "Exit" }, true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[&settings, &autostart, &mascot, &minimal, &reload, &update, &PredefinedMenuItem::separator(app)?, &quit],
@@ -815,6 +849,13 @@ pub fn run() {
             window.set_ignore_cursor_events(true)?;
             NOTCH_HWND.store(hwnd(&window).0 as isize, Ordering::Relaxed);
             place_window(&window);
+
+            let w_event = window.clone();
+            window.on_window_event(move |event| {
+                if matches!(event, tauri::WindowEvent::ScaleFactorChanged { .. } | tauri::WindowEvent::Resized(..)) {
+                    place_window(&w_event);
+                }
+            });
 
             build_tray(app.handle())?;
             start_hover_emitter();
