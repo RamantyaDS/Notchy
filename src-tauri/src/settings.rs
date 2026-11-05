@@ -77,7 +77,8 @@ pub struct Settings {
     pub spring_physics: String,
     /// false: Default Notchy neutral ambient glow; true: Windows DWM accent sync
     pub windows_accent_glow: bool,
-    /// Language preference: "en" (default) or "id"
+    /// Language preference: "en" or "id"
+    #[serde(default = "legacy_language")]
     pub language: String,
 }
 
@@ -103,6 +104,10 @@ pub fn default_shortcuts() -> Vec<Shortcut> {
     [("Kunci", "lock"), ("Sleep", "sleep"), ("Screenshot", "screenshot"), ("Downloads", "downloads"), ("Kamera", "camera")]
         .map(|(name, action)| Shortcut { name: name.into(), action: action.into(), target: String::new() })
         .to_vec()
+}
+
+fn legacy_language() -> String {
+    "id".into()
 }
 
 fn default_language() -> String {
@@ -149,7 +154,7 @@ impl Default for Settings {
             net_speed_status: true,
             net_speed_threshold_down_kb: 500,
             net_speed_threshold_up_kb: 250,
-            bluetooth_peek: true,
+            bluetooth_peek: false,
             bluetooth_low_threshold: 20,
             monitor_placement: "primary".into(),
             spring_physics: "spring".into(),
@@ -260,7 +265,7 @@ mod tests {
         assert_eq!(s.net_speed_threshold_down_kb, 500);
         assert_eq!(s.net_speed_threshold_up_kb, 250);
         assert!(!s.hide_volume_osd);
-        assert!(s.bluetooth_peek);
+        assert!(!s.bluetooth_peek);
         assert_eq!(s.bluetooth_low_threshold, 20);
         assert_eq!(s.monitor_placement, "primary");
         assert_eq!(s.spring_physics, "spring");
@@ -285,12 +290,12 @@ mod tests {
         assert!(s.net_speed_status);
         assert_eq!(s.net_speed_threshold_down_kb, 500);
         assert_eq!(s.net_speed_threshold_up_kb, 250);
-        assert!(s.bluetooth_peek);
+        assert!(!s.bluetooth_peek);
         assert_eq!(s.bluetooth_low_threshold, 20);
         assert_eq!(s.monitor_placement, "primary");
         assert_eq!(s.spring_physics, "spring");
         assert!(!s.windows_accent_glow);
-        assert!(s.language == "en" || s.language == "id");
+        assert_eq!(s.language, "id");
     }
 
     #[test]

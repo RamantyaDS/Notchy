@@ -3,6 +3,7 @@
 //! and low battery thresholds (< 20%) without CPU polling.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use serde_json::json;
 use tauri::AppHandle;
@@ -34,9 +35,24 @@ pub fn start(app: AppHandle) {
         // Bluetooth AEP protocol GUID query
         let aqs = HSTRING::from(r#"System.Devices.Aep.ProtocolId:="{E0CBF06C-CD8B-4647-BB8A-263B43F0F974}""#);
 
-        let Ok(watcher) = DeviceInformation::CreateWatcherAqsFilter(&aqs) else {
+        let props: windows_collections::IIterable<HSTRING> = vec![
+            HSTRING::from("System.Devices.Aep.IsConnected"),
+            HSTRING::from("System.Devices.BatteryLifePercent"),
+            HSTRING::from("System.Devices.Aep.Bluetooth.Cod.Major"),
+        ].into();
+
+        let Ok(watcher) = DeviceInformation::CreateWatcherAqsFilterAndAdditionalProperties(&aqs, &props) else {
             return;
         };
+
+        let enumerated = Arc::new(AtomicBool::new(false));
+        let enum_added = enumerated.clone();
+        let enum_done = enumerated.clone();
+
+        let _ = watcher.EnumerationCompleted(&TypedEventHandler::new(move |_, _| {
+            enum_done.store(true, Ordering::SeqCst);
+            Ok(())
+        }));
 
         let app_added = app.clone();
         let dev_added = devices.clone();
@@ -82,7 +98,8 @@ pub fn start(app: AppHandle) {
             entry.battery = battery;
             entry.category = category.clone();
 
-            if connected {
+            // Ignore Added events during initial boot enumeration to avoid burst of peeks
+            if connected && enum_added.load(Ordering::SeqCst) {
                 let settings = crate::settings::get_settings();
                 if settings.bluetooth_peek {
                     peek(

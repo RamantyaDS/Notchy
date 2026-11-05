@@ -325,6 +325,12 @@
   });
 
   $effect(() => {
+    if (open && windowsAccentGlow) {
+      invoke<string>("get_accent_color").then((c) => (accentColor = c)).catch(() => {});
+    }
+  });
+
+  $effect(() => {
     const every =
       open && (media?.playing || pomo.running) ? 250 : view === "island" && (pomo.running || call) ? 1000 : 0;
     if (!every) return;
