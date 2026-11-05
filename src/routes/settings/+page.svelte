@@ -945,10 +945,12 @@
 </div>
 
 <style>
+  :global(html),
   :global(body) {
     margin: 0;
     padding: 0;
-    background: #0d1117;
+    background: #0d1117 !important;
+    background-color: #0d1117 !important;
     color: #e6edf3;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", sans-serif;
     user-select: none;
@@ -962,6 +964,7 @@
     padding: 24px 20px 48px;
     min-height: 100vh;
     box-sizing: border-box;
+    background: #0d1117;
   }
 
   /* Header */
