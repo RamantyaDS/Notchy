@@ -132,6 +132,7 @@
   let netSpeedThresholdUpKb = $state(250);
 
   // Spring & Windows Accent state
+  let monitorTransition = $state<"idle" | "leaving" | "entering">("idle");
   let springPhysics = $state("spring");
   let windowsAccentGlow = $state(false);
   let accentColor = $state("#38bdf8");
@@ -628,6 +629,25 @@
       onMicMuted: (m) => (micMuted = m),
       onSettings: (s) => applySettings(s),
       onAccentColor: (a) => (accentColor = a),
+      onMonitorLeave: async () => {
+        if (monitorTransition !== "idle") return;
+        if (springPhysics === "off") {
+          await invoke("move_to_target_monitor");
+          await invoke("finish_monitor_transition");
+          return;
+        }
+        if (open) open = false;
+        monitorTransition = "leaving";
+        await new Promise((r) => setTimeout(r, 200));
+
+        await invoke("move_to_target_monitor");
+
+        monitorTransition = "entering";
+        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 20)));
+        monitorTransition = "idle";
+        await new Promise((r) => setTimeout(r, 340));
+        await invoke("finish_monitor_transition");
+      },
     }).then((cleanup) => (unlistenEvents = cleanup));
 
     // Drag and drop setup
@@ -723,6 +743,8 @@
   class:accent-synced={windowsAccentGlow && !!accentColor}
   class:accent-default={!windowsAccentGlow}
   class:has-peek={!!peekMgr.peek}
+  class:monitor-leaving={monitorTransition === "leaving"}
+  class:monitor-entering={monitorTransition === "entering"}
   style:--tint={tint}
   style:--w="{size.w}px"
   style:--h="{size.h}px"
@@ -953,8 +975,27 @@
     transition:
       width 0.62s var(--spring),
       height 0.62s var(--spring),
+      transform 0.32s var(--spring),
+      opacity 0.22s ease,
       border-radius 0.45s ease,
       box-shadow 0.45s ease;
+  }
+
+  /* Multi-monitor zero-flicker spring transition */
+  .notch.monitor-leaving {
+    transform: translateX(-50%) translateY(-115%) scaleX(0.7) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition:
+      transform 0.2s var(--spring),
+      opacity 0.16s ease !important;
+  }
+
+  .notch.monitor-entering {
+    transform: translateX(-50%) translateY(-115%) scaleX(0.7) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: none !important;
   }
   .notch.open {
     box-shadow:

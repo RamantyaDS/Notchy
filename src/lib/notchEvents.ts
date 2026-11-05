@@ -21,6 +21,7 @@ export interface EventHandlers {
   onMicMuted: (muted: boolean) => void;
   onSettings: (settings: any) => void;
   onAccentColor: (accent: string) => void;
+  onMonitorLeave?: () => void;
 }
 
 export async function setupNotchEvents(handlers: EventHandlers): Promise<() => void> {
@@ -52,6 +53,7 @@ export async function setupNotchEvents(handlers: EventHandlers): Promise<() => v
     add(listen<boolean>("mic-muted", (e) => handlers.onMicMuted(e.payload))),
     add(listen("settings", (e) => handlers.onSettings(e.payload))),
     add(listen<string>("accent-color", (e) => handlers.onAccentColor(e.payload))),
+    add(listen("monitor-transition-leave", () => handlers.onMonitorLeave?.())),
   ]);
 
   return () => {

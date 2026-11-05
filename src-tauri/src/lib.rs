@@ -8,7 +8,7 @@ use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST,
+    GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, HMONITOR, MONITORINFO, MONITOR_DEFAULTTONEAREST,
     MONITOR_DEFAULTTOPRIMARY,
 };
 use windows::Win32::Foundation::POINT;
@@ -97,6 +97,7 @@ static ACTIVE_MON_B: AtomicI32 = AtomicI32::new(0);
 static FOLLOW_CURSOR: AtomicBool = AtomicBool::new(false);
 static MONITOR_TRANSITION_PENDING: AtomicBool = AtomicBool::new(false);
 static CURRENT_HMON: AtomicIsize = AtomicIsize::new(0);
+static TARGET_HMON: AtomicIsize = AtomicIsize::new(0);
 
 fn hit_rect() -> (i32, i32, i32, i32) {
     (HIT_L.load(Ordering::Relaxed), HIT_T.load(Ordering::Relaxed), HIT_R.load(Ordering::Relaxed), HIT_B.load(Ordering::Relaxed))
@@ -163,15 +164,17 @@ fn on_mouse_move(x: i32, y: i32) {
         }
     }
 
-    // Instant zero-delay monitor transition check when follow-cursor is active
+    // Smooth organic spring monitor transition check when follow-cursor is active
     if FOLLOW_CURSOR.load(Ordering::Relaxed) {
         let pt = POINT { x, y };
         let hmon = unsafe { MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST) };
         let prev = CURRENT_HMON.load(Ordering::Relaxed);
         if prev != 0 && hmon.0 as isize != prev {
-            CURRENT_HMON.store(hmon.0 as isize, Ordering::Relaxed);
-            if let Some(tx) = WATCH_TX.get() {
-                let _ = tx.send(());
+            TARGET_HMON.store(hmon.0 as isize, Ordering::Relaxed);
+            if !MONITOR_TRANSITION_PENDING.swap(true, Ordering::Relaxed) {
+                if let Some(w) = main_window() {
+                    let _ = w.emit("monitor-transition-leave", ());
+                }
             }
         }
     }
@@ -373,11 +376,16 @@ pub(crate) fn place_window(window: &WebviewWindow) {
                 }
             }
             "follow-cursor" => {
-                let pt = POINT {
-                    x: CURSOR_X.load(Ordering::Relaxed),
-                    y: CURSOR_Y.load(Ordering::Relaxed),
-                };
-                MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST)
+                let target = TARGET_HMON.load(Ordering::Relaxed);
+                if target != 0 {
+                    HMONITOR(target as _)
+                } else {
+                    let pt = POINT {
+                        x: CURSOR_X.load(Ordering::Relaxed),
+                        y: CURSOR_Y.load(Ordering::Relaxed),
+                    };
+                    MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST)
+                }
             }
             _ => MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY),
         };
@@ -433,6 +441,25 @@ pub(crate) fn place_window(window: &WebviewWindow) {
             );
             update_hit_rect();
         }
+    }
+}
+
+#[tauri::command]
+fn move_to_target_monitor(window: WebviewWindow) {
+    let target = TARGET_HMON.load(Ordering::Relaxed);
+    if target != 0 {
+        CURRENT_HMON.store(target, Ordering::Relaxed);
+    }
+    place_window(&window);
+}
+
+#[tauri::command]
+fn finish_monitor_transition(window: WebviewWindow) {
+    MONITOR_TRANSITION_PENDING.store(false, Ordering::Relaxed);
+    let target = TARGET_HMON.load(Ordering::Relaxed);
+    let current = CURRENT_HMON.load(Ordering::Relaxed);
+    if target != 0 && target != current {
+        place_window(&window);
     }
 }
 
@@ -650,8 +677,10 @@ fn start_watcher(window: WebviewWindow) {
             let timed_out = rx.recv_timeout(Duration::from_secs(1)).is_err();
             while rx.try_recv().is_ok() {}
 
-            // Immediately reposition window to active monitor with zero latency
-            place_window(&window);
+            // Reposition window to active monitor (skip while transition animation is active)
+            if !MONITOR_TRANSITION_PENDING.load(Ordering::Relaxed) {
+                place_window(&window);
+            }
 
             let h = hwnd(&window);
             let hide = fullscreen_app_running();
@@ -835,6 +864,8 @@ pub fn run() {
             shortcuts::run_link,
             settings::patch_settings,
             settings::open_settings,
+            move_to_target_monitor,
+            finish_monitor_transition,
         ])
         .setup(move |app| {
             // Logged here, not earlier: a second copy (e.g. a watchdog run while Notchy is
