@@ -1,0 +1,131 @@
+<script lang="ts">
+  import { fade } from "svelte/transition";
+  import type { Weather } from "./weather";
+
+  let {
+    weather,
+    greeting,
+    dozing,
+    blink,
+    look,
+    time,
+    mascot = true,
+    mascotMode = "idle",
+    activeEyes = false,
+  }: {
+    weather: Weather | null;
+    greeting: boolean;
+    dozing: boolean;
+    blink: boolean;
+    look: [number, number, number];
+    time: string;
+    mascot?: boolean;
+    mascotMode?: string;
+    activeEyes?: boolean;
+  } = $props();
+
+  const showEyes = $derived(
+    mascot && (mascotMode === "always" || activeEyes || dozing)
+  );
+
+  const showSideClock = $derived(
+    mascot && mascotMode === "always" && (showEyes || greeting)
+  );
+</script>
+
+{#if weather}
+  <span class="weather">{weather.icon}<b>{weather.temp}°</b></span>
+{/if}
+
+{#if greeting}
+  <div class="eyes happy" in:fade={{ duration: 150 }}><i></i><i></i></div>
+{:else if showEyes}
+  <div
+    class="eyes"
+    class:blink
+    class:sleepy={dozing}
+    style:--lx={look[0]}
+    style:--ly={look[1]}
+    style:--near={look[2]}
+    in:fade={{ duration: 300 }}
+  >
+    <i></i><i></i>
+  </div>
+{:else}
+  <span class="rest-time" in:fade={{ duration: 300 }}>{time}</span>
+{/if}
+
+{#if showSideClock}
+  <span class="rest-time-side" in:fade={{ duration: 300 }}>{time}</span>
+{/if}
+
+<style>
+  .rest-time {
+    font-size: 13.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  .rest-time-side {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    font-size: 11.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    color: #e6edf3;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+  }
+  .weather {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+  }
+  .weather b {
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .eyes {
+    display: flex;
+    gap: 15px;
+    transform: translate(calc(var(--lx, 0) * 9px), calc(var(--ly, 0) * 4px)) scale(calc(1 + var(--near, 0) * 0.25));
+    transition: transform 0.22s var(--spring, cubic-bezier(0.34, 1.32, 0.5, 1));
+  }
+  .eyes i {
+    width: 8.4px;
+    height: 12.4px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow:
+      0 0 6px 1px rgba(255, 255, 255, 0.45),
+      0 0 14px 4px rgba(255, 255, 255, 0.12);
+    transition: transform 0.12s ease;
+  }
+  .eyes.sleepy i {
+    transform: scaleY(0.4);
+  }
+  .eyes.blink i {
+    transform: scaleY(0.1);
+  }
+  .eyes.happy i {
+    width: 12px;
+    height: 7px;
+    border: 2.4px solid #fff;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
+    background: none;
+  }
+</style>

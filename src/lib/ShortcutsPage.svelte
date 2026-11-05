@@ -1,6 +1,21 @@
 <script lang="ts">
   // Buttons for quick actions; the list is set in Settings.
   import { invoke } from "@tauri-apps/api/core";
+  import { t } from "./i18n";
+
+  function getShortcutLabel(name: string, action: string): string {
+    const defaultMap: Record<string, string> = {
+      lock: "shortcuts.lock",
+      sleep: "shortcuts.sleep",
+      screenshot: "shortcuts.screenshot",
+      downloads: "shortcuts.downloads",
+      camera: "shortcuts.camera",
+    };
+    if (defaultMap[action] && (["Kunci", "Lock", "Sleep", "Screenshot", "Downloads", "Kamera", "Camera"].includes(name))) {
+      return t(defaultMap[action]);
+    }
+    return name;
+  }
 
   export type Shortcut = { name: string; action: string; target: string };
 
@@ -30,15 +45,15 @@
 
 <div class="page">
   <div class="header">
-    <span class="title">Pintasan</span>
-    <span class="hint">atur di Settings</span>
+    <span class="title">{t("shortcuts.title")}</span>
+    <span class="hint">{t("shortcuts.hint")}</span>
   </div>
   <!-- One row for up to five, two rows of four beyond that. -->
   <div class="grid" style:--cols={shortcuts.length <= 5 ? Math.max(shortcuts.length, 1) : 4}>
     {#each shortcuts.slice(0, 8) as s, i}
       <button class="sc" class:failed={failed === i} onclick={() => run(i)} title={s.target || s.name}>
         <svg viewBox="0 0 24 24"><path d={ICON[s.action] ?? ICON.open} /></svg>
-        <span>{failed === i ? "Gagal" : s.name}</span>
+        <span>{failed === i ? t("shortcuts.failed") : getShortcutLabel(s.name, s.action)}</span>
       </button>
     {/each}
   </div>

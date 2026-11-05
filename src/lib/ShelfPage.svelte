@@ -2,6 +2,7 @@
   import { convertFileSrc, invoke } from "@tauri-apps/api/core";
   import { startDrag } from "@crabnebula/tauri-plugin-drag";
   import type { Shelf, ShelfItem } from "./productivity.svelte";
+  import { t } from "./i18n";
 
   // dropTarget: which zone the dragged file is over ("shelf" or "share").
   let { shelf, dropping, dropTarget = null }: { shelf: Shelf; dropping: boolean; dropTarget?: string | null } = $props();
@@ -50,24 +51,24 @@
 <div class="page" class:dropping>
   <div class="header">
     <span class="title">Shelf</span>
-    <span class="hint">Tarik keluar kapan saja · klik untuk membuka</span>
-    {#if shelf.items.length}<button class="clear" onclick={() => shelf.clear()}>Bersihkan</button>{/if}
+    <span class="hint">{t("shelf.hint")}</span>
+    {#if shelf.items.length}<button class="clear" onclick={() => shelf.clear()}>{t("shelf.clear")}</button>{/if}
   </div>
 
   {#if dropping}
     <!-- Two places to drop: keep it on the shelf, or hand it to Windows' Share window. -->
     <div class="zones">
       <div class="zone" class:hot={dropTarget !== "share"} data-drop="shelf">
-        <span class="tray">📥</span><strong>Simpan di Shelf</strong>
+        <span class="tray">📥</span><strong>{t("shelf.saveToShelf")}</strong>
       </div>
       <div class="zone" class:hot={dropTarget === "share"} data-drop="share">
-        <svg viewBox="0 0 24 24"><path d="M4 12v7h16v-7M12 3v12M8 7l4-4 4 4" /></svg><strong>Bagikan</strong>
+        <svg viewBox="0 0 24 24"><path d="M4 12v7h16v-7M12 3v12M8 7l4-4 4 4" /></svg><strong>{t("shelf.share")}</strong>
       </div>
     </div>
   {:else if shelf.items.length === 0}
     <div class="zone">
       <span class="tray">📥</span>
-      <strong>Tarik file ke sini</strong>
+      <strong>{t("shelf.dragHere")}</strong>
     </div>
   {:else}
     <div class="items scroll">
@@ -81,7 +82,7 @@
           {/if}
           <span class="name">{item.name}</span>
           {#if !item.dir}<span class="size">{size(item.size)}</span>{/if}
-          <button class="remove" onpointerdown={(e) => e.stopPropagation()} onclick={() => shelf.remove(item.path)} aria-label="Hapus dari shelf">×</button>
+          <button class="remove" onpointerdown={(e) => e.stopPropagation()} onclick={() => shelf.remove(item.path)} aria-label={t("shelf.removeFromShelf")}>×</button>
         </div>
       {/each}
     </div>

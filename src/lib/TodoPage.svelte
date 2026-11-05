@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import type { Task, Todo } from "./productivity.svelte";
+  import { t } from "./i18n";
 
   // `onTyping` asks Rust for keyboard focus (the notch normally never takes it).
   let { todo, onTyping }: { todo: Todo; onTyping: (typing: boolean) => void } = $props();
@@ -44,33 +45,33 @@
 <div class="page">
   <div class="side">
     <div class="count"><b>{todo.doneToday()}</b>/{todo.tasks.length}</div>
-    <div class="caption">selesai hari ini</div>
+    <div class="caption">{t("todo.doneToday")}</div>
     {#if editing === null}
-      <button class="add" onclick={() => edit()}>+ Tambah</button>
+      <button class="add" onclick={() => edit()}>{t("todo.add")}</button>
     {/if}
   </div>
 
   <div class="list">
   {#if editing !== null}
     <div class="form" onfocusout={blur}>
-      <input bind:this={input} bind:value={text} onkeydown={keys} placeholder="Tugas baru…" class="text" />
-      <input bind:value={time} onkeydown={keys} type="time" class="time" title="Ingatkan jam (opsional)" />
-      <button onclick={() => finish(true)}>Simpan</button>
+      <input bind:this={input} bind:value={text} onkeydown={keys} placeholder={t("todo.placeholder")} class="text" />
+      <input bind:value={time} onkeydown={keys} type="time" class="time" title={t("todo.timeTitle")} />
+      <button onclick={() => finish(true)}>{t("todo.save")}</button>
     </div>
   {/if}
 
   <ul class="scroll">
     {#each todo.tasks.filter((t) => t.id !== editing) as task (task.id)}
       <li class:done={task.done}>
-        <button class="check" onclick={() => todo.toggle(task.id)} aria-label={task.done ? "Belum selesai" : "Selesai"}>
+        <button class="check" onclick={() => todo.toggle(task.id)} aria-label={task.done ? t("todo.markUndone") : t("todo.markDone")}>
           {#if task.done}✓{/if}
         </button>
         <button class="label" onclick={() => edit(task)}>{task.text}</button>
         {#if task.time}<span class="chip">{task.time}</span>{/if}
-        <button class="remove" onclick={() => todo.remove(task.id)} aria-label="Hapus">×</button>
+        <button class="remove" onclick={() => todo.remove(task.id)} aria-label={t("todo.delete")}>×</button>
       </li>
     {:else}
-      {#if editing === null}<li class="empty">Belum ada tugas. Tambah satu, bisa dengan jam pengingat.</li>{/if}
+      {#if editing === null}<li class="empty">{t("todo.empty")}</li>{/if}
     {/each}
   </ul>
   </div>

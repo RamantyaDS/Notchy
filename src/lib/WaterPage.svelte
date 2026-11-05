@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import type { Water } from "./productivity.svelte";
+  import { t } from "./i18n";
 
   let { water }: { water: Water } = $props();
 
@@ -22,21 +23,21 @@
     <div class="summary">
       <div class="top">
         <div class="amount">{liters(today)} <span>/ {liters(s.goalMl)} L</span></div>
-        <button class="switch" class:on={reminders} onclick={toggle} role="switch" aria-checked={reminders} title="Pengingat minum">
-          <span>Pengingat</span><i></i>
+        <button class="switch" class:on={reminders} onclick={toggle} role="switch" aria-checked={reminders} title={t("water.remindersTitle")}>
+          <span>{t("water.reminders")}</span><i></i>
         </button>
       </div>
-      <div class="status">{pct >= 100 ? "Target hari ini tercapai" : `Hari ini · ${pct}%`}</div>
+      <div class="status">{pct >= 100 ? t("water.goalReached") : t("water.todayPct", { pct })}</div>
       <div class="bar"><span style:width="{pct}%"></span></div>
       <div class="buttons">
-        <button class="drink" onclick={() => water.drink()}>💧 Minum +{s.glassMl} ml</button>
-        <button class="plain" onclick={() => invoke("open_settings")} title="Pengaturan minum air">
-          <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>Atur
+        <button class="drink" onclick={() => water.drink()}>{t("water.drinkAmount", { amount: s.glassMl })}</button>
+        <button class="plain" onclick={() => invoke("open_settings")} title={t("water.settingsTitle")}>
+          <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>{t("water.settings")}
         </button>
       </div>
     </div>
 
-    <div class="chart" aria-label="Minum per jam hari ini">
+    <div class="chart" aria-label={t("water.chartLabel")}>
       <div class="axis"><span>{top}</span><span>{top / 2}</span><span>0</span></div>
       <div class="plot">
         <div class="bars">

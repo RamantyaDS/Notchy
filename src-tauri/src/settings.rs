@@ -39,6 +39,8 @@ pub struct Settings {
     water_reminders: bool,
     /// The clock gives way to the eyes after a quiet while.
     pub mascot: bool,
+    /// Mascot tracking mode: "idle" (wait 120s idle) or "always" (continuous follow)
+    pub mascot_mode: String,
     /// A closed, idle notch is just a thin black line (for thick top bezels).
     pub minimal_notch: bool,
     /// Show new Windows notifications in the notch.
@@ -66,6 +68,18 @@ pub struct Settings {
     pub net_speed_status: bool,
     pub net_speed_threshold_down_kb: u32,
     pub net_speed_threshold_up_kb: u32,
+    /// Bluetooth battery monitor toggle & threshold
+    pub bluetooth_peek: bool,
+    pub bluetooth_low_threshold: u32,
+    /// Monitor placement: "primary", "secondary", "follow-cursor"
+    pub monitor_placement: String,
+    /// Spring animation preset: "spring", "snappy", "smooth", "off"
+    pub spring_physics: String,
+    /// false: Default Notchy neutral ambient glow; true: Windows DWM accent sync
+    pub windows_accent_glow: bool,
+    /// Language preference: "en" or "id"
+    #[serde(default = "legacy_language")]
+    pub language: String,
 }
 
 /// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
@@ -92,6 +106,22 @@ pub fn default_shortcuts() -> Vec<Shortcut> {
         .to_vec()
 }
 
+fn legacy_language() -> String {
+    "id".into()
+}
+
+fn default_language() -> String {
+    unsafe {
+        let langid = windows::Win32::Globalization::GetUserDefaultUILanguage();
+        // Primary language ID in low 10 bits: LANG_ENGLISH = 0x09
+        if (langid & 0x03FF) == 0x09 {
+            "en".into()
+        } else {
+            "id".into() // Default fallback to Indonesian as requested by Ramantya
+        }
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -106,6 +136,7 @@ impl Default for Settings {
             water_enabled: true,
             water_reminders: true,
             mascot: true,
+            mascot_mode: "idle".into(),
             minimal_notch: false,
             mirror_notifications: true,
             calendar_url: String::new(),
@@ -123,6 +154,12 @@ impl Default for Settings {
             net_speed_status: true,
             net_speed_threshold_down_kb: 500,
             net_speed_threshold_up_kb: 250,
+            bluetooth_peek: false,
+            bluetooth_low_threshold: 20,
+            monitor_placement: "primary".into(),
+            spring_physics: "spring".into(),
+            windows_accent_glow: false,
+            language: default_language(),
         }
     }
 }
@@ -141,6 +178,7 @@ pub fn save_settings(app: AppHandle, settings: Settings) -> Result<(), String> {
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     crate::store::write_safely(&path(), &json)?;
     crate::network::update_settings(&settings);
+    crate::place_window_for_settings(&app);
     let _ = app.emit("settings", &settings);
     Ok(())
 }
@@ -211,7 +249,7 @@ pub fn open_window(app: &AppHandle) {
     }
     let _ = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings".into()))
         .title("Notchy Settings")
-        .inner_size(460.0, 640.0)
+        .inner_size(480.0, 660.0)
         .resizable(false)
         .center()
         .build();
@@ -226,8 +264,15 @@ mod tests {
         let s = Settings::default();
         assert_eq!(s.net_speed_threshold_down_kb, 500);
         assert_eq!(s.net_speed_threshold_up_kb, 250);
+        assert!(!s.hide_volume_osd);
+        assert!(!s.bluetooth_peek);
+        assert_eq!(s.bluetooth_low_threshold, 20);
+        assert_eq!(s.monitor_placement, "primary");
+        assert_eq!(s.spring_physics, "spring");
+        assert!(!s.windows_accent_glow);
         assert_eq!(s.net_speed_island, false);
-        assert_eq!(s.net_speed_status, true);
+        assert!(s.net_speed_status);
+        assert!(s.language == "en" || s.language == "id");
     }
 
     #[test]
@@ -240,10 +285,17 @@ mod tests {
         }"#;
         let s: Settings = serde_json::from_str(old_json).expect("deserialize old json");
         assert_eq!(s.focus_minutes, 30);
-        assert_eq!(s.net_speed_island, true);
-        assert_eq!(s.net_speed_status, true);
+        assert!(!s.hide_volume_osd);
+        assert!(s.net_speed_island);
+        assert!(s.net_speed_status);
         assert_eq!(s.net_speed_threshold_down_kb, 500);
         assert_eq!(s.net_speed_threshold_up_kb, 250);
+        assert!(!s.bluetooth_peek);
+        assert_eq!(s.bluetooth_low_threshold, 20);
+        assert_eq!(s.monitor_placement, "primary");
+        assert_eq!(s.spring_physics, "spring");
+        assert!(!s.windows_accent_glow);
+        assert_eq!(s.language, "id");
     }
 
     #[test]

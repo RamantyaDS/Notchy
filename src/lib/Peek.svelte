@@ -5,6 +5,7 @@
 
 <script lang="ts">
   import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+  import { t } from "./i18n";
 
   // onOpen: the peek was clicked through (opens the app / closes the peek).
   // onAction: one of its buttons was clicked (e.g. "camera", "join").
@@ -19,6 +20,8 @@
     micOff: "M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V6a3 3 0 0 0-5.7-1.3M19 11a7 7 0 0 1-1.2 3.9M5 11a7 7 0 0 0 10.6 6M12 18v3M3 3l18 18",
     caps: "M12 4 4 13h4v5h8v-5h4zM8 21h8",
     keyboard: "M3 6h18v12H3zM7 10h.01M11 10h.01M15 10h.01M7 14h10",
+    mouse: "M12 2a6 6 0 0 0-6 6v8a6 6 0 0 0 12 0V8a6 6 0 0 0-6-6zm0 2a4 4 0 0 1 4 4v2H8V8a4 4 0 0 1 4-4z",
+    bluetooth: "M7 7l10 10-5 5V2l5 5L7 17",
     bolt: "M13 2 4 14h7l-1 8 9-12h-7z",
     battery: "M3 8h15v8H3zM21 11v2M6 11v2",
     wifi: "M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0M12 19.5h.01",
@@ -75,36 +78,45 @@
             }
           : { icon: "speaker", title: "Audio keluar lewat", detail: p.name };
       case "earbuds-low":
-        return { icon: "headphones", tone: "#fb923c", title: "Baterai earbuds lemah", detail: p.name, ring: p.battery, value: `${p.battery}%` };
+        return { icon: "headphones", tone: "#fb923c", title: t("peek.earbudsLow"), detail: p.name, ring: p.battery, value: `${p.battery}%` };
       case "update-info":
         return p.state === "checking"
-          ? { icon: "sync", tone: "#38bdf8", title: "Mengecek update…", detail: `Notchy v${p.version}` }
+          ? { icon: "sync", tone: "#38bdf8", title: t("peek.checkingUpdate"), detail: `Notchy v${p.version}` }
           : p.state === "latest"
-            ? { icon: "done", tone: "#34d399", title: "Sudah versi terbaru", detail: `Notchy v${p.version}` }
+            ? { icon: "done", tone: "#34d399", title: t("peek.latestVersion"), detail: `Notchy v${p.version}` }
             : p.state === "dev"
-              ? { icon: "code", title: "Versi pengembang", detail: "Update lewat build, bukan updater" }
-              : { icon: "alert", tone: "#f87171", title: "Gagal mengecek update", detail: "Cek koneksi internet" };
+              ? { icon: "code", title: t("peek.devVersion"), detail: t("peek.devVersionDetail") }
+              : { icon: "alert", tone: "#f87171", title: t("peek.updateFailed"), detail: t("peek.updateFailedDetail") };
       case "camera":
-        return { icon: "camera", tone: "#34d399", title: "Kamera dipakai", detail: p.app };
+        return { icon: "camera", tone: "#34d399", title: t("peek.cameraInUse"), detail: p.app };
       case "mic-in-use":
-        return { icon: "mic", tone: "#fb923c", title: "Mikrofon dipakai", detail: p.app };
+        return { icon: "mic", tone: "#fb923c", title: t("peek.micInUse"), detail: p.app };
       case "timer":
         return p.phase === "break"
-          ? { icon: "timer", tone: "#34d399", title: "Waktunya istirahat", detail: "Sesi fokus selesai" }
-          : { icon: "timer", tone: "#fb7185", title: "Istirahat selesai", detail: "Siap fokus lagi?" };
+          ? { icon: "timer", tone: "#34d399", title: t("peek.timeForBreak"), detail: t("peek.focusDone") }
+          : { icon: "timer", tone: "#fb7185", title: t("peek.breakDone"), detail: t("peek.readyToFocus") };
       case "water":
         return {
           icon: "drop",
           tone: "#38bdf8",
-          title: "Waktunya minum",
-          detail: `${(p.today / 1000).toLocaleString("id-ID")} dari ${(p.goal / 1000).toLocaleString("id-ID")} L hari ini`,
+          title: t("peek.timeToDrink"),
+          detail: `${(p.today / 1000).toFixed(1)} / ${(p.goal / 1000).toFixed(1)} L`,
         };
       case "todo":
-        return { icon: "check", tone: "#fb923c", title: p.text, detail: `Pengingat ${p.time}` };
+        return { icon: "check", tone: "#fb923c", title: p.text, detail: `Reminder ${p.time}` };
       case "calendar": {
-        const at = new Date(p.start).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":");
-        return { icon: "calendar", tone: "#fb923c", title: p.title, detail: p.before ? `Mulai ${p.before} menit lagi · ${at}` : `Dimulai sekarang · ${at}` };
+        const at = new Date(p.start).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }).replace(".", ":");
+        return { icon: "calendar", tone: "#fb923c", title: p.title, detail: p.before ? `${p.before}m · ${at}` : `Now · ${at}` };
       }
+      case "bluetooth":
+        return {
+          icon: p.category === "audio" ? "headphones" : p.category === "hid" ? "keyboard" : "bluetooth",
+          tone: p.low ? "#f87171" : "#34d399",
+          title: p.low ? t("peek.bluetoothLow", { device: p.name }) : t("peek.bluetoothConnected", { device: p.name }),
+          detail: p.battery != null ? `${t("peek.battery")}: ${p.battery}%` : (p.low ? p.name : t("peek.bluetoothDevice")),
+          ring: p.battery ?? undefined,
+          value: p.battery != null ? `${p.battery}%` : undefined,
+        };
       default:
         return null;
     }
@@ -132,15 +144,15 @@
   </button>
 {:else if peek.kind === "screenshot"}
   <div class="shot">
-    <button class="thumb" onclick={() => open(false)} aria-label="Buka screenshot">
+    <button class="thumb" onclick={() => open(false)} aria-label={t("peek.openScreenshot")}>
       <img src={convertFileSrc(peek.path)} alt="" />
     </button>
     <div class="text">
-      <div class="title">Screenshot tersimpan</div>
+      <div class="title">{t("peek.screenshotSaved")}</div>
       <div class="detail">{peek.name}</div>
       <div class="actions">
-        <button onclick={() => open(false)}>Buka</button>
-        <button onclick={() => open(true)}>Lihat di folder</button>
+        <button onclick={() => open(false)}>{t("peek.open")}</button>
+        <button onclick={() => open(true)}>{t("peek.showInFolder")}</button>
       </div>
     </div>
   </div>
@@ -152,7 +164,7 @@
     </span>
     <div class="text">
       <div class="title one">{peek.name}</div>
-      <div class="detail">Selesai diunduh · klik untuk buka</div>
+      <div class="detail">{t("peek.downloadDone")}</div>
     </div>
   </button>
 {:else if peek.kind === "meeting"}
@@ -163,7 +175,7 @@
     </span>
     <div class="text">
       <div class="title one">{peek.title}</div>
-      <div class="detail">Mulai 2 menit lagi</div>
+      <div class="detail">{t("peek.meetingIn2Min")}</div>
     </div>
     <div class="actions inline">
       <button onclick={() => onAction?.("camera")}>Cek kamera</button>

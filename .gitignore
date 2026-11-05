@@ -12,3 +12,4 @@ vite.config.ts.timestamp-*
 # Release leftovers
 release-build/
 *.zip
+release-dev/

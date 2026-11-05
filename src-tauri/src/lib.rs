@@ -4,11 +4,12 @@ use std::time::{Duration, Instant};
 
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST,
+    GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, HMONITOR, MONITORINFO, MONITOR_DEFAULTTONEAREST,
+    MONITOR_DEFAULTTOPRIMARY,
 };
 use windows::Win32::Foundation::POINT;
 use windows::Win32::System::Com::{
@@ -22,7 +23,7 @@ use windows::Win32::UI::Accessibility::{
     UIA_MenuItemControlTypeId, UIA_RadioButtonControlTypeId, UIA_SplitButtonControlTypeId,
     UIA_TabItemControlTypeId,
 };
-use windows::Win32::UI::HiDpi::GetDpiForWindow;
+use windows::Win32::UI::HiDpi::{GetDpiForMonitor, GetDpiForWindow, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::Shell::{
     SHQueryUserNotificationState, QUNS_BUSY, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN,
 };
@@ -39,6 +40,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 mod audio;
+mod bluetooth;
 mod calls;
 mod clipboard;
 mod downloads;
@@ -86,6 +88,17 @@ static HIT_R: AtomicI32 = AtomicI32::new(0);
 static HIT_B: AtomicI32 = AtomicI32::new(0);
 static HIT_INSIDE: AtomicBool = AtomicBool::new(false);
 
+/// Active monitor physical boundaries (left, top, right, bottom).
+/// Used to immediately detect monitor transitions when follow-cursor is active.
+static ACTIVE_MON_L: AtomicI32 = AtomicI32::new(0);
+static ACTIVE_MON_T: AtomicI32 = AtomicI32::new(0);
+static ACTIVE_MON_R: AtomicI32 = AtomicI32::new(0);
+static ACTIVE_MON_B: AtomicI32 = AtomicI32::new(0);
+static FOLLOW_CURSOR: AtomicBool = AtomicBool::new(false);
+static MONITOR_TRANSITION_PENDING: AtomicBool = AtomicBool::new(false);
+static CURRENT_HMON: AtomicIsize = AtomicIsize::new(0);
+static TARGET_HMON: AtomicIsize = AtomicIsize::new(0);
+
 fn hit_rect() -> (i32, i32, i32, i32) {
     (HIT_L.load(Ordering::Relaxed), HIT_T.load(Ordering::Relaxed), HIT_R.load(Ordering::Relaxed), HIT_B.load(Ordering::Relaxed))
 }
@@ -116,17 +129,23 @@ pub(crate) fn is_notch_open() -> bool {
 
 fn update_hit_rect() {
     let Some(window) = main_window() else { return };
-    let geometry = match (window.is_visible(), window.outer_position(), window.outer_size()) {
-        (Ok(true), Ok(pos), Ok(size)) => Some((pos, size, window.scale_factor().unwrap_or(1.0))),
-        _ => None,
+    let h = hwnd(&window);
+    let mut rect = RECT::default();
+    let geometry = unsafe {
+        if IsWindowVisible(h).as_bool() && GetWindowRect(h, &mut rect).is_ok() {
+            let scale = GetDpiForWindow(h) as f64 / 96.0;
+            Some((rect.left, rect.top, rect.right - rect.left, scale))
+        } else {
+            None
+        }
     };
     let notch = *HIT_SIZE.lock().unwrap();
     let (l, t, r, b) = match geometry {
-        Some((pos, size, scale)) => {
+        Some((win_x, win_y, win_w, scale)) => {
             let w = (notch.0 * scale) as i32;
             let h = (notch.1 * scale) as i32;
-            let left = pos.x + (size.width as i32 - w) / 2;
-            (left, pos.y, left + w, pos.y + h)
+            let left = win_x + (win_w - w) / 2;
+            (left, win_y, left + w, win_y + h)
         }
         None => (0, 0, 0, 0),
     };
@@ -142,6 +161,21 @@ fn on_mouse_move(x: i32, y: i32) {
     if !EYES_PENDING.swap(true, Ordering::Relaxed) {
         if let Some(tx) = EYES_TX.get() {
             let _ = tx.send(());
+        }
+    }
+
+    // Smooth organic spring monitor transition check when follow-cursor is active
+    if FOLLOW_CURSOR.load(Ordering::Relaxed) {
+        let pt = POINT { x, y };
+        let hmon = unsafe { MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST) };
+        let prev = CURRENT_HMON.load(Ordering::Relaxed);
+        if prev != 0 && hmon.0 as isize != prev {
+            TARGET_HMON.store(hmon.0 as isize, Ordering::Relaxed);
+            if !MONITOR_TRANSITION_PENDING.swap(true, Ordering::Relaxed) {
+                if let Some(w) = main_window() {
+                    let _ = w.emit("monitor-transition-leave", ());
+                }
+            }
         }
     }
 
@@ -270,9 +304,9 @@ fn start_eyes_emitter() {
             // 1 when the cursor is right at the notch, 0 from ~250px away.
             let near = 1.0 - (dist / 250.0).min(1.0);
             let look = (dx / dist * reach, dy / dist * reach, near);
-            if (look.0 - last.0).abs() < 0.03
-                && (look.1 - last.1).abs() < 0.03
-                && (look.2 - last.2).abs() < 0.03
+            if (look.0 - last.0).abs() < 0.015
+                && (look.1 - last.1).abs() < 0.015
+                && (look.2 - last.2).abs() < 0.015
             {
                 continue;
             }
@@ -319,15 +353,121 @@ fn start_mouse_hook() {
     });
 }
 
-/// Centers the window at the top of the primary monitor.
-fn place_window(window: &WebviewWindow) {
-    let (Ok(Some(monitor)), Ok(size)) = (window.primary_monitor(), window.outer_size()) else { return };
-    let target = PhysicalPosition::new(
-        monitor.position().x + (monitor.size().width as i32 - size.width as i32) / 2,
-        monitor.position().y,
-    );
-    if window.outer_position().ok() != Some(target) {
-        let _ = window.set_position(target);
+/// Centers the window at the top of the selected monitor based on settings.
+pub(crate) fn place_window(window: &WebviewWindow) {
+    let settings = crate::settings::get_settings();
+    let h = hwnd(window);
+
+    let (hmon, mon_l, mon_t, mon_w) = unsafe {
+        let hmon = match settings.monitor_placement.as_str() {
+            "secondary" => {
+                let prim_mon = MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY);
+                let Ok(monitors) = window.available_monitors() else { return };
+                let sec = monitors.into_iter().find(|m| {
+                    let pos = m.position();
+                    let mh = MonitorFromPoint(POINT { x: pos.x, y: pos.y }, MONITOR_DEFAULTTONEAREST);
+                    mh != prim_mon
+                });
+                if let Some(m) = sec {
+                    let pos = m.position();
+                    MonitorFromPoint(POINT { x: pos.x, y: pos.y }, MONITOR_DEFAULTTONEAREST)
+                } else {
+                    prim_mon
+                }
+            }
+            "follow-cursor" => {
+                let target = TARGET_HMON.load(Ordering::Relaxed);
+                if target != 0 {
+                    HMONITOR(target as _)
+                } else {
+                    let pt = POINT {
+                        x: CURSOR_X.load(Ordering::Relaxed),
+                        y: CURSOR_Y.load(Ordering::Relaxed),
+                    };
+                    MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST)
+                }
+            }
+            _ => MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY),
+        };
+
+        let mut info = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
+        if !GetMonitorInfoW(hmon, &mut info).as_bool() {
+            return;
+        }
+
+        CURRENT_HMON.store(hmon.0 as isize, Ordering::Relaxed);
+        let m = info.rcMonitor;
+        ACTIVE_MON_L.store(m.left, Ordering::Relaxed);
+        ACTIVE_MON_T.store(m.top, Ordering::Relaxed);
+        ACTIVE_MON_R.store(m.right, Ordering::Relaxed);
+        ACTIVE_MON_B.store(m.bottom, Ordering::Relaxed);
+        MONITOR_TRANSITION_PENDING.store(false, Ordering::Relaxed);
+
+        (hmon, m.left, m.top, m.right - m.left)
+    };
+
+    let mut dpi_x = 96;
+    let mut dpi_y = 96;
+    let scale = unsafe {
+        if GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &mut dpi_x, &mut dpi_y).is_ok() && dpi_x > 0 {
+            dpi_x as f64 / 96.0
+        } else {
+            let dpi = GetDpiForWindow(h);
+            if dpi > 0 { dpi as f64 / 96.0 } else { 1.0 }
+        }
+    };
+
+    let win_w = (600.0 * scale).round() as i32;
+    let win_h = (200.0 * scale).round() as i32;
+    let target_x = mon_l + (mon_w - win_w) / 2;
+    let target_y = mon_t;
+
+    unsafe {
+        let mut cur = RECT::default();
+        let need_move = if GetWindowRect(h, &mut cur).is_ok() {
+            cur.left != target_x || cur.top != target_y || (cur.right - cur.left) != win_w
+        } else {
+            true
+        };
+        if need_move {
+            let _ = SetWindowPos(
+                h,
+                Some(HWND_TOPMOST),
+                target_x,
+                target_y,
+                win_w,
+                win_h,
+                SWP_NOACTIVATE,
+            );
+            update_hit_rect();
+        }
+    }
+}
+
+#[tauri::command]
+fn move_to_target_monitor(window: WebviewWindow) {
+    let target = TARGET_HMON.load(Ordering::Relaxed);
+    if target != 0 {
+        CURRENT_HMON.store(target, Ordering::Relaxed);
+    }
+    place_window(&window);
+}
+
+#[tauri::command]
+fn finish_monitor_transition(window: WebviewWindow) {
+    MONITOR_TRANSITION_PENDING.store(false, Ordering::Relaxed);
+    let target = TARGET_HMON.load(Ordering::Relaxed);
+    let current = CURRENT_HMON.load(Ordering::Relaxed);
+    if target != 0 && target != current {
+        place_window(&window);
+    }
+}
+
+pub fn place_window_for_settings(app: &AppHandle) {
+    let s = crate::settings::get_settings();
+    FOLLOW_CURSOR.store(s.monitor_placement == "follow-cursor", Ordering::Relaxed);
+    if let Some(w) = app.get_webview_window("main") {
+        place_window(&w);
     }
 }
 
@@ -537,19 +677,20 @@ fn start_watcher(window: WebviewWindow) {
             let timed_out = rx.recv_timeout(Duration::from_secs(1)).is_err();
             while rx.try_recv().is_ok() {}
 
+            // Reposition window to active monitor (skip while transition animation is active)
+            if !MONITOR_TRANSITION_PENDING.load(Ordering::Relaxed) {
+                place_window(&window);
+            }
+
             let h = hwnd(&window);
             let hide = fullscreen_app_running();
             let visible = unsafe { IsWindowVisible(h).as_bool() };
-            // Both directions go through ShowWindow: Tauri's hide() is a no-op here
-            // because Tauri never saw the window being shown.
             if hide && visible {
                 unsafe { let _ = ShowWindow(h, SW_HIDE); }
             } else if !hide && !visible {
                 unsafe { let _ = ShowWindow(h, SW_SHOWNOACTIVATE); }
             }
             if !hide && below_ordinary_window(h) {
-                // The notch can end up under ordinary windows while keeping its topmost
-                // flag (21 Oct 2026, with Outlook in front): it's there, just covered.
                 unsafe {
                     let _ = SetWindowPos(h, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
                 }
@@ -563,32 +704,52 @@ fn start_watcher(window: WebviewWindow) {
             if TUCKED.swap(tucked, Ordering::Relaxed) != tucked {
                 let _ = window.emit("notch-tucked", tucked);
             }
-
-            if timed_out || hide == visible {
-                place_window(&window);
-                update_hit_rect();
-            }
         }
     });
 }
 
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
+    let current = settings::get_settings();
+    let is_id = current.language == "id";
+
     let autostart = CheckMenuItem::with_id(
         app,
         "autostart",
-        "Start with Windows",
+        if is_id { "Start dengan Windows" } else { "Start with Windows" },
         true,
         app.autolaunch().is_enabled().unwrap_or(false),
         None::<&str>,
     )?;
-    let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
-    let current = settings::get_settings();
-    let mascot = CheckMenuItem::with_id(app, "mascot", "Mata (maskot)", true, current.mascot, None::<&str>)?;
-    let minimal = CheckMenuItem::with_id(app, "minimal", "Notch minimal", true, current.minimal_notch, None::<&str>)?;
-    let reload = MenuItem::with_id(app, "reload", "Muat ulang notch", true, None::<&str>)?;
-    let update =
-        MenuItem::with_id(app, "update", format!("Cek update (v{})", env!("CARGO_PKG_VERSION")), true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", if is_id { "Pengaturan…" } else { "Settings…" }, true, None::<&str>)?;
+    let mascot = CheckMenuItem::with_id(
+        app,
+        "mascot",
+        if is_id { "Mata (maskot)" } else { "Mascot (eyes)" },
+        true,
+        current.mascot,
+        None::<&str>,
+    )?;
+    let minimal = CheckMenuItem::with_id(
+        app,
+        "minimal",
+        if is_id { "Notch minimal" } else { "Minimal notch" },
+        true,
+        current.minimal_notch,
+        None::<&str>,
+    )?;
+    let reload = MenuItem::with_id(app, "reload", if is_id { "Muat ulang notch" } else { "Reload notch" }, true, None::<&str>)?;
+    let update = MenuItem::with_id(
+        app,
+        "update",
+        if is_id {
+            format!("Cek update (v{})", env!("CARGO_PKG_VERSION"))
+        } else {
+            format!("Check for updates (v{})", env!("CARGO_PKG_VERSION"))
+        },
+        true,
+        None::<&str>,
+    )?;
+    let quit = MenuItem::with_id(app, "quit", if is_id { "Keluar" } else { "Exit" }, true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[&settings, &autostart, &mascot, &minimal, &reload, &update, &PredefinedMenuItem::separator(app)?, &quit],
@@ -671,6 +832,7 @@ pub fn run() {
             audio::list_outputs,
             audio::next_output,
             system::power_state,
+            system::get_accent_color,
             system::in_use_state,
             system::open_screenshot,
             settings::get_settings,
@@ -702,6 +864,8 @@ pub fn run() {
             shortcuts::run_link,
             settings::patch_settings,
             settings::open_settings,
+            move_to_target_monitor,
+            finish_monitor_transition,
         ])
         .setup(move |app| {
             // Logged here, not earlier: a second copy (e.g. a watchdog run while Notchy is
@@ -716,6 +880,13 @@ pub fn run() {
             window.set_ignore_cursor_events(true)?;
             NOTCH_HWND.store(hwnd(&window).0 as isize, Ordering::Relaxed);
             place_window(&window);
+
+            let w_event = window.clone();
+            window.on_window_event(move |event| {
+                if matches!(event, tauri::WindowEvent::ScaleFactorChanged { .. } | tauri::WindowEvent::Resized(..)) {
+                    place_window(&w_event);
+                }
+            });
 
             build_tray(app.handle())?;
             start_hover_emitter();
@@ -733,8 +904,10 @@ pub fn run() {
             downloads::start(app.handle().clone());
             clipboard::start(app.handle().clone());
             let s = settings::get_settings();
+            FOLLOW_CURSOR.store(s.monitor_placement == "follow-cursor", Ordering::Relaxed);
             network::update_settings(&s);
             network::start(app.handle().clone());
+            bluetooth::start(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())
