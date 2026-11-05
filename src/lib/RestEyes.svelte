@@ -27,6 +27,10 @@
   const showEyes = $derived(
     mascot && (mascotMode === "always" || activeEyes || dozing)
   );
+
+  const showSideClock = $derived(
+    mascot && mascotMode === "always" && (showEyes || greeting)
+  );
 </script>
 
 {#if weather}
@@ -51,6 +55,10 @@
   <span class="rest-time" in:fade={{ duration: 300 }}>{time}</span>
 {/if}
 
+{#if showSideClock}
+  <span class="rest-time-side" in:fade={{ duration: 300 }}>{time}</span>
+{/if}
+
 <style>
   .rest-time {
     font-size: 13.5px;
@@ -58,6 +66,19 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
     white-space: nowrap;
+  }
+  .rest-time-side {
+    position: absolute;
+    right: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    color: #e6edf3;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    line-height: 1;
   }
   .weather {
     position: absolute;

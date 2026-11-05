@@ -302,8 +302,8 @@
   const size = $derived(
     view === "island" && island.main
       ? { ...SIZES.island, w: islandWidth(island.main, island.side) + islandDots }
-      : view === "rest" && weather
-        ? { ...SIZES.rest, w: 170 }
+      : view === "rest" && (weather || (mascot && mascotMode === "always"))
+        ? { ...SIZES.rest, w: weather && mascot && mascotMode === "always" ? 184 : 170 }
         : SIZES[view as keyof typeof SIZES] ?? SIZES.rest,
   );
   const closedView = $derived(view === "rest" || view === "island" || view === "charging");
