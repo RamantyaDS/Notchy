@@ -70,6 +70,9 @@
   .rest-time-side {
     position: absolute;
     right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
     font-size: 11.5px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -83,6 +86,9 @@
   .weather {
     position: absolute;
     left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
     display: flex;
     align-items: center;
     gap: 3px;

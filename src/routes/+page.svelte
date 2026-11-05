@@ -950,12 +950,15 @@
 </div>
 
 <style>
+  :global(html),
   :global(body) {
     margin: 0;
+    padding: 0;
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
-    background: transparent;
+    background: transparent !important;
+    background-color: transparent !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", sans-serif;
     color: #fff;
   }
@@ -967,6 +970,9 @@
     width: var(--w);
     height: var(--h);
     transform: translateX(-50%);
+    transform-origin: top center;
+    border-top: none !important;
+    outline: none !important;
     background: #000;
     border-radius: 0 0 var(--r) var(--r);
     box-shadow:
@@ -983,7 +989,8 @@
 
   /* Multi-monitor zero-flicker spring transition */
   .notch.monitor-leaving {
-    transform: translateX(-50%) translateY(-115%) scaleX(0.7) !important;
+    transform: translateX(-50%) scaleY(0) scaleX(0.7) !important;
+    transform-origin: top center !important;
     opacity: 0 !important;
     pointer-events: none !important;
     transition:
@@ -992,7 +999,8 @@
   }
 
   .notch.monitor-entering {
-    transform: translateX(-50%) translateY(-115%) scaleX(0.7) !important;
+    transform: translateX(-50%) scaleY(0) scaleX(0.7) !important;
+    transform-origin: top center !important;
     opacity: 0 !important;
     pointer-events: none !important;
     transition: none !important;
