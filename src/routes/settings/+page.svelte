@@ -955,7 +955,27 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", sans-serif;
     user-select: none;
     -webkit-user-select: none;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: 100%;
+  }
+
+  :global(body)::-webkit-scrollbar,
+  :global(html)::-webkit-scrollbar {
+    width: 6px;
+  }
+  :global(body)::-webkit-scrollbar-track,
+  :global(html)::-webkit-scrollbar-track {
+    background: #0d1117;
+  }
+  :global(body)::-webkit-scrollbar-thumb,
+  :global(html)::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+  }
+  :global(body)::-webkit-scrollbar-thumb:hover,
+  :global(html)::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
   }
 
   .settings-shell {
