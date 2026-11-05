@@ -19,6 +19,7 @@
     waterEnabled: boolean;
     waterReminders: boolean;
     mascot: boolean;
+    mascotMode?: string;
     minimalNotch: boolean;
     mirrorNotifications: boolean;
     calendarUrl: string;
@@ -374,6 +375,25 @@
                     <span class="slider"></span>
                   </label>
                 </div>
+
+                {#if settings.mascot !== false}
+                  <div class="nested-control" transition:slide={{ duration: 160 }}>
+                    <label class="input-inline">
+                      <div class="toggle-text">
+                        <strong>{tr("settings.mascotModeTitle")}</strong>
+                        <small>{tr("settings.mascotModeDesc")}</small>
+                      </div>
+                      <select
+                        class="select-input"
+                        value={settings.mascotMode ?? "idle"}
+                        onchange={(e) => save({ mascotMode: e.currentTarget.value })}
+                      >
+                        <option value="idle">{tr("settings.mascotModeIdle")}</option>
+                        <option value="always">{tr("settings.mascotModeAlways")}</option>
+                      </select>
+                    </label>
+                  </div>
+                {/if}
 
                 <div class="toggle-item">
                   <div class="toggle-text">

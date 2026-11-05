@@ -96,6 +96,8 @@
   let dozing = $state(false);
   let greeting = $state(false);
   let mascot = $state(true);
+  let mascotMode = $state("idle");
+  let activeEyes = $state(false);
   let minimalNotch = $state(false);
   let look = $state<[number, number, number]>([0, 0, 0]);
   let hovered = $state(false);
@@ -426,6 +428,7 @@
     smallLyrics: boolean;
     shortcuts: Shortcut[];
     mascot: boolean;
+    mascotMode?: string;
     minimalNotch: boolean;
     musicEnabled?: boolean;
     pomodoroEnabled?: boolean;
@@ -471,17 +474,28 @@
     let tick: ReturnType<typeof setTimeout>;
     let blinkTimer: ReturnType<typeof setTimeout>;
     let sleepTimer: ReturnType<typeof setTimeout>;
+    let activeEyesTimer: ReturnType<typeof setTimeout>;
     let greetTimer: ReturnType<typeof setTimeout>;
 
     const wake = () => {
-      if (dozing) {
-        greeting = true;
-        clearTimeout(greetTimer);
-        greetTimer = setTimeout(() => (greeting = false), 1500);
-      }
-      dozing = false;
       clearTimeout(sleepTimer);
-      sleepTimer = setTimeout(() => (dozing = mascot), 120_000);
+      clearTimeout(activeEyesTimer);
+      if (mascot) {
+        if (mascotMode === "always") {
+          sleepTimer = setTimeout(() => {
+            if (mascot && mascotMode === "always") dozing = true;
+          }, 30_000);
+        } else {
+          activeEyes = false;
+          dozing = false;
+          sleepTimer = setTimeout(() => {
+            if (mascot && mascotMode === "idle") {
+              activeEyes = true;
+              dozing = true;
+            }
+          }, 120_000);
+        }
+      }
     };
 
     const loadWeather = async (s?: AllSettings) => {
@@ -496,7 +510,12 @@
     const applySettings = (s: AllSettings) => {
       smallLyrics = s.smallLyrics && s.musicEnabled !== false;
       mascot = s.mascot !== false;
-      if (!mascot) dozing = false;
+      mascotMode = s.mascotMode ?? "idle";
+      if (!mascot) {
+        dozing = false;
+        activeEyes = false;
+      }
+      wake();
       minimalNotch = s.minimalNotch === true;
       shortcuts = s.shortcuts ?? [];
       const current = pages[page];
@@ -529,6 +548,10 @@
     setupNotchEvents({
       onNotchHover: (h) => {
         hovered = h;
+        if (h && activeEyes) {
+          activeEyes = false;
+          dozing = false;
+        }
         clearTimeout(closeTimer);
         clearTimeout(openTimer);
         if (h) {
@@ -552,7 +575,43 @@
       onClipboard: (clips) => (clipItems = clips),
       onEyesLook: (l) => {
         look = l;
-        wake();
+        if (mascot) {
+          if (mascotMode === "always") {
+            if (dozing) {
+              dozing = false;
+              greeting = true;
+              clearTimeout(greetTimer);
+              greetTimer = setTimeout(() => (greeting = false), 1000);
+            }
+            clearTimeout(sleepTimer);
+            sleepTimer = setTimeout(() => {
+              if (mascot && mascotMode === "always") dozing = true;
+            }, 30_000);
+          } else if (activeEyes) {
+            if (dozing) {
+              dozing = false;
+              greeting = true;
+              clearTimeout(greetTimer);
+              greetTimer = setTimeout(() => (greeting = false), 1000);
+            }
+            clearTimeout(activeEyesTimer);
+            activeEyesTimer = setTimeout(() => {
+              if (mascotMode === "idle") {
+                activeEyes = false;
+                dozing = false;
+                wake();
+              }
+            }, 25_000);
+          } else {
+            clearTimeout(sleepTimer);
+            sleepTimer = setTimeout(() => {
+              if (mascot && mascotMode === "idle") {
+                activeEyes = true;
+                dozing = true;
+              }
+            }, 120_000);
+          }
+        }
       },
       onTucked: (t) => (tucked = t),
       onMedia: (m) => {
@@ -687,7 +746,7 @@
   {/if}
 
   <div class="layer rest" class:on={view === "rest"}>
-    <RestEyes {weather} {greeting} {dozing} {blink} {look} {time} />
+    <RestEyes {weather} {greeting} {dozing} {blink} {look} {time} {mascot} {mascotMode} {activeEyes} />
   </div>
 
   {#if island.main}

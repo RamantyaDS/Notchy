@@ -301,9 +301,9 @@ fn start_eyes_emitter() {
             // 1 when the cursor is right at the notch, 0 from ~250px away.
             let near = 1.0 - (dist / 250.0).min(1.0);
             let look = (dx / dist * reach, dy / dist * reach, near);
-            if (look.0 - last.0).abs() < 0.03
-                && (look.1 - last.1).abs() < 0.03
-                && (look.2 - last.2).abs() < 0.03
+            if (look.0 - last.0).abs() < 0.015
+                && (look.1 - last.1).abs() < 0.015
+                && (look.2 - last.2).abs() < 0.015
             {
                 continue;
             }

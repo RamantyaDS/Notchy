@@ -9,6 +9,9 @@
     blink,
     look,
     time,
+    mascot = true,
+    mascotMode = "idle",
+    activeEyes = false,
   }: {
     weather: Weather | null;
     greeting: boolean;
@@ -16,7 +19,14 @@
     blink: boolean;
     look: [number, number, number];
     time: string;
+    mascot?: boolean;
+    mascotMode?: string;
+    activeEyes?: boolean;
   } = $props();
+
+  const showEyes = $derived(
+    mascot && (mascotMode === "always" || activeEyes || dozing)
+  );
 </script>
 
 {#if weather}
@@ -25,19 +35,20 @@
 
 {#if greeting}
   <div class="eyes happy" in:fade={{ duration: 150 }}><i></i><i></i></div>
-{:else if dozing}
+{:else if showEyes}
   <div
     class="eyes"
     class:blink
+    class:sleepy={dozing}
     style:--lx={look[0]}
     style:--ly={look[1]}
     style:--near={look[2]}
-    in:fade={{ duration: 400 }}
+    in:fade={{ duration: 300 }}
   >
     <i></i><i></i>
   </div>
 {:else}
-  <span class="rest-time" in:fade={{ duration: 400 }}>{time}</span>
+  <span class="rest-time" in:fade={{ duration: 300 }}>{time}</span>
 {/if}
 
 <style>
@@ -74,7 +85,10 @@
     box-shadow:
       0 0 6px 1px rgba(255, 255, 255, 0.45),
       0 0 14px 4px rgba(255, 255, 255, 0.12);
-    transition: transform 0.09s ease;
+    transition: transform 0.12s ease;
+  }
+  .eyes.sleepy i {
+    transform: scaleY(0.4);
   }
   .eyes.blink i {
     transform: scaleY(0.1);
