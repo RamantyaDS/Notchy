@@ -210,46 +210,72 @@
   }
 
   /* 🎨 Theme: Anime Sparkle ✨ */
+  .eyes.theme-anime i {
+    width: 9.6px;
+    height: 13.5px;
+    border-radius: 50% 50% 48% 48%;
+    background: radial-gradient(circle at 50% 25%, #60a5fa 0%, #3730a3 45%, #1e1b4b 80%, #0f172a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-top: 2px solid #ffffff;
+    box-shadow:
+      0 0 7px 1.5px rgba(129, 140, 248, 0.65),
+      0 0 14px 3px rgba(99, 102, 241, 0.25);
+    overflow: hidden;
+    position: relative;
+  }
   .eyes.theme-anime i::after {
     content: "";
     position: absolute;
     top: 2px;
     right: 1.5px;
-    width: 3.8px;
-    height: 3.8px;
+    width: 4.6px;
+    height: 4.6px;
     background: #ffffff;
     clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.95));
-    animation: anime-glint 2.2s ease-in-out infinite alternate;
+    filter: drop-shadow(0 0 2.5px rgba(255, 255, 255, 1));
+    animation: anime-glint 2s ease-in-out infinite alternate;
+    z-index: 2;
   }
   .eyes.theme-anime i::before {
     content: "";
     position: absolute;
-    bottom: 2px;
-    left: 2px;
-    width: 2px;
-    height: 2px;
+    bottom: 2.2px;
+    left: 2.2px;
+    width: 2.4px;
+    height: 2.4px;
     border-radius: 50%;
     background: #ffffff;
-    opacity: 0.85;
+    opacity: 0.95;
+    box-shadow: 2.4px -4px 0 -0.6px rgba(255, 255, 255, 0.95);
+    z-index: 2;
   }
   @keyframes anime-glint {
     0% {
-      transform: scale(0.75) rotate(0deg);
-      opacity: 0.6;
+      transform: scale(0.8) rotate(0deg);
+      opacity: 0.7;
     }
     50% {
-      transform: scale(1.3) rotate(45deg);
+      transform: scale(1.35) rotate(45deg);
       opacity: 1;
     }
     100% {
-      transform: scale(0.85) rotate(90deg);
-      opacity: 0.75;
+      transform: scale(0.9) rotate(90deg);
+      opacity: 0.8;
     }
+  }
+  .eyes.theme-anime.happy i {
+    background: transparent;
+    border: 2.2px solid #a5b4fc;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 0 8px 1.5px rgba(165, 180, 252, 0.6);
   }
   .eyes.theme-anime.happy i::after,
   .eyes.theme-anime.happy i::before {
     display: none;
+  }
+  .eyes.theme-anime.shocked i::after {
+    transform: scale(0.35);
   }
 
   /* 🎨 Theme: Retro 8-Bit Pixel 👾 */
