@@ -289,10 +289,111 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, 950);
 
+  // ---------------------------------------------------------------------------
+  // Dynamic GitHub Release Version Sync
+  // ---------------------------------------------------------------------------
+  let activeCleanVersion = "0.2.9";
+
+  function applyReleaseData(releaseInfo) {
+    if (!releaseInfo) return;
+    const { tag, clean, installerUrl, portableUrl } = releaseInfo;
+    if (clean) activeCleanVersion = clean;
+
+    if (tag) {
+      document.querySelectorAll(".data-version-text").forEach((el) => {
+        el.textContent = tag;
+      });
+    }
+
+    if (clean) {
+      document.querySelectorAll(".data-version-clean").forEach((el) => {
+        el.textContent = clean;
+      });
+    }
+
+    if (installerUrl) {
+      document.querySelectorAll("[data-download-installer]").forEach((el) => {
+        el.href = installerUrl;
+      });
+    }
+
+    if (portableUrl) {
+      document.querySelectorAll("[data-download-portable]").forEach((el) => {
+        el.href = portableUrl;
+      });
+    }
+  }
+
+  async function fetchLatestRelease() {
+    const CACHE_KEY = "notchy_latest_release";
+    const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
+    // 1. Try reading from localStorage first for instant render
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp < CACHE_TTL)) {
+          applyReleaseData(parsed);
+          return;
+        }
+      }
+    } catch (e) {
+      // Ignore localStorage errors (e.g. private browsing mode)
+    }
+
+    // 2. Fetch latest release from GitHub API
+    try {
+      const res = await fetch("https://api.github.com/repos/RamantyaDS/Notchy/releases/latest", {
+        headers: { Accept: "application/vnd.github.v3+json" }
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const rawTag = data.tag_name || "";
+      if (!rawTag) return;
+
+      const tag = rawTag.startsWith("v") ? rawTag : "v" + rawTag;
+      const clean = tag.replace(/^v/, "");
+
+      // Find assets
+      const assets = Array.isArray(data.assets) ? data.assets : [];
+      const installerAsset = assets.find((a) =>
+        typeof a.name === "string" && (a.name.endsWith("-setup.exe") || (a.name.endsWith(".exe") && !a.name.endsWith(".sig")))
+      );
+      const portableAsset = assets.find((a) =>
+        typeof a.name === "string" && (a.name.endsWith("-portable.zip") || (a.name.endsWith(".zip") && !a.name.endsWith(".sig")))
+      );
+
+      const installerUrl = installerAsset?.browser_download_url || data.html_url || "https://github.com/RamantyaDS/Notchy/releases/latest";
+      const portableUrl = portableAsset?.browser_download_url || data.html_url || "https://github.com/RamantyaDS/Notchy/releases/latest";
+
+      const releaseInfo = {
+        timestamp: Date.now(),
+        tag,
+        clean,
+        installerUrl,
+        portableUrl
+      };
+
+      applyReleaseData(releaseInfo);
+
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(releaseInfo));
+      } catch (e) {
+        // Ignore quota/storage errors
+      }
+    } catch (err) {
+      // Graceful fallback to static HTML defaults on network failure/rate limiting
+    }
+  }
+
+  fetchLatestRelease();
+
   // Copy SHA-256 Command
   if (copyHashBtn) {
     copyHashBtn.addEventListener("click", () => {
-      const commandText = "Get-FileHash .\\Notchy_0.2.9_x64-setup.exe -Algorithm SHA256";
+      const commandText = "Get-FileHash .\\Notchy_" + activeCleanVersion + "_x64-setup.exe -Algorithm SHA256";
       navigator.clipboard.writeText(commandText).then(() => {
         if (copyHashFeedback) {
           copyHashFeedback.classList.remove("hidden");
