@@ -59,6 +59,8 @@ export const translations = {
     "settings.mascotThemePixel": "Retro 8-Bit Pixel 👾",
     "settings.mascotThemeCat": "Cat Eyes 🐱",
     "settings.mascotThemeCartoon": "Cartoon Pupil 👀",
+    "settings.musicMascotTitle": "Music Island Mascot",
+    "settings.musicMascotDesc": "Show mascot in music island when lyrics are empty (replaces clock, default off).",
     "settings.minimalTitle": "Minimal Notch",
     "settings.minimalDesc": "Collapses to a slim 5px line when idle (great for laptops with thick top bezels).",
 
@@ -323,6 +325,8 @@ export const translations = {
     "settings.mascotThemePixel": "Retro 8-Bit Pixel 👾",
     "settings.mascotThemeCat": "Cat Eyes 🐱",
     "settings.mascotThemeCartoon": "Mata Kartun Pupil 👀",
+    "settings.musicMascotTitle": "Maskot di Pulau Musik",
+    "settings.musicMascotDesc": "Tampilkan maskot di pulau musik saat tidak ada lirik lagu (menggantikan jam, bawaan mati).",
     "settings.minimalTitle": "Notch Minimal",
     "settings.minimalDesc": "Bentuk garis tipis 5px saat idle (sangat cocok untuk laptop ber-bezel tebal).",
 

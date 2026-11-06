@@ -15,7 +15,7 @@
     wink = null,
     dizzy = false,
     musicPlaying = false,
-    celebrating = false,
+
     charging = false,
     batteryPercent = 100,
     island = false,
@@ -35,7 +35,7 @@
     wink?: "left" | "right" | null;
     dizzy?: boolean;
     musicPlaying?: boolean;
-    celebrating?: boolean;
+
     charging?: boolean;
     batteryPercent?: number;
     island?: boolean;
@@ -44,11 +44,11 @@
     tickled?: boolean;
   } = $props();
 
-  const isBatteryFull = $derived(charging && batteryPercent >= 100);
-  const isHappy = $derived(greeting || isBatteryFull || tickled);
+
+  const isHappy = $derived(greeting || tickled);
 
   const showEyes = $derived(
-    mascot && (island || charging || mascotMode === "always" || activeEyes || dozing || shocked || tickled)
+    mascot && (island || mascotMode === "always" || activeEyes || dozing || shocked || tickled)
   );
 
   const showSideClock = $derived(
@@ -84,7 +84,7 @@
         class:wink-right={wink === "right"}
         class:sleepy={dozing}
         class:dizzy
-        class:heart={celebrating}
+
         class:charging
         class:happy={isHappy}
         class:shocked
@@ -385,21 +385,11 @@
       0 0 18px 5px rgba(255, 255, 255, 0.35);
   }
 
-  /* 🔋 Charging Mode Glow */
-  .eyes.charging:not(.sleepy):not(.dizzy):not(.heart):not(.happy) i {
-    animation: charging-energy 3s ease-in-out infinite alternate;
-  }
-  @keyframes charging-energy {
-    0% {
-      box-shadow:
-        0 0 6px 1.5px rgba(52, 211, 153, 0.55),
-        0 0 12px 3px rgba(52, 211, 153, 0.18);
-    }
-    100% {
-      box-shadow:
-        0 0 9px 2.5px rgba(52, 211, 153, 0.8),
-        0 0 16px 5px rgba(52, 211, 153, 0.35);
-    }
+  /* 🔋 Charging Mode Glow (Static to eliminate repaint overhead) */
+  .eyes.charging:not(.sleepy):not(.dizzy):not(.happy) i {
+    box-shadow:
+      0 0 6px 1.5px rgba(52, 211, 153, 0.6),
+      0 0 13px 3px rgba(52, 211, 153, 0.22);
   }
   .eyes.charging.sleepy i {
     box-shadow:
@@ -464,22 +454,7 @@
       transform: rotate(360deg);
     }
   }
-  .eyes.heart i {
-    width: 11px;
-    height: 10px;
-    background: #ff5c8a;
-    box-shadow: 0 0 10px 2px rgba(255, 92, 138, 0.7);
-    clip-path: polygon(50% 15%, 80% 0%, 100% 25%, 100% 60%, 50% 100%, 0% 60%, 0% 25%, 20% 0%);
-    animation: heart-beat 0.6s ease-in-out infinite alternate;
-  }
-  @keyframes heart-beat {
-    0% {
-      transform: scale(0.9);
-    }
-    100% {
-      transform: scale(1.22);
-    }
-  }
+  
 
   /* Floating Particles */
   .zzz {
@@ -559,8 +534,6 @@
     .eyes-wrapper.tickle-shake,
     .eyes.dizzy,
     .eyes.theme-anime i::after,
-    .eyes.charging:not(.sleepy):not(.dizzy):not(.heart):not(.happy) i,
-    .eyes.heart i,
     .zzz,
     .giggle-sparkle {
       animation: none !important;

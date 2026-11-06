@@ -43,6 +43,8 @@ pub struct Settings {
     pub mascot_mode: String,
     /// Mascot eye style theme: "classic", "anime", "pixel", "cat", "cartoon"
     pub mascot_theme: String,
+    /// Show mascot in music island when lyrics are empty (replaces clock, default false)
+    pub music_mascot: bool,
     /// A closed, idle notch is just a thin black line (for thick top bezels).
     pub minimal_notch: bool,
     /// Show new Windows notifications in the notch.
@@ -140,6 +142,7 @@ impl Default for Settings {
             mascot: true,
             mascot_mode: "idle".into(),
             mascot_theme: "classic".into(),
+            music_mascot: false,
             minimal_notch: false,
             mirror_notifications: true,
             calendar_url: String::new(),

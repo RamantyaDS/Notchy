@@ -259,7 +259,7 @@ Di-merge sebagai a1950a3, setelah dua putaran review. Build lokal kode PR ditola
 - **Mode charging simetris 3 kolom**: cincin baterai radial hijau di kiri, maskot aktif dengan denyut aura energi di tengah, dan jam digital tabular di kanan.
 - **Head-bop musik Dynamic Island**: maskot mengangguk ritmis naik-turun halus di tengah Dynamic Island saat jeda lirik atau lagu instrumental.
 - **Gesture interaktif**: kaget (-5px hop) saat notifikasi/meeting masuk, geli/tickle saat kursor digosok bolak-balik di notch tertutup, pusing spiral saat kursor digoyang cepat, dan kedipan mandiri.
-- **Aksesibilitas & performa**: `@media (prefers-reduced-motion)` dan 100% animasi GPU compositor tanpa layout reflow.
+- **Aksesibilitas**: Mendukung `@media (prefers-reduced-motion)` untuk menghormati preferensi pengurangan animasi pengguna.
 - **Ikon resmi "The Alive Notch"**: vector master SVG dan paket ikon multi-resolusi Windows.
 
 ---

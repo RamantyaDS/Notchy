@@ -95,12 +95,12 @@
   let blink = $state(false);
   let wink = $state<"left" | "right" | null>(null);
   let dizzy = $state(false);
-  let celebrating = $state(false);
   let dozing = $state(false);
   let greeting = $state(false);
   let mascot = $state(true);
   let mascotMode = $state("idle");
   let mascotTheme = $state("classic");
+  let musicMascot = $state(false);
   let activeEyes = $state(false);
   let shocked = $state(false);
   let shockedTimer: ReturnType<typeof setTimeout> | undefined;
@@ -470,6 +470,7 @@
     mascot: boolean;
     mascotMode?: string;
     mascotTheme?: string;
+    musicMascot?: boolean;
     minimalNotch: boolean;
     musicEnabled?: boolean;
     pomodoroEnabled?: boolean;
@@ -522,9 +523,9 @@
       clearTimeout(sleepTimer);
       clearTimeout(activeEyesTimer);
       if (mascot) {
-        if (mascotMode === "always" || charging) {
+        if (mascotMode === "always") {
           sleepTimer = setTimeout(() => {
-            if (mascot && (mascotMode === "always" || charging)) dozing = true;
+            if (mascot && mascotMode === "always") dozing = true;
           }, 30_000);
         } else {
           activeEyes = false;
@@ -553,6 +554,7 @@
       mascot = s.mascot !== false;
       mascotMode = s.mascotMode ?? "idle";
       mascotTheme = s.mascotTheme ?? "classic";
+      musicMascot = s.musicMascot === true;
       if (!mascot) {
         dozing = false;
         activeEyes = false;
@@ -623,27 +625,27 @@
       onClipboard: (clips) => (clipItems = clips),
       onEyesLook: (l) => {
         look = l;
-        const dx = l[0] - lastLx;
-        const sign = Math.sign(dx);
-        const nowMsTime = Date.now();
-        if (sign !== 0 && sign !== lastSign && Math.abs(dx) > 0.22 && l[2] > 0.3) {
-          if (nowMsTime - lastDirChangeMs < 480) {
-            dirChanges++;
-            if (dirChanges >= 5 && !dizzy) {
-              dizzy = true;
-              dirChanges = 0;
-              clearTimeout(dizzyTimeout);
-              dizzyTimeout = setTimeout(() => (dizzy = false), 2200);
-            }
-          } else {
-            dirChanges = 1;
-          }
-          lastDirChangeMs = nowMsTime;
-          lastSign = sign;
-        }
-        lastLx = l[0];
         if (mascot) {
-          if (mascotMode === "always" || charging) {
+          const dx = l[0] - lastLx;
+          const sign = Math.sign(dx);
+          const nowMsTime = Date.now();
+          if (sign !== 0 && sign !== lastSign && Math.abs(dx) > 0.22 && l[2] > 0.3) {
+            if (nowMsTime - lastDirChangeMs < 480) {
+              dirChanges++;
+              if (dirChanges >= 5 && !dizzy) {
+                dizzy = true;
+                dirChanges = 0;
+                clearTimeout(dizzyTimeout);
+                dizzyTimeout = setTimeout(() => (dizzy = false), 2200);
+              }
+            } else {
+              dirChanges = 1;
+            }
+            lastDirChangeMs = nowMsTime;
+            lastSign = sign;
+          }
+          lastLx = l[0];
+          if (mascotMode === "always") {
             if (dozing) {
               dozing = false;
               greeting = true;
@@ -652,7 +654,7 @@
             }
             clearTimeout(sleepTimer);
             sleepTimer = setTimeout(() => {
-              if (mascot && (mascotMode === "always" || charging)) dozing = true;
+              if (mascot && mascotMode === "always") dozing = true;
             }, 30_000);
           } else if (activeEyes) {
             if (dozing) {
@@ -860,7 +862,6 @@
       {wink}
       {dizzy}
       musicPlaying={!!media?.playing}
-      {celebrating}
       {look}
       {time}
       {mascot}
@@ -895,7 +896,7 @@
         {blink}
         {wink}
         {dizzy}
-        {celebrating}
+        {musicMascot}
         {look}
         {greeting}
         {shocked}
@@ -921,7 +922,6 @@
           {wink}
           {dizzy}
           musicPlaying={!!media?.playing}
-          {celebrating}
           {look}
           {time}
           {mascot}

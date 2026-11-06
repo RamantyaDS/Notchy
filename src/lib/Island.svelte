@@ -33,7 +33,7 @@
     blink = false,
     wink = null,
     dizzy = false,
-    celebrating = false,
+    musicMascot = false,
     look = [0, 0, 0],
     greeting = false,
     shocked = false,
@@ -62,7 +62,7 @@
     blink?: boolean;
     wink?: "left" | "right" | null;
     dizzy?: boolean;
-    celebrating?: boolean;
+    musicMascot?: boolean;
     look?: [number, number, number];
     greeting?: boolean;
     shocked?: boolean;
@@ -104,7 +104,7 @@
       <div class="disc" class:spin={playing && !levels} style={discStyle}></div>
       {#if line}
         <span class="line" in:fade={{ duration: 150 }}>{line}</span>
-      {:else if mascot}
+      {:else if mascot && musicMascot}
         <div class="island-eyes" in:fade={{ duration: 180 }}>
           <RestEyes
             weather={null}
@@ -114,7 +114,7 @@
             {wink}
             {dizzy}
             musicPlaying={playing}
-            {celebrating}
+
             {look}
             {time}
             {mascot}
