@@ -19,21 +19,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          }
-        }
-      }
-    }
-  </script>
+  <!-- Pre-compiled Standalone Tailwind CSS (Zero CDN / No JIT Console Warning) -->
+  <link rel="stylesheet" href="tailwind.css" />
 
   <!-- Bespoke Refined Styles -->
   <link rel="stylesheet" href="styles.css" />
@@ -51,7 +38,7 @@
         <img src="assets/icon.png" alt="Notchy Logo" class="w-8 h-8 rounded-xl shadow-md group-hover:scale-105 transition-transform" />
         <div class="flex items-baseline gap-2">
           <span class="font-bold text-lg text-white group-hover:text-indigo-300 transition-colors">Notchy</span>
-          <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 border border-white/[0.08] data-version-text">v0.2.9</span>
+          <span class="hidden sm:inline-block text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 border border-white/[0.08] data-version-text">v0.2.9</span>
         </div>
       </a>
 
@@ -203,10 +190,10 @@
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
-                      <span class="text-xs font-semibold text-white truncate">A Sky Full of Stars</span>
+                      <span class="text-xs font-semibold text-white truncate">Langit Kertas</span>
                       <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.08] text-slate-300 font-medium">Spotify</span>
                     </div>
-                    <div class="text-[11px] text-slate-400 truncate">Coldplay · Ghost Stories</div>
+                    <div class="text-[11px] text-slate-400 truncate">Arunika · Lampu Kota</div>
                     <div class="flex items-center gap-2 mt-1.5">
                       <span class="text-[9px] text-pink-400 font-mono">2:14</span>
                       <div class="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
@@ -412,8 +399,8 @@
         </div>
 
         <!-- Clean Segmented Mode Selector -->
-        <div class="mt-4 flex justify-center">
-          <div class="segmented-control">
+        <div class="mt-4 w-full overflow-x-auto pb-2 flex sm:justify-center justify-start px-2 scrollbar-none">
+          <div class="segmented-control flex-shrink-0">
             <button data-sim-mode="eyes" class="segmented-btn active">
               👀 <span data-lang="id">Maskot</span><span data-lang="en">Mascot</span>
             </button>
@@ -563,15 +550,15 @@
               💧 <span data-lang="id">Kesehatan Kerja</span><span data-lang="en">Daily Wellness</span>
             </span>
             <h4 class="text-xl font-bold text-white mt-3 mb-2">
-              <span data-lang="id">Pomodoro, Pengingat Minum & Istirahat Mata</span>
-              <span data-lang="en">Pomodoro, Hydration & Eye Rest</span>
+              <span data-lang="id">Pomodoro & Pengingat Hidrasi Sehat</span>
+              <span data-lang="en">Pomodoro & Mindful Hydration</span>
             </h4>
             <p class="text-slate-400 text-sm leading-relaxed mb-5">
               <span data-lang="id">
-                Pengingat ramah untuk minum air, istirahat mata setiap 20 menit, dan sesi Pomodoro tanpa perlu mengunduh aplikasi terpisah.
+                Pengingat ramah untuk minum air teratur dan sesi fokus Pomodoro tanpa perlu mengunduh aplikasi terpisah.
               </span>
               <span data-lang="en">
-                Gentle reminders to hydrate, take 20-20-20 eye breaks, and run focus blocks without noisy separate apps.
+                Gentle reminders to stay hydrated and structured Pomodoro focus blocks without noisy separate apps.
               </span>
             </p>
           </div>
@@ -608,7 +595,7 @@
               <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">👾 Retro Pixel</span>
               <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">🐱 Cat Slit Gaze</span>
               <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">👀 Parallax Pupil</span>
-              <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">🔋 Option C Charging</span>
+              <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">🔋 <span data-lang="id">Tampilan Mengecas</span><span data-lang="en">Charging View</span></span>
             </div>
           </div>
           <div class="flex items-center justify-center p-8 rounded-2xl bg-black/60 border border-white/[0.08] shadow-inner min-h-[180px]">
@@ -827,27 +814,6 @@
 
       </div>
 
-      <!-- Hash Integrity Check -->
-      <div class="p-4 rounded-xl bg-black/40 border border-white/[0.06] text-left text-xs font-mono text-slate-400">
-        <div class="flex items-center justify-between mb-1.5">
-          <span class="text-emerald-400 text-[11px] font-semibold">
-            <span data-lang="id">Cek Integritas SHA-256 (PowerShell)</span>
-            <span data-lang="en">SHA-256 Integrity Check (PowerShell)</span>
-          </span>
-          <button id="copy-hash-btn" class="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 border border-white/[0.08]">
-            <span data-lang="id">Salin Perintah</span>
-            <span data-lang="en">Copy Command</span>
-          </button>
-        </div>
-        <div class="text-[11px] text-slate-300">
-          <code>Get-FileHash .\Notchy_<span class="data-version-clean">0.2.9</span>_x64-setup.exe -Algorithm SHA256</code>
-        </div>
-        <div id="copy-hash-feedback" class="hidden text-emerald-400 text-[10px] mt-1 font-mono">
-          <span data-lang="id">✓ Perintah berhasil disalin ke clipboard!</span>
-          <span data-lang="en">✓ Command copied to clipboard!</span>
-        </div>
-      </div>
-
     </div>
   </section>
 
@@ -941,7 +907,6 @@
           <span data-lang="id">Laporkan Masalah</span>
           <span data-lang="en">Report Issue</span>
         </a>
-        <a href="https://github.com/RamantyaDS/Notchy/blob/main/LICENSE" target="_blank" class="hover:text-slate-300 transition-colors">MIT License</a>
       </div>
 
     </div>

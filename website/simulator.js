@@ -15,27 +15,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const netDownEl = document.getElementById("sim-net-down");
   const netUpEl = document.getElementById("sim-net-up");
   const lyricLineEl = document.getElementById("sim-lyric-line");
-  const copyHashBtn = document.getElementById("copy-hash-btn");
-  const copyHashFeedback = document.getElementById("copy-hash-feedback");
   const langButtons = document.querySelectorAll("[data-lang-switch]");
 
   let currentMode = "eyes";
   let isTucked = false;
   let currentLang = "id";
 
-  // Bilingual Synced Lyrics Library
+  // Bilingual Synced Lyrics Library (Original Fictional Track: Arunika - Langit Kertas)
   const sampleLyricsMap = {
     id: [
-      "'Cause you're a sky, 'cause you're a sky full of stars 🌟",
-      "Kukira kita asam dan garam, bertemu di belanga ✨",
-      "Lirik sinkron otomatis tanpa buka tab peramban 🎶",
-      "Fokus nugas dan bekerja ditemani alunan musik 💖",
+      "Kita lipat malam jadi perahu ⛵",
+      "Hanyut pelan di langit kertas ✨",
+      "Lampu kota jadi bintang kecil 🌃",
+      "Lirik sinkron otomatis tanpa buka tab peramban ⚡",
     ],
     en: [
-      "'Cause you're a sky, 'cause you're a sky full of stars 🌟",
-      "I'm gonna give you my heart 💖",
-      "'Cause in a sky full of stars, you light up the path ✨",
-      "Work and study seamlessly with live synchronized lyrics 🎶",
+      "We fold the night into a paper boat ⛵",
+      "Drifting gently across a paper sky ✨",
+      "City lights turn into little stars 🌃",
+      "Work and study seamlessly with live synchronized lyrics 🎧",
     ],
   };
   let lyricIndex = 0;
@@ -390,20 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   fetchLatestRelease();
 
-  // Copy SHA-256 Command
-  if (copyHashBtn) {
-    copyHashBtn.addEventListener("click", () => {
-      const commandText = "Get-FileHash .\\Notchy_" + activeCleanVersion + "_x64-setup.exe -Algorithm SHA256";
-      navigator.clipboard.writeText(commandText).then(() => {
-        if (copyHashFeedback) {
-          copyHashFeedback.classList.remove("hidden");
-          setTimeout(() => {
-            copyHashFeedback.classList.add("hidden");
-          }, 2600);
-        }
-      });
-    });
-  }
+
 
   // Smooth scroll
   document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
