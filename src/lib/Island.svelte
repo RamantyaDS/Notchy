@@ -3,6 +3,8 @@
   // activity, then up to two more at the right end behind a thin divider.
   import { invoke } from "@tauri-apps/api/core";
   import { untrack } from "svelte";
+  import { fade } from "svelte/transition";
+  import RestEyes from "./RestEyes.svelte";
   import Bars from "./Bars.svelte";
   import { bytes, duration, type Activity } from "./island";
   import { formatSpeed } from "./network";
@@ -23,6 +25,19 @@
     active,
     camera = false,
     mic = false,
+    mascot = true,
+    mascotMode = "idle",
+    mascotTheme = "classic",
+    activeEyes = false,
+    dozing = false,
+    blink = false,
+    wink = null,
+    dizzy = false,
+    musicMascot = false,
+    look = [0, 0, 0],
+    greeting = false,
+    shocked = false,
+    tickled = false,
   }: {
     main: Activity;
     side: Activity[];
@@ -39,6 +54,19 @@
     /** Camera / mic in use (the mic dot is left out during a call, which already says so). */
     camera?: boolean;
     mic?: boolean;
+    mascot?: boolean;
+    mascotMode?: string;
+    mascotTheme?: string;
+    activeEyes?: boolean;
+    dozing?: boolean;
+    blink?: boolean;
+    wink?: "left" | "right" | null;
+    dizzy?: boolean;
+    musicMascot?: boolean;
+    look?: [number, number, number];
+    greeting?: boolean;
+    shocked?: boolean;
+    tickled?: boolean;
   } = $props();
 
   const playing = $derived(active && !!media?.playing);
@@ -74,7 +102,33 @@
   <div class="main {main.kind}">
     {#if main.kind === "music"}
       <div class="disc" class:spin={playing && !levels} style={discStyle}></div>
-      {#key line}<span class="line" class:clock-line={!line}>{line || time}</span>{/key}
+      {#if line}
+        <span class="line" in:fade={{ duration: 150 }}>{line}</span>
+      {:else if mascot && musicMascot}
+        <div class="island-eyes" in:fade={{ duration: 180 }}>
+          <RestEyes
+            weather={null}
+            {greeting}
+            {dozing}
+            {blink}
+            {wink}
+            {dizzy}
+            musicPlaying={playing}
+
+            {look}
+            {time}
+            {mascot}
+            {mascotMode}
+            {mascotTheme}
+            {activeEyes}
+            {shocked}
+            {tickled}
+            island={true}
+          />
+        </div>
+      {:else}
+        <span class="line clock-line" in:fade={{ duration: 150 }}>{time}</span>
+      {/if}
       <Bars live={playing} {levels} />
     {:else if main.kind === "timer"}
       {@render ring(pomo.progress(now), pomo.phase === "break")}
@@ -194,6 +248,15 @@
     width: 1px;
     height: 16px;
     background: rgba(255, 255, 255, 0.18);
+  }
+  .island-eyes {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    pointer-events: none;
   }
   .line {
     flex: 1;

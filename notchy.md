@@ -65,7 +65,7 @@ Notchy dianggap berhasil kalau:
 ## 3. Keputusan yang masih terbuka
 
 - [ ] Shortcut keyboard untuk membuka notch.
-- [ ] Ikon aplikasi: masih ikon bawaan Tauri. Kandidat: wordmark "notchy" + pil notch dari video promo.
+- [x] Ikon aplikasi: Menggunakan ikon resmi "The Alive Notch" (Mascot Mata Notchy + pil notch berlatar squircle Fluent Windows 11). Vector master di `src-tauri/icons/icon-master.svg`.
 - [x] Overlay volume bawaan Windows masih ikut muncul bersama peek volume Notchy. Sekarang ada opsi untuk menyembunyikannya (lihat Status sistem). Overlay kecerahan belum.
 
 ---
@@ -252,6 +252,15 @@ Di-merge sebagai a1950a3, setelah dua putaran review. Build lokal kode PR ditola
 - **Diminta di review dan sudah dibereskan:** `createUpdaterArtifacts` sempat diubah ke `false` (akan mematikan update otomatis), bahasa default sempat `en`, Bluetooth sempat default nyala tanpa properti yang benar, `release.yml` kini hanya `workflow_dispatch`, job CI frontend pindah ke Ubuntu supaya tidak antre runner Windows.
 - **Catatan kecil yang belum diubah:** handler `Updated` Bluetooth membaca `settings.json` dari disk tiap event.
 - **Diuji 5 Nov 2026:** CPU saat diam 1,1% selama 60 detik (menit pertama setelah start ~4,9% karena memuat), 261 MB. Pengguna lama tetap bahasa Indonesia, opsi overlay volume tetap jalan, tampilan notch dan Settings dicek langsung oleh pemilik. Multi-monitor belum dites (cuma satu layar).
+
+### L. PR #4 (Malik): tema mata maskot, pupil dinamis parallax, layout charging opsi C, dan dynamic island head-bop
+- **5 tema gaya mata maskot** (`mascotTheme`): `classic` (default), `anime` (bintang kilau `anime-glint`), `pixel` (8-bit kotak retro), `cat` (celah pupil vertikal melirik), dan `cartoon` (pupil bulat dengan pantulan cahaya kornea).
+- **Pupil dinamis & parallax gaze 3D**: pupil meluncur independen di dalam bola mata mengikuti kursor + membesar saat kursor mendekat (dilatasi penasaran) + menyusut kecil saat kaget (`shocked`).
+- **Mode charging simetris 3 kolom**: cincin baterai radial hijau di kiri, maskot aktif dengan denyut aura energi di tengah, dan jam digital tabular di kanan.
+- **Head-bop musik Dynamic Island**: maskot mengangguk ritmis naik-turun halus di tengah Dynamic Island saat jeda lirik atau lagu instrumental.
+- **Gesture interaktif**: kaget (-5px hop) saat notifikasi/meeting masuk, geli/tickle saat kursor digosok bolak-balik di notch tertutup, pusing spiral saat kursor digoyang cepat, dan kedipan mandiri.
+- **Aksesibilitas**: Mendukung `@media (prefers-reduced-motion)` untuk menghormati preferensi pengurangan animasi pengguna.
+- **Ikon resmi "The Alive Notch"**: vector master SVG dan paket ikon multi-resolusi Windows.
 
 ---
 

@@ -47,7 +47,7 @@ A small black island at the top of your screen that shows what's happening (musi
 
 🖥️ **More than one screen?** Keep the notch on the main screen, the second one, or let it follow your cursor from screen to screen.
 
-👀 **Eyes and feel.** The mascot's eyes can wake up only when you're idle or follow your cursor all the time; pick how bouncy the notch feels, and optionally let its glow follow your Windows accent color.
+👀 **Eyes with character.** Five eye styles (Classic, Anime, Pixel, Cat, Cartoon), winks, and little reactions to alerts. The eyes can wake up only when you're idle or follow your cursor all the time; pick how bouncy the notch feels, and optionally let its glow follow your Windows accent color.
 
 🌐 **English or Indonesian**, switchable in Settings. Clock follows your Windows 12/24-hour setting.
 
@@ -128,7 +128,7 @@ Anything that shows up in Windows' media controls (the box above the volume slid
 
 <details><summary>My laptop has a thick top bezel / I don't like the eyes</summary>
 
-Right-click the tray icon: **Notch minimal** turns the idle notch into a thin black line, and **Mata (maskot)** turns the eyes off. Things like music, alerts and hover still work.
+Right-click the tray icon: **Notch minimal** turns the idle notch into a thin black line, and **Mata (maskot)** turns the eyes off. You can also customize Notchy's look in Settings with 5 different eye styles (Classic, Anime ✨, Pixel 👾, Cat 🐱, Cartoon 👀). Things like music, alerts and hover still work.
 </details>
 
 <details><summary>How do I quit, or stop it starting with Windows?</summary>
@@ -175,7 +175,7 @@ Design notes and every decision behind the app are in [`notchy.md`](notchy.md) (
 <details>
 <summary>🇮🇩 Bahasa Indonesia</summary>
 
-**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), timer fokus, pengingat minum, to-do, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, kecepatan internet, dan status sistem. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, dan notch bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
+**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), timer fokus, pengingat minum, to-do, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, kecepatan internet, dan status sistem. Mata maskot punya 5 gaya (Classic, Anime, Pixel, Cat, Cartoon) yang bisa melirik kursor, berkedip, dan berekspresi. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, dan notch bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
 
 Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
 
