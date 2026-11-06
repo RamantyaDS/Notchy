@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import type { Task, Todo } from "./productivity.svelte";
-  import { t } from "./i18n";
+  import { dayKey, type Task, type Todo } from "./productivity.svelte";
+  import { getLocale, t } from "./i18n";
 
   // `onTyping` asks Rust for keyboard focus (the notch normally never takes it).
   let { todo, onTyping }: { todo: Todo; onTyping: (typing: boolean) => void } = $props();
@@ -11,6 +11,18 @@
   let text = $state("");
   let time = $state("");
   let input = $state<HTMLInputElement>();
+
+  // Week strip: today and the six days after it. Picking a day lists its tasks,
+  // and new tasks go to that day.
+  const today = dayKey();
+  let day = $state(today);
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return { key: dayKey(d), num: d.getDate(), name: d.toLocaleDateString(getLocale() === "id" ? "id-ID" : "en-US", { weekday: "narrow" }) };
+  });
+  const tasks = $derived(todo.forDay(day));
+  const busy = $derived(new Set(week.filter((w) => w.key !== day && todo.forDay(w.key).some((x) => !x.done)).map((w) => w.key)));
 
   async function edit(task?: Task) {
     editing = task?.id ?? 0;
@@ -23,7 +35,7 @@
   }
 
   function finish(keep: boolean) {
-    if (keep && editing === 0) todo.add(text, time);
+    if (keep && editing === 0) todo.add(text, time, day);
     else if (keep && editing) todo.update(editing, text, time);
     editing = null;
     onTyping(false);
@@ -44,14 +56,21 @@
 <!-- Left: how the day is going, and the add button. Right: the tasks. -->
 <div class="page">
   <div class="side">
-    <div class="count"><b>{todo.doneToday()}</b>/{todo.tasks.length}</div>
-    <div class="caption">{t("todo.doneToday")}</div>
+    <div class="count"><b>{tasks.filter((x) => x.done).length}</b>/{tasks.length}</div>
+    <div class="caption">{day === today ? t("todo.doneToday") : t("todo.doneThatDay")}</div>
     {#if editing === null}
       <button class="add" onclick={() => edit()}>{t("todo.add")}</button>
     {/if}
   </div>
 
   <div class="list">
+  <div class="week" role="tablist">
+    {#each week as w (w.key)}
+      <button role="tab" aria-selected={w.key === day} class:on={w.key === day} class:busy={busy.has(w.key)} onclick={() => (day = w.key)}>
+        <small>{w.name}</small>{w.num}
+      </button>
+    {/each}
+  </div>
   {#if editing !== null}
     <div class="form" onfocusout={blur}>
       <input bind:this={input} bind:value={text} onkeydown={keys} placeholder={t("todo.placeholder")} class="text" />
@@ -61,7 +80,7 @@
   {/if}
 
   <ul class="scroll">
-    {#each todo.tasks.filter((t) => t.id !== editing) as task (task.id)}
+    {#each tasks.filter((t) => t.id !== editing) as task (task.id)}
       <li class:done={task.done}>
         <button class="check" onclick={() => todo.toggle(task.id)} aria-label={task.done ? t("todo.markUndone") : t("todo.markDone")}>
           {#if task.done}✓{/if}
@@ -137,6 +156,51 @@
   .add:hover,
   .form button:hover {
     background: rgba(255, 255, 255, 0.22);
+  }
+  .week {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 5px;
+  }
+  .week button {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 3px;
+    padding: 2px 0;
+    border-radius: 7px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .week small {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.4);
+  }
+  .week button:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .week button.on {
+    background: #fff;
+    color: #000;
+    font-weight: 600;
+  }
+  .week button.on small {
+    color: rgba(0, 0, 0, 0.5);
+  }
+  /* A dot under days that still have open tasks. */
+  .week button.busy::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    height: 3px;
+    margin-left: -1.5px;
+    border-radius: 50%;
+    background: #fdba74;
   }
   .form {
     display: flex;

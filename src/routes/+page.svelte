@@ -15,10 +15,11 @@
   import ShortcutsPage, { type Shortcut } from "$lib/ShortcutsPage.svelte";
   import StatusBar from "$lib/StatusBar.svelte";
   import TimerPage from "$lib/TimerPage.svelte";
+  import TodayPage from "$lib/TodayPage.svelte";
   import TodoPage from "$lib/TodoPage.svelte";
   import WaterPage from "$lib/WaterPage.svelte";
   import { arrange, islandWidth, type Activity, type Call, type Download } from "$lib/island";
-  import { positionAt, type NowPlaying } from "$lib/media";
+  import { nextSource, positionAt, type NowPlaying } from "$lib/media";
   import { cleanTrack, currentLine, findLyrics, type Lyrics } from "$lib/lyrics";
   import { Pomodoro, Shelf, Todo, Water, type Settings } from "$lib/productivity.svelte";
   import { fetchWeather, type Weather } from "$lib/weather";
@@ -63,6 +64,7 @@
     lyrics: { w: 520, h: 154, r: 32, e: 22 },
     pomodoro: { w: 420, h: 154, r: 32, e: 22 },
     water: { w: 420, h: 154, r: 32, e: 22 },
+    today: { w: 420, h: 154, r: 32, e: 22 },
     todo: { w: 420, h: 154, r: 32, e: 22 },
     shelf: { w: 420, h: 154, r: 32, e: 22 },
     clipboard: { w: 420, h: 154, r: 32, e: 22 },
@@ -71,6 +73,7 @@
   };
 
   let musicEnabled = $state(true);
+  let todayEnabled = $state(true);
   let pomodoroEnabled = $state(true);
   let waterEnabled = $state(true);
   let todoEnabled = $state(true);
@@ -81,6 +84,7 @@
   const pages = $derived(
     filterPages(ALL_PAGES, {
       musicEnabled,
+      todayEnabled,
       pomodoroEnabled,
       waterEnabled,
       todoEnabled,
@@ -111,6 +115,9 @@
   let tickleSwitches = 0;
   let lastTickleTime = 0;
   let minimalNotch = $state(false);
+  let floatingNotch = $state(false);
+  /** Thin ring in the closed notch: "off", "battery" or "water". */
+  let statusRing = $state("off");
   let look = $state<[number, number, number]>([0, 0, 0]);
   let hovered = $state(false);
   let page = $state(0);
@@ -310,14 +317,27 @@
     return () => clearTimeout(id);
   });
 
+  // Percent shown by the status ring in the resting notch, or null for none.
+  const ringValue = $derived(
+    statusRing === "battery" && power.battery
+      ? power.percent
+      : statusRing === "water" && waterEnabled
+        ? Math.min(100, Math.round((water.today() / (water.settings?.goalMl || 2000)) * 100))
+        : null,
+  );
+  const ringed = $derived(view === "rest" && ringValue !== null);
+  const floating = $derived(floatingNotch && view !== "tucked");
+  const FLOAT_GAP = 8;
+
   const islandDots = $derived((inUse.camera.length > 0 ? 10 : 0) + (inUse.mic.length > 0 && !call ? 10 : 0));
-  const size = $derived(
+  const baseSize = $derived(
     view === "island" && island.main
       ? { ...SIZES.island, w: islandWidth(island.main, island.side) + islandDots }
       : view === "rest" && (weather || (mascot && mascotMode === "always"))
         ? { ...SIZES.rest, w: weather && mascot && mascotMode === "always" ? 184 : 170 }
         : SIZES[view as keyof typeof SIZES] ?? SIZES.rest,
   );
+  const size = $derived(ringed ? { ...baseSize, w: baseSize.w + 22 } : baseSize);
   const closedView = $derived(view === "rest" || view === "island" || view === "charging");
   const withStatus = $derived(paged && !mirror && view !== "peek" && view !== "clock");
 
@@ -333,7 +353,7 @@
   });
 
   $effect(() => {
-    invoke("set_notch_size", { w: size.w, h: view === "minimal" ? 10 : size.h });
+    invoke("set_notch_size", { w: size.w, h: view === "minimal" ? 10 : size.h, top: floating ? FLOAT_GAP : 0 });
   });
 
   $effect(() => {
@@ -473,6 +493,9 @@
     musicMascot?: boolean;
     minimalNotch: boolean;
     musicEnabled?: boolean;
+    todayEnabled?: boolean;
+    floatingNotch?: boolean;
+    statusRing?: string;
     pomodoroEnabled?: boolean;
     waterEnabled?: boolean;
     todoEnabled?: boolean;
@@ -561,9 +584,12 @@
       }
       wake();
       minimalNotch = s.minimalNotch === true;
+      floatingNotch = s.floatingNotch === true;
+      statusRing = s.statusRing ?? "off";
       shortcuts = s.shortcuts ?? [];
       const current = pages[page];
       musicEnabled = s.musicEnabled !== false;
+      todayEnabled = s.todayEnabled !== false;
       pomodoroEnabled = s.pomodoroEnabled !== false;
       waterEnabled = s.waterEnabled !== false;
       todoEnabled = s.todoEnabled !== false;
@@ -588,6 +614,8 @@
 
     invoke<string>("get_accent_color").then((c) => (accentColor = c)).catch(() => {});
     invoke<AllSettings>("get_settings").then(applySettings);
+    // Windows only reports power changes, so read the current state once.
+    invoke<Power>("power_state").then((p) => (power = p)).catch(() => {});
 
     let lastLx = 0;
     let dirChanges = 0;
@@ -814,6 +842,23 @@
   );
 </script>
 
+{#snippet statusRingSvg(value: number, inline = false)}
+  <svg class="status-ring" class:inline viewBox="0 0 20 20" aria-label="{value}%">
+    <title>{statusRing === "battery" ? `${value}%` : `💧 ${value}%`}</title>
+    <circle cx="10" cy="10" r="7.5" />
+    <circle
+      cx="10"
+      cy="10"
+      r="7.5"
+      class="fill"
+      class:water={statusRing === "water"}
+      class:low={statusRing === "battery" && value <= 20}
+      pathLength="100"
+      stroke-dasharray="{value} 100"
+    />
+  </svg>
+{/snippet}
+
 <div
   class="notch"
   role="group"
@@ -821,6 +866,8 @@
   class:open={paged}
   class:tucked={view === "tucked"}
   class:minimal={view === "minimal"}
+  class:floating
+  class:ringed
   class:greet={greeting && view === "rest"}
   class:charging
   class:tinted
@@ -854,6 +901,7 @@
   {/if}
 
   <div class="layer rest" class:on={view === "rest"}>
+    {#if ringValue !== null}{@render statusRingSvg(ringValue)}{/if}
     <RestEyes
       {weather}
       {greeting}
@@ -937,6 +985,7 @@
     {/if}
 
     <span class="charge-time">{time}</span>
+    {#if statusRing === "water" && ringValue !== null}{@render statusRingSvg(ringValue, true)}{/if}
   </div>
 
   <div class="layer clock" class:on={view === "clock"}>
@@ -1029,6 +1078,7 @@
         {lyrics}
         status={lyricsStatus}
         onLyrics={() => (lyricsOn = !lyricsOn)}
+        onSource={nextSource}
       />
     </div>
   {/if}
@@ -1040,7 +1090,9 @@
         in:fly={{ x: pageDirection * 48, duration: 220, delay: 50, easing: cubicOut }}
         out:fly={{ x: -pageDirection * 48, duration: 120, easing: cubicOut }}
       >
-        {#if pages[page] === "pomodoro"}
+        {#if pages[page] === "today"}
+          <TodayPage {todo} {water} {weather} {nextEvent} {clockOf} waterOn={waterEnabled} />
+        {:else if pages[page] === "pomodoro"}
           <TimerPage {pomo} now={nowMs} />
         {:else if pages[page] === "water"}
           <WaterPage {water} />
@@ -1186,6 +1238,52 @@
   .notch::after {
     left: calc(100% - 1px);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 101 100' preserveAspectRatio='none'%3E%3Cpath d='M101 0 A100 100 0 0 0 1 100 L0 100 L0 0 Z' fill='%23000'/%3E%3C/svg%3E");
+  }
+
+  /* Floating style: a pill a little below the top edge, no ears. */
+  .notch.floating {
+    top: 8px;
+    border-radius: var(--r);
+  }
+  .notch.floating::before,
+  .notch.floating::after {
+    display: none;
+  }
+  .notch.floating.minimal {
+    border-radius: 3px;
+  }
+
+  .status-ring {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+    transform: rotate(-90deg);
+  }
+  /* Water ring in the charging view, beside the battery ring. */
+  .status-ring.inline {
+    left: 40px;
+  }
+  .status-ring circle {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.16);
+    stroke-width: 2.6;
+  }
+  .status-ring .fill {
+    stroke: #34d399;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.6s ease;
+  }
+  .status-ring .fill.low {
+    stroke: #f87171;
+  }
+  .status-ring .fill.water {
+    stroke: #38bdf8;
+  }
+  .ringed :global(.weather) {
+    left: 33px;
   }
 
   .ambient {

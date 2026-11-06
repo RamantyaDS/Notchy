@@ -47,6 +47,10 @@ pub struct Settings {
     pub music_mascot: bool,
     /// A closed, idle notch is just a thin black line (for thick top bezels).
     pub minimal_notch: bool,
+    /// The notch floats a little below the top edge as a rounded pill.
+    pub floating_notch: bool,
+    /// Thin ring in the closed notch: "off", "battery" or "water".
+    pub status_ring: String,
     /// Show new Windows notifications in the notch.
     pub mirror_notifications: bool,
     /// Secret ICS address of a calendar (Google/Outlook), or empty.
@@ -67,6 +71,7 @@ pub struct Settings {
     pub shelf_enabled: bool,
     pub clipboard_enabled: bool,
     pub shortcuts_enabled: bool,
+    pub today_enabled: bool,
     /// Network speed indicators on/off and thresholds (in KB/s)
     pub net_speed_island: bool,
     pub net_speed_status: bool,
@@ -144,6 +149,8 @@ impl Default for Settings {
             mascot_theme: "classic".into(),
             music_mascot: false,
             minimal_notch: false,
+            floating_notch: false,
+            status_ring: "off".into(),
             mirror_notifications: true,
             calendar_url: String::new(),
             small_lyrics: true,
@@ -156,6 +163,7 @@ impl Default for Settings {
             shelf_enabled: true,
             clipboard_enabled: true,
             shortcuts_enabled: true,
+            today_enabled: true,
             net_speed_island: false,
             net_speed_status: true,
             net_speed_threshold_down_kb: 500,
@@ -255,7 +263,8 @@ pub fn open_window(app: &AppHandle) {
     }
     let _ = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings".into()))
         .title("Notchy Settings")
-        .inner_size(480.0, 660.0)
+        .inner_size(780.0, 560.0)
+        .theme(Some(tauri::Theme::Dark))
         .resizable(false)
         .center()
         .build();
@@ -276,6 +285,9 @@ mod tests {
         assert_eq!(s.monitor_placement, "primary");
         assert_eq!(s.spring_physics, "spring");
         assert!(!s.windows_accent_glow);
+        assert!(!s.floating_notch);
+        assert_eq!(s.status_ring, "off");
+        assert!(s.today_enabled);
         assert_eq!(s.net_speed_island, false);
         assert!(s.net_speed_status);
         assert!(s.language == "en" || s.language == "id");

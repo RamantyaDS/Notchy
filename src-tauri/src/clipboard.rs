@@ -23,7 +23,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLIPBOARDUPDATE, WNDCLASSW,
 };
 
-const MAX_ITEMS: usize = 20;
+const MAX_ITEMS: usize = 50;
+/// Pictures can be megabytes each, so fewer of them are kept.
+const MAX_IMAGES: usize = 10;
 const MAX_TEXT: usize = 20_000;
 const MAX_IMAGE: usize = 32 * 1024 * 1024;
 
@@ -186,6 +188,11 @@ fn add(data: Data) {
     }
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     items.insert(0, Item { id, data, preview, size });
+    let mut images = 0;
+    items.retain(|i| {
+        images += matches!(i.data, Data::Image(_)) as usize;
+        !matches!(i.data, Data::Image(_)) || images <= MAX_IMAGES
+    });
     items.truncate(MAX_ITEMS);
     drop(items);
     notify();

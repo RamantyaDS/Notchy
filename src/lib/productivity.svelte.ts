@@ -26,6 +26,9 @@ const save = (name: string, value: unknown) => invoke("save_data", { name, value
 
 const MINUTE = 60_000;
 const startOfDay = (d = new Date()) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+/** Local date as "YYYY-MM-DD" (sorts like the date it names). */
+export const dayKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 // ---------------------------------------------------------------- pomodoro
 
@@ -195,11 +198,20 @@ export type Task = {
   doneAt?: number;
   /** Day (start-of-day ms) the reminder already fired. */
   remindedOn?: number;
+  /** "YYYY-MM-DD" the task is for; missing on older tasks, which count as today. */
+  date?: string;
 };
+
+/** Whether a task shows on `day`. Unfinished tasks from earlier days carry over to today. */
+export function onDay(task: Task, day: string, today = dayKey()): boolean {
+  const date = task.date ?? today;
+  return day === today ? date === today || (date < today && !task.done) : date === day;
+}
 
 export class Todo {
   tasks = $state<Task[]>([]);
   #timers: ReturnType<typeof setTimeout>[] = [];
+  #midnight: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private notify: Notify) {}
 
@@ -211,12 +223,17 @@ export class Todo {
   }
 
   doneToday() {
-    return this.tasks.filter((t) => t.done).length;
+    return this.forDay(dayKey()).filter((t) => t.done).length;
   }
 
-  add(text: string, time: string) {
+  forDay(day: string) {
+    const today = dayKey();
+    return this.tasks.filter((t) => onDay(t, day, today));
+  }
+
+  add(text: string, time: string, date = dayKey()) {
     if (!text.trim()) return;
-    this.tasks = [...this.tasks, { id: Date.now(), text: text.trim(), time, done: false }];
+    this.tasks = [...this.tasks, { id: Date.now(), text: text.trim(), time, done: false, date }];
     this.#commit();
   }
 
@@ -240,12 +257,15 @@ export class Todo {
     this.#schedule();
   }
 
-  /** One timer per open task with a time later today. */
+  /** One timer per open task with a time later today, and a fresh plan at midnight. */
   #schedule() {
     this.#timers.forEach(clearTimeout);
+    clearTimeout(this.#midnight);
     const today = startOfDay();
+    const key = dayKey();
+    this.#midnight = setTimeout(() => this.#schedule(), today + 24 * 60 * MINUTE + 1000 - Date.now());
     this.#timers = this.tasks
-      .filter((t) => !t.done && t.time && t.remindedOn !== today)
+      .filter((t) => !t.done && t.time && t.remindedOn !== today && (t.date ?? key) === key)
       .map((t) => {
         const [h, m] = t.time.split(":").map(Number);
         const at = today + (h * 60 + m) * MINUTE;

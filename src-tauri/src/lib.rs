@@ -78,7 +78,8 @@ static PINNED: AtomicBool = AtomicBool::new(false);
 static OUTSIDE_TX: OnceLock<mpsc::Sender<()>> = OnceLock::new();
 static PREV_FOREGROUND: AtomicIsize = AtomicIsize::new(0);
 /// Notch size in logical px, as reported by the frontend.
-static HIT_SIZE: Mutex<(f64, f64)> = Mutex::new((0.0, 0.0));
+/// Notch width, height and gap above it (floating style), in logical pixels.
+static HIT_SIZE: Mutex<(f64, f64, f64)> = Mutex::new((0.0, 0.0, 0.0));
 /// The area the notch occupies in physical screen px (everything else is
 /// click-through), and whether the cursor is in it. Atomics, so the mouse hook
 /// never waits on a lock (Windows drops hooks that answer too slowly).
@@ -118,8 +119,8 @@ fn hwnd(window: &WebviewWindow) -> HWND {
 /// The frontend reports the notch size whenever it changes; the notch is
 /// always centered at the top of the window.
 #[tauri::command]
-fn set_notch_size(w: f64, h: f64) {
-    *HIT_SIZE.lock().unwrap() = (w, h);
+fn set_notch_size(w: f64, h: f64, top: Option<f64>) {
+    *HIT_SIZE.lock().unwrap() = (w, h, top.unwrap_or(0.0));
     update_hit_rect();
 }
 
@@ -143,7 +144,9 @@ fn update_hit_rect() {
     let (l, t, r, b) = match geometry {
         Some((win_x, win_y, win_w, scale)) => {
             let w = (notch.0 * scale) as i32;
-            let h = (notch.1 * scale) as i32;
+            // The gap above a floating notch counts as the notch, so pushing
+            // the cursor against the top edge still opens it.
+            let h = ((notch.1 + notch.2) * scale) as i32;
             let left = win_x + (win_w - w) / 2;
             (left, win_y, left + w, win_y + h)
         }
@@ -815,7 +818,12 @@ pub fn run() {
     }
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|_, _, _| {}))
+        .plugin(tauri_plugin_single_instance::init(|app, args, _| {
+            // `notchy.exe --settings` while Notchy runs opens its Settings window.
+            if args.iter().any(|a| a == "--settings") {
+                settings::open_window(app);
+            }
+        }))
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_drag::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -823,6 +831,7 @@ pub fn run() {
             set_notch_size,
             is_tucked,
             media::media_now,
+            media::media_next_source,
             media::media_toggle,
             media::media_next,
             media::media_prev,

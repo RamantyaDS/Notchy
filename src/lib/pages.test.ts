@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ALL_PAGES, filterPages, PAGE_LABELS, resolvePageDirection, type PageToggles } from "./pages";
 
 describe("pages configuration and labels", () => {
-  it("defines all 7 pages with appropriate Indonesian labels", () => {
-    expect(ALL_PAGES).toEqual(["now", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"]);
+  it("defines all 8 pages with appropriate Indonesian labels", () => {
+    expect(ALL_PAGES).toEqual(["now", "today", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"]);
     expect(PAGE_LABELS.now).toBe("Pemutar Musik");
+    expect(PAGE_LABELS.today).toBe("Hari Ini");
     expect(PAGE_LABELS.pomodoro).toBe("Fokus Pomodoro");
     expect(PAGE_LABELS.water).toBe("Minum Air");
     expect(PAGE_LABELS.todo).toBe("Catatan To-Do");
@@ -17,6 +18,7 @@ describe("pages configuration and labels", () => {
     expect(filterPages(ALL_PAGES, {})).toEqual(ALL_PAGES);
     const allTrue: PageToggles = {
       musicEnabled: true,
+      todayEnabled: true,
       pomodoroEnabled: true,
       waterEnabled: true,
       todoEnabled: true,
@@ -30,7 +32,7 @@ describe("pages configuration and labels", () => {
   it("filters out disabled pages accurately", () => {
     const withoutMusic = filterPages(ALL_PAGES, { musicEnabled: false });
     expect(withoutMusic).not.toContain("now");
-    expect(withoutMusic).toHaveLength(6);
+    expect(withoutMusic).toHaveLength(7);
 
     const onlyTodoAndPomodoro = filterPages(ALL_PAGES, {
       musicEnabled: false,
@@ -38,6 +40,7 @@ describe("pages configuration and labels", () => {
       shelfEnabled: false,
       clipboardEnabled: false,
       shortcutsEnabled: false,
+      todayEnabled: false,
       pomodoroEnabled: true,
       todoEnabled: true,
     });
@@ -49,12 +52,13 @@ describe("pages configuration and labels", () => {
       pomodoroEnabled: false,
       todoEnabled: false,
     });
-    expect(res).toEqual(["now", "water", "shelf", "clipboard", "shortcuts"]);
+    expect(res).toEqual(["now", "today", "water", "shelf", "clipboard", "shortcuts"]);
   });
 
   it("safety fallback: returns at least one page ('now') if all toggles are set to false", () => {
     const allFalse: PageToggles = {
       musicEnabled: false,
+      todayEnabled: false,
       pomodoroEnabled: false,
       waterEnabled: false,
       todoEnabled: false,

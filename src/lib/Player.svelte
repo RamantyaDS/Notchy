@@ -1,5 +1,6 @@
 <script lang="ts">
   import Bars from "./Bars.svelte";
+  import { t } from "./i18n";
   import { cleanTrack, currentLine, type Lyrics } from "./lyrics";
   import { formatTime, next, positionAt, prev, seek, toggle, type NowPlaying } from "./media";
 
@@ -12,6 +13,7 @@
     onLyrics,
     lyrics,
     status,
+    onSource,
   }: {
     media: NowPlaying;
     now: number;
@@ -20,7 +22,14 @@
     onLyrics: () => void;
     lyrics: Lyrics | null;
     status: "loading" | "done" | "offline";
+    onSource?: () => void;
   } = $props();
+
+  // With more than one player around, the cover switches between them.
+  const many = $derived((media.sources ?? 1) > 1);
+  const app = $derived(
+    media.source.split("!")[0].split("_")[0].replace(/\.exe$/i, "").split(".").pop() || media.source,
+  );
 
   const track = $derived(cleanTrack(media.title, media.artist, media.source));
   const pos = $derived(positionAt(media, now));
@@ -86,9 +95,17 @@
 <div class="player" class:split={withLyrics}>
   <div class="main">
     <div class="top">
-      <div class="art" style:background-image={media.art ? `url(${media.art})` : null}>
+      <button
+        class="art"
+        class:many
+        disabled={!many}
+        onclick={() => onSource?.()}
+        title={many ? `${app} · ${t("main.otherPlayer")}` : app}
+        style:background-image={media.art ? `url(${media.art})` : null}
+      >
         {#if !media.art}♪{/if}
-      </div>
+        {#if many}<span class="source">{app}</span>{/if}
+      </button>
       <div
         class="meta"
         role="presentation"
@@ -196,6 +213,11 @@
     gap: 14px;
   }
   .art {
+    position: relative;
+    padding: 0;
+    border: 0;
+    font: inherit;
+    overflow: hidden;
     flex: none;
     width: 54px;
     height: 54px;
@@ -205,6 +227,25 @@
     place-items: center;
     color: rgba(255, 255, 255, 0.4);
     box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.9);
+  }
+  .art.many {
+    cursor: pointer;
+  }
+  .art.many:hover {
+    filter: brightness(1.12);
+  }
+  .source {
+    position: absolute;
+    inset: auto 0 0;
+    padding: 1px 3px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 8.5px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .split .art {
     width: 46px;

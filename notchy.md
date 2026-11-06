@@ -262,6 +262,19 @@ Di-merge sebagai a1950a3, setelah dua putaran review. Build lokal kode PR ditola
 - **Aksesibilitas**: Mendukung `@media (prefers-reduced-motion)` untuk menghormati preferensi pengurangan animasi pengguna.
 - **Ikon resmi "The Alive Notch"**: vector master SVG dan paket ikon multi-resolusi Windows.
 
+### M. Settings sidebar dan fitur tampilan, 6 Nov 2026
+- **Settings** jadi gaya sidebar (seperti System Settings macOS): 12 menu dengan ikon kotak berwarna, isi dalam kartu `.group` berisi `.row`, sakelar biru, tombol − / + untuk angka, pencarian di atas sidebar. Jendela 780×560, judul gelap. Teks baru memakai key `nav.*` dan `s.*`; key `settings.*`/`tabs.*` yang tidak terpakai lagi dihapus.
+- **Gaya melayang** (`floatingNotch`, default mati): notch turun 8 px jadi pil tanpa "telinga". Celah di atasnya ikut dihitung sebagai area notch (`set_notch_size` dapat parameter `top`), jadi mendorong kursor ke tepi atas tetap membuka notch. Saat tucked, notch kembali menempel.
+- **Cincin status** (`statusRing`: off/battery/water, default off): cincin 16 px di kiri notch saat diam. Cincin air juga muncul di tampilan mengecas (cincin baterai sudah ada di sana).
+- **Halaman Hari ini** (`todayEnabled`, default nyala): meeting berikutnya, cuaca, tugas hari ini (maks. 3, bisa dicentang), dan progres air.
+- **Strip minggu di to-do**: hari ini + 6 hari ke depan, titik di hari yang masih punya tugas. Tugas dapat field `date`; tugas lama tanpa tanggal dianggap hari ini, tugas yang belum selesai dari hari sebelumnya ikut muncul hari ini. Pengingat hanya untuk tugas hari ini, dijadwal ulang tiap tengah malam.
+- **Clipboard** 50 item, tapi gambar maksimal 10 (gambar bisa megabyte per item).
+- **Klik cover untuk ganti pemutar**: `media_next_source` memilih sesi berikutnya dari `GetSessions()`; pilihan ini dipakai sampai Windows sendiri mengganti sesi aktif. Label nama aplikasi muncul di cover kalau ada lebih dari satu pemutar.
+- **`notchy.exe --settings`** saat Notchy jalan membuka Settings (lewat single-instance).
+- **Bug lama ikut diperbaiki:** status daya tidak dibaca saat start, jadi tampilan mengecas baru muncul setelah daya berubah. Sekarang `power_state` dipanggil sekali saat halaman dimuat.
+- **Kaca buram belum dikerjakan:** efek buram di WebView hanya memburamkan isi halaman, bukan desktop. Acrylic/Mica Windows berlaku untuk seluruh kotak jendela 600×200 yang transparan, bukan bentuk notch, dan di Windows 10 terkenal patah-patah.
+- **Diuji 6 Nov 2026:** CPU saat diam ~1,6% (45 detik). Gaya melayang, cincin baterai di tampilan mengecas, dan Settings dicek lewat screenshot. Halaman Hari ini, strip minggu, dan klik cover belum dicoba langsung.
+
 ---
 
 ## 6. Urutan pengerjaan

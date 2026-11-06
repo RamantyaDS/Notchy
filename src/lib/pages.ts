@@ -1,8 +1,9 @@
-export const ALL_PAGES = ["now", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"] as const;
+export const ALL_PAGES = ["now", "today", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"] as const;
 export type PageName = (typeof ALL_PAGES)[number];
 
 export type PageToggles = {
   musicEnabled?: boolean;
+  todayEnabled?: boolean;
   pomodoroEnabled?: boolean;
   waterEnabled?: boolean;
   todoEnabled?: boolean;
@@ -13,6 +14,7 @@ export type PageToggles = {
 
 export const PAGE_LABELS: Record<PageName, string> = {
   now: "Pemutar Musik",
+  today: "Hari Ini",
   pomodoro: "Fokus Pomodoro",
   water: "Minum Air",
   todo: "Catatan To-Do",
@@ -26,6 +28,7 @@ import { t } from "./i18n";
 export function getPageLabel(page: PageName): string {
   const map: Record<PageName, string> = {
     now: "pages.music",
+    today: "pages.today",
     pomodoro: "pages.pomodoro",
     water: "pages.water",
     todo: "pages.todo",
@@ -45,6 +48,8 @@ export function filterPages(allPages: readonly PageName[], toggles: PageToggles)
     switch (p) {
       case "now":
         return toggles.musicEnabled !== false;
+      case "today":
+        return toggles.todayEnabled !== false;
       case "pomodoro":
         return toggles.pomodoroEnabled !== false;
       case "water":

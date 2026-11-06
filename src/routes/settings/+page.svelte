@@ -6,6 +6,7 @@
   import { t, setLocale, getLocale, subscribeLocale } from "$lib/i18n";
 
   type City = { name: string; latitude: number; longitude: number };
+  type Shortcut = { name: string; action: string; target: string };
   type Settings = {
     language?: string;
     weatherCity: City | null;
@@ -23,6 +24,8 @@
     mascotTheme?: string;
     musicMascot?: boolean;
     minimalNotch: boolean;
+    floatingNotch?: boolean;
+    statusRing?: string;
     mirrorNotifications: boolean;
     calendarUrl: string;
     smallLyrics: boolean;
@@ -30,6 +33,7 @@
     capsLockPeek: boolean;
     hideVolumeOsd?: boolean;
     musicEnabled: boolean;
+    todayEnabled?: boolean;
     pomodoroEnabled: boolean;
     todoEnabled: boolean;
     shelfEnabled: boolean;
@@ -45,17 +49,59 @@
     springPhysics: string;
     windowsAccentGlow: boolean;
   };
-
-  type Shortcut = { name: string; action: string; target: string };
+  type Key = keyof Settings;
 
   let currentLang = $state(getLocale());
   $effect(() => subscribeLocale((l) => (currentLang = l)));
-
-  // Localized resolver reactive to language changes
   const tr = (key: string, params?: Record<string, string | number>) => {
     void currentLang;
     return t(key, params);
   };
+
+  // Sidebar sections. `words` feed the search box in both languages.
+  type SectionId =
+    | "general"
+    | "appearance"
+    | "eyes"
+    | "pages"
+    | "music"
+    | "focus"
+    | "water"
+    | "calendar"
+    | "shortcuts"
+    | "notifications"
+    | "system"
+    | "weather";
+  const SECTIONS: { id: SectionId; color: string; icon: string; words: string }[] = [
+    { id: "general", color: "#8e8e93", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z", words: "language bahasa monitor layar screen cursor kursor animation animasi spring" },
+    { id: "appearance", color: "#5e5ce6", icon: "M3 7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4zM8 3v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V3", words: "floating melayang minimal ring cincin battery baterai accent aksen glow warna color" },
+    { id: "eyes", color: "#1c1c1e", icon: "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", words: "mascot maskot eyes mata cursor kursor idle style gaya theme tema anime pixel cat kucing cartoon kartun" },
+    { id: "pages", color: "#0a84ff", icon: "M4 5h16M4 12h16M4 19h10", words: "pages halaman today hari ini pomodoro water air todo shelf clipboard shortcuts" },
+    { id: "music", color: "#ff375f", icon: "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", words: "music musik lyrics lirik lrclib song lagu" },
+    { id: "focus", color: "#ff9f0a", icon: "M12 22a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 9v4l2.5 2.5M9 2h6", words: "pomodoro focus fokus break istirahat timer minutes menit" },
+    { id: "water", color: "#64d2ff", icon: "M12 2.7S5 10 5 14.5a7 7 0 0 0 14 0C19 10 12 2.7 12 2.7z", words: "water air minum glass gelas target reminder pengingat ml" },
+    { id: "calendar", color: "#ff453a", icon: "M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M8 2v4M16 2v4", words: "calendar kalender ics google outlook meeting rapat" },
+    { id: "shortcuts", color: "#ffd60a", icon: "M13 2 4 14h7l-1 8 9-12h-7z", words: "shortcuts pintasan launcher app link" },
+    { id: "notifications", color: "#ff453a", icon: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0", words: "notifications notifikasi do not disturb dnd whatsapp teams" },
+    { id: "system", color: "#636366", icon: "M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 9h.01M11 9h.01M15 9h.01M7 13h10", words: "keyboard caps lock volume overlay osd bluetooth network jaringan speed kecepatan download upload" },
+    { id: "weather", color: "#30b0c7", icon: "M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 1 0 6 16.4M6 19h11.5", words: "weather cuaca city kota location lokasi" },
+  ];
+
+  let section = $state<SectionId>("general");
+  let searchQuery = $state("");
+  let settings = $state<Settings | null>(null);
+  let saved = $state(false);
+  let savedTimer: ReturnType<typeof setTimeout> | undefined;
+
+  let cityQuery = $state("");
+  let cityResults = $state<Place[]>([]);
+  let searchingCity = $state(false);
+
+  const query = $derived(searchQuery.trim().toLowerCase());
+  const visible = $derived(
+    query ? SECTIONS.filter((s) => `${s.words} ${tr(`nav.${s.id}`)}`.toLowerCase().includes(query)).map((s) => s.id) : [section],
+  );
+  const shows = (id: SectionId) => visible.includes(id);
 
   const ACTION_ITEMS: [string, string][] = [
     ["lock", "actions.lock"],
@@ -66,78 +112,39 @@
     ["open", "actions.open"],
   ];
 
-  type TabKey = "display" | "system" | "productivity" | "media";
-
-  let activeTab = $state<TabKey>("display");
-  let searchQuery = $state("");
-  let settings = $state<Settings | null>(null);
-  let accentColor = $state("#38bdf8");
-  let saved = $state(false);
-
-  // Weather search state
-  let cityQuery = $state("");
-  let cityResults = $state<Place[]>([]);
-  let searchingCity = $state(false);
-
-  type PageToggleKey =
-    | "musicEnabled"
-    | "pomodoroEnabled"
-    | "waterEnabled"
-    | "todoEnabled"
-    | "shelfEnabled"
-    | "clipboardEnabled"
-    | "shortcutsEnabled";
-
-  const PAGE_ITEMS: [PageToggleKey, string, string][] = [
-    ["musicEnabled", "pageItems.music", "pageItems.musicDesc"],
-    ["pomodoroEnabled", "pageItems.pomodoro", "pageItems.pomodoroDesc"],
-    ["waterEnabled", "pageItems.water", "pageItems.waterDesc"],
-    ["todoEnabled", "pageItems.todo", "pageItems.todoDesc"],
-    ["shelfEnabled", "pageItems.shelf", "pageItems.shelfDesc"],
-    ["clipboardEnabled", "pageItems.clipboard", "pageItems.clipboardDesc"],
-    ["shortcutsEnabled", "pageItems.shortcuts", "pageItems.shortcutsDesc"],
+  type PageKey = "musicEnabled" | "todayEnabled" | "pomodoroEnabled" | "waterEnabled" | "todoEnabled" | "shelfEnabled" | "clipboardEnabled" | "shortcutsEnabled";
+  const PAGE_ITEMS: [PageKey, string][] = [
+    ["musicEnabled", "pageItems.music"],
+    ["todayEnabled", "pageItems.today"],
+    ["pomodoroEnabled", "pageItems.pomodoro"],
+    ["waterEnabled", "pageItems.water"],
+    ["todoEnabled", "pageItems.todo"],
+    ["shelfEnabled", "pageItems.shelf"],
+    ["clipboardEnabled", "pageItems.clipboard"],
+    ["shortcutsEnabled", "pageItems.shortcuts"],
   ];
-
-  const enabledPagesCount = $derived.by(() => {
-    const s = settings;
-    return s ? PAGE_ITEMS.filter(([key]) => s[key] !== false).length : 7;
-  });
+  const enabledPages = $derived(settings ? PAGE_ITEMS.filter(([k]) => settings![k] !== false).length : PAGE_ITEMS.length);
 
   onMount(async () => {
     settings = await invoke<Settings>("get_settings");
-    if (settings?.language) {
-      setLocale(settings.language);
-    }
-    accentColor = await invoke<string>("get_accent_color").catch(() => "#38bdf8");
+    if (settings?.language) setLocale(settings.language);
   });
 
   async function save(patch: Partial<Settings> = {}) {
     if (!settings) return;
-    if (patch.language) {
-      setLocale(patch.language);
-    }
+    if (patch.language) setLocale(patch.language);
     settings = { ...settings, ...patch };
     await invoke("save_settings", { settings });
     saved = true;
-    setTimeout(() => (saved = false), 1800);
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(() => (saved = false), 1600);
   }
+
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
   function editShortcut(i: number, patch: Partial<Shortcut>) {
     if (!settings) return;
     save({ shortcuts: settings.shortcuts.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
-  }
-
-  async function searchCityHandler(e: SubmitEvent) {
-    e.preventDefault();
-    if (!cityQuery.trim()) return;
-    searchingCity = true;
-    cityResults = await searchCity(cityQuery.trim()).catch(() => []);
-    searchingCity = false;
-  }
-
-  function matches(text: string): boolean {
-    if (!searchQuery.trim()) return true;
-    return text.toLowerCase().includes(searchQuery.trim().toLowerCase());
   }
 
   function defaultShortcuts(): Shortcut[] {
@@ -149,837 +156,364 @@
       { name: tr("shortcuts.camera"), action: "camera", target: "" },
     ];
   }
+
+  async function searchCityHandler(e: SubmitEvent) {
+    e.preventDefault();
+    if (!cityQuery.trim()) return;
+    searchingCity = true;
+    cityResults = await searchCity(cityQuery.trim()).catch(() => []);
+    searchingCity = false;
+  }
 </script>
 
-<div class="settings-shell">
-  <!-- Sidebar / Header Banner -->
-  <header class="app-header">
-    <div class="brand">
-      <div class="logo-badge">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-          <path d="M7 10.5C7 9.67 7.67 9 8.5 9s1.5.67 1.5 1.5S9.33 12 8.5 12 7 11.33 7 10.5zm7 0c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5z" />
-        </svg>
-      </div>
-      <div>
-        <h1 class="app-title">{tr("settings.title")}</h1>
-        <span class="version-tag">{tr("settings.subtitle")}</span>
-      </div>
-    </div>
+{#snippet toggle(key: Key, on: boolean, disabled = false)}
+  <label class="switch">
+    <input type="checkbox" checked={on} {disabled} onchange={(e) => save({ [key]: e.currentTarget.checked })} />
+    <span></span>
+  </label>
+{/snippet}
 
-    <!-- Quick Search -->
-    <div class="search-box">
-      <svg class="search-icon" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-width="2" />
-        <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-      </svg>
-      <input
-        type="text"
-        bind:value={searchQuery}
-        placeholder={tr("settings.searchPlaceholder")}
-      />
-      {#if searchQuery}
-        <button class="clear-search" onclick={() => (searchQuery = "")}>✕</button>
-      {/if}
-    </div>
-  </header>
-
-  <!-- Tab Bar (Minimalist 4-Column Grid, No Overflow) -->
-  <div class="tabs-nav" role="tablist" aria-label={tr("settings.title")}>
-    <button
-      class="tab-btn"
-      class:active={activeTab === "display"}
-      onclick={() => (activeTab = "display")}
-      role="tab"
-      aria-selected={activeTab === "display"}
-    >
-      <span class="tab-icon">🖥️</span>
-      <span class="tab-text">{tr("tabs.display")}</span>
-    </button>
-    <button
-      class="tab-btn"
-      class:active={activeTab === "system"}
-      onclick={() => (activeTab = "system")}
-      role="tab"
-      aria-selected={activeTab === "system"}
-    >
-      <span class="tab-icon">⚙️</span>
-      <span class="tab-text">{tr("tabs.system")}</span>
-    </button>
-    <button
-      class="tab-btn"
-      class:active={activeTab === "productivity"}
-      onclick={() => (activeTab = "productivity")}
-      role="tab"
-      aria-selected={activeTab === "productivity"}
-    >
-      <span class="tab-icon">⏱️</span>
-      <span class="tab-text">{tr("tabs.focus")}</span>
-    </button>
-    <button
-      class="tab-btn"
-      class:active={activeTab === "media"}
-      onclick={() => (activeTab = "media")}
-      role="tab"
-      aria-selected={activeTab === "media"}
-    >
-      <span class="tab-icon">🎵</span>
-      <span class="tab-text">{tr("tabs.media")}</span>
-    </button>
+{#snippet stepper(key: Key, value: number, min: number, max: number, step: number, unit: string)}
+  <div class="stepper">
+    <button disabled={value <= min} onclick={() => save({ [key]: clamp(value - step, min, max) })} aria-label="−">−</button>
+    <span>{value}{unit ? ` ${unit}` : ""}</span>
+    <button disabled={value >= max} onclick={() => save({ [key]: clamp(value + step, min, max) })} aria-label="+">+</button>
   </div>
+{/snippet}
 
-  <!-- Main Content Area -->
-  <main class="settings-content">
+{#snippet row(title: string, desc: string)}
+  <div class="row-text">
+    <span>{title}</span>
+    {#if desc}<small>{desc}</small>{/if}
+  </div>
+{/snippet}
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+      <input type="text" bind:value={searchQuery} placeholder={tr("s.search")} />
+      {#if searchQuery}<button onclick={() => (searchQuery = "")} aria-label="✕">✕</button>{/if}
+    </div>
+    <nav>
+      {#each SECTIONS as s (s.id)}
+        <button class:on={!query && section === s.id} class:hit={query && shows(s.id)} onclick={() => ((section = s.id), (searchQuery = ""))}>
+          <i style:background={s.color}><svg viewBox="0 0 24 24"><path d={s.icon} /></svg></i>
+          {tr(`nav.${s.id}`)}
+        </button>
+      {/each}
+    </nav>
+  </aside>
+
+  <main class="content">
     {#if !settings}
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <p>{tr("settings.loading")}</p>
-      </div>
+      <p class="muted">{tr("settings.loading")}</p>
     {:else}
-      <!-- TAB 1: TAMPILAN & LAYAR / DISPLAY -->
-      {#if activeTab === "display" || searchQuery}
-        <div class="tab-panel" in:fade={{ duration: 180 }}>
-          {#if matches("Language Bahasa Inggris Indonesia English")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">🌐</div>
-                <div class="card-info">
-                  <h3>{tr("settings.language")}</h3>
-                  <p>{tr("settings.languageDesc")}</p>
-                </div>
-              </div>
-              <div class="control-row">
-                <select
-                  class="select-input"
-                  value={settings.language ?? "en"}
-                  onchange={(e) => {
-                    const lang = e.currentTarget.value;
-                    setLocale(lang);
-                    save({ language: lang });
-                  }}
-                >
-                  <option value="en">{tr("settings.langEn")}</option>
-                  <option value="id">{tr("settings.langId")}</option>
-                </select>
-              </div>
-            </section>
-          {/if}
+      {#if !visible.length}<p class="muted">{tr("s.noResults")}</p>{/if}
 
-          {#if matches("Layar Multi-Monitor Penempatan Posisi Display Primary Secondary Kursor Screen Cursor Placement")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">🖥️</div>
-                <div class="card-info">
-                  <h3>{tr("settings.monitorTitle")}</h3>
-                  <p>{tr("settings.monitorDesc")}</p>
-                </div>
-              </div>
-              <div class="control-row">
-                <select
-                  class="select-input"
-                  value={settings.monitorPlacement ?? "primary"}
-                  onchange={(e) => save({ monitorPlacement: e.currentTarget.value })}
-                >
-                  <option value="primary">{tr("settings.monitorPrimary")}</option>
-                  <option value="secondary">{tr("settings.monitorSecondary")}</option>
-                  <option value="follow-cursor">{tr("settings.monitorFollow")}</option>
-                </select>
-              </div>
-            </section>
-          {/if}
+      {#if shows("general")}
+        <h1>{tr("nav.general")}</h1>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.language"), "")}
+            <select value={settings.language ?? "en"} onchange={(e) => save({ language: e.currentTarget.value })}>
+              <option value="en">English</option>
+              <option value="id">Bahasa Indonesia</option>
+            </select>
+          </div>
+          <div class="row">
+            {@render row(tr("s.monitor"), tr("s.monitorDesc"))}
+            <select value={settings.monitorPlacement ?? "primary"} onchange={(e) => save({ monitorPlacement: e.currentTarget.value })}>
+              <option value="primary">{tr("s.monitorPrimary")}</option>
+              <option value="secondary">{tr("s.monitorSecondary")}</option>
+              <option value="follow-cursor">{tr("s.monitorFollow")}</option>
+            </select>
+          </div>
+          <div class="row">
+            {@render row(tr("s.spring"), tr("s.springDesc"))}
+            <select value={settings.springPhysics ?? "spring"} onchange={(e) => save({ springPhysics: e.currentTarget.value })}>
+              <option value="spring">{tr("s.springBouncy")}</option>
+              <option value="snappy">{tr("s.springSnappy")}</option>
+              <option value="smooth">{tr("s.springSmooth")}</option>
+              <option value="off">{tr("s.off")}</option>
+            </select>
+          </div>
+        </div>
+      {/if}
 
-          {#if matches("Animasi Spring Physics Pegas Kecepatan Transisi Organik Bouncy Animation Transition")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">🌀</div>
-                <div class="card-info">
-                  <h3>{tr("settings.springTitle")}</h3>
-                  <p>{tr("settings.springDesc")}</p>
-                </div>
-              </div>
-              <div class="control-row">
-                <select
-                  class="select-input"
-                  value={settings.springPhysics ?? "spring"}
-                  onchange={(e) => save({ springPhysics: e.currentTarget.value })}
-                >
-                  <option value="spring">{tr("settings.springOrganic")}</option>
-                  <option value="snappy">{tr("settings.springSnappy")}</option>
-                  <option value="smooth">{tr("settings.springSmooth")}</option>
-                  <option value="off">{tr("settings.springOff")}</option>
-                </select>
-              </div>
-            </section>
-          {/if}
+      {#if shows("appearance")}
+        <h1>{tr("nav.appearance")}</h1>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.floating"), tr("s.floatingDesc"))}
+            {@render toggle("floatingNotch", settings.floatingNotch === true)}
+          </div>
+          <div class="row">
+            {@render row(tr("s.minimal"), tr("s.minimalDesc"))}
+            {@render toggle("minimalNotch", settings.minimalNotch === true)}
+          </div>
+          <div class="row">
+            {@render row(tr("s.ring"), tr("s.ringDesc"))}
+            <select value={settings.statusRing ?? "off"} onchange={(e) => save({ statusRing: e.currentTarget.value })}>
+              <option value="off">{tr("s.off")}</option>
+              <option value="battery">{tr("s.ringBattery")}</option>
+              <option value="water">{tr("s.ringWater")}</option>
+            </select>
+          </div>
+        </div>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.accent"), tr("s.accentDesc"))}
+            {@render toggle("windowsAccentGlow", settings.windowsAccentGlow === true)}
+          </div>
+        </div>
+      {/if}
 
-          {#if matches("Sinkronisasi Warna Aksen Windows Dynamic Accent DWM Glow Border Theme")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">✨</div>
-                <div class="card-info">
-                  <h3>{tr("settings.accentTitle")}</h3>
-                  <p>{tr("settings.accentDesc")}</p>
-                </div>
-                <label class="switch" title="Toggle Windows Accent Sync">
-                  <input
-                    type="checkbox"
-                    checked={settings.windowsAccentGlow === true}
-                    onchange={(e) => save({ windowsAccentGlow: e.currentTarget.checked })}
-                  />
-                  <span class="slider"></span>
-                </label>
-              </div>
-
-              <div class="accent-status-box">
-                <div class="accent-preview">
-                  <span
-                    class="color-dot"
-                    style:background={settings.windowsAccentGlow ? accentColor : "rgba(255,255,255,0.3)"}
-                  ></span>
-                  <span class="accent-mode-text">
-                    {tr("settings.accentCurrentMode")}
-                    <strong>{settings.windowsAccentGlow ? tr("settings.accentDwmActive") : tr("settings.accentDefaultNeutral")}</strong>
-                    {#if settings.windowsAccentGlow}
-                      <code class="color-hex">{accentColor}</code>
-                    {/if}
-                  </span>
-                </div>
-                <p class="accent-hint">
-                  {settings.windowsAccentGlow
-                    ? tr("settings.accentHintActive")
-                    : tr("settings.accentHintDefault")}
-                </p>
-              </div>
-            </section>
-          {/if}
-
-          {#if matches("Mascot Mata Ekspresif Minimal Notch Bezel Tipis Eyes Thin Character")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">👀</div>
-                <div class="card-info">
-                  <h3>{tr("settings.mascotStyleTitle")}</h3>
-                  <p>{tr("settings.mascotStyleDesc")}</p>
-                </div>
-              </div>
-
-              <div class="toggle-list">
-                <div class="toggle-item">
-                  <div class="toggle-text">
-                    <strong>{tr("settings.mascotTitle")}</strong>
-                    <small>{tr("settings.mascotDesc")}</small>
-                  </div>
-                  <label class="switch">
-                    <input
-                      type="checkbox"
-                      checked={settings.mascot !== false}
-                      onchange={(e) => save({ mascot: e.currentTarget.checked })}
-                    />
-                    <span class="slider"></span>
-                  </label>
-                </div>
-
-                {#if settings.mascot !== false}
-                  <div class="nested-control" transition:slide={{ duration: 160 }}>
-                    <label class="input-inline">
-                      <div class="toggle-text">
-                        <strong>{tr("settings.mascotModeTitle")}</strong>
-                        <small>{tr("settings.mascotModeDesc")}</small>
-                      </div>
-                      <select
-                        class="select-input"
-                        value={settings.mascotMode ?? "idle"}
-                        onchange={(e) => save({ mascotMode: e.currentTarget.value })}
-                      >
-                        <option value="idle">{tr("settings.mascotModeIdle")}</option>
-                        <option value="always">{tr("settings.mascotModeAlways")}</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <div class="nested-control" transition:slide={{ duration: 160 }}>
-                    <label class="input-inline">
-                      <div class="toggle-text">
-                        <strong>{tr("settings.mascotThemeTitle")}</strong>
-                        <small>{tr("settings.mascotThemeDesc")}</small>
-                      </div>
-                      <select
-                        class="select-input"
-                        value={settings.mascotTheme ?? "classic"}
-                        onchange={(e) => save({ mascotTheme: e.currentTarget.value })}
-                      >
-                        <option value="classic">{tr("settings.mascotThemeClassic")}</option>
-                        <option value="anime">{tr("settings.mascotThemeAnime")}</option>
-                        <option value="pixel">{tr("settings.mascotThemePixel")}</option>
-                        <option value="cat">{tr("settings.mascotThemeCat")}</option>
-                        <option value="cartoon">{tr("settings.mascotThemeCartoon")}</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <div class="nested-control" transition:slide={{ duration: 160 }}>
-                    <div class="toggle-item">
-                      <div class="toggle-text">
-                        <strong>{tr("settings.musicMascotTitle")}</strong>
-                        <small>{tr("settings.musicMascotDesc")}</small>
-                      </div>
-                      <label class="switch">
-                        <input
-                          type="checkbox"
-                          checked={settings.musicMascot === true}
-                          onchange={(e) => save({ musicMascot: e.currentTarget.checked })}
-                        />
-                        <span class="slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                {/if}
-
-                <div class="toggle-item">
-                  <div class="toggle-text">
-                    <strong>{tr("settings.minimalTitle")}</strong>
-                    <small>{tr("settings.minimalDesc")}</small>
-                  </div>
-                  <label class="switch">
-                    <input
-                      type="checkbox"
-                      checked={settings.minimalNotch === true}
-                      onchange={(e) => save({ minimalNotch: e.currentTarget.checked })}
-                    />
-                    <span class="slider"></span>
-                  </label>
-                </div>
-              </div>
-            </section>
+      {#if shows("eyes")}
+        <h1>{tr("nav.eyes")}</h1>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.mascot"), tr("s.mascotDesc"))}
+            {@render toggle("mascot", settings.mascot !== false)}
+          </div>
+          {#if settings.mascot !== false}
+            <div class="row" transition:slide={{ duration: 150 }}>
+              {@render row(tr("s.mascotMode"), "")}
+              <select value={settings.mascotMode ?? "idle"} onchange={(e) => save({ mascotMode: e.currentTarget.value })}>
+                <option value="idle">{tr("s.mascotIdle")}</option>
+                <option value="always">{tr("s.mascotAlways")}</option>
+              </select>
+            </div>
+            <div class="row" transition:slide={{ duration: 150 }}>
+              {@render row(tr("s.eyeStyle"), "")}
+              <select value={settings.mascotTheme ?? "classic"} onchange={(e) => save({ mascotTheme: e.currentTarget.value })}>
+                <option value="classic">{tr("s.eyeClassic")}</option>
+                <option value="anime">Anime</option>
+                <option value="pixel">Pixel</option>
+                <option value="cat">{tr("s.eyeCat")}</option>
+                <option value="cartoon">{tr("s.eyeCartoon")}</option>
+              </select>
+            </div>
+            <div class="row" transition:slide={{ duration: 150 }}>
+              {@render row(tr("s.musicMascot"), tr("s.musicMascotDesc"))}
+              {@render toggle("musicMascot", settings.musicMascot === true)}
+            </div>
           {/if}
         </div>
       {/if}
 
-      <!-- TAB 2: SISTEM & INDIKATOR / SYSTEM -->
-      {#if activeTab === "system" || searchQuery}
-        <div class="tab-panel" in:fade={{ duration: 180 }}>
-          {#if matches("Bluetooth Baterai Headset TWS Mouse Keyboard Perangkat Device Battery")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">🎧</div>
-                <div class="card-info">
-                  <h3>{tr("settings.bluetoothTitle")}</h3>
-                  <p>{tr("settings.bluetoothDesc")}</p>
-                </div>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    checked={settings.bluetoothPeek !== false}
-                    onchange={(e) => save({ bluetoothPeek: e.currentTarget.checked })}
-                  />
-                  <span class="slider"></span>
-                </label>
-              </div>
+      {#if shows("pages")}
+        <h1>{tr("nav.pages")}</h1>
+        <p class="lead">{tr("s.pagesDesc")}</p>
+        <div class="group">
+          {#each PAGE_ITEMS as [key, label] (key)}
+            {@const on = settings[key] !== false}
+            <div class="row">
+              {@render row(tr(label), tr(`${label}Desc`))}
+              {@render toggle(key, on, on && enabledPages <= 1)}
+            </div>
+          {/each}
+        </div>
+      {/if}
 
-              {#if settings.bluetoothPeek !== false}
-                <div class="nested-control" transition:slide={{ duration: 160 }}>
-                  <label class="input-inline">
-                    <span>{tr("settings.bluetoothLowThreshold")}</span>
-                    <div class="number-unit">
-                      <input
-                        type="number"
-                        min="5"
-                        max="50"
-                        value={settings.bluetoothLowThreshold ?? 20}
-                        onchange={(e) => {
-                          const val = Math.max(5, Math.min(50, Number(e.currentTarget.value) || 20));
-                          save({ bluetoothLowThreshold: val });
-                        }}
-                      />
-                      <em>%</em>
-                    </div>
-                  </label>
-                </div>
+      {#if shows("music")}
+        <h1>{tr("nav.music")}</h1>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.lyrics"), tr("s.lyricsDesc"))}
+            {@render toggle("smallLyrics", settings.smallLyrics)}
+          </div>
+        </div>
+        <p class="hint">{tr("s.coverHint")}</p>
+      {/if}
+
+      {#if shows("focus")}
+        <h1>{tr("nav.focus")}</h1>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.focusLen"), "")}
+            {@render stepper("focusMinutes", settings.focusMinutes, 5, 180, 5, tr("s.min"))}
+          </div>
+          <div class="row">
+            {@render row(tr("s.breakLen"), "")}
+            {@render stepper("breakMinutes", settings.breakMinutes, 1, 60, 1, tr("s.min"))}
+          </div>
+        </div>
+      {/if}
+
+      {#if shows("water")}
+        <h1>{tr("nav.water")}</h1>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.waterOn"), tr("s.waterOnDesc"))}
+            {@render toggle("waterEnabled", settings.waterEnabled)}
+          </div>
+        </div>
+        {#if settings.waterEnabled}
+          <div class="group" transition:slide={{ duration: 150 }}>
+            <div class="row">
+              {@render row(tr("s.glass"), "")}
+              {@render stepper("glassMl", settings.glassMl, 50, 1000, 50, "ml")}
+            </div>
+            <div class="row">
+              {@render row(tr("s.goal"), "")}
+              {@render stepper("goalMl", settings.goalMl, 500, 6000, 250, "ml")}
+            </div>
+            <div class="row">
+              {@render row(tr("s.from"), "")}
+              {@render stepper("waterFrom", settings.waterFrom, 0, 23, 1, ":00")}
+            </div>
+            <div class="row">
+              {@render row(tr("s.to"), "")}
+              {@render stepper("waterTo", settings.waterTo, 0, 23, 1, ":00")}
+            </div>
+            <div class="row">
+              {@render row(tr("s.remindEvery"), tr("s.remindEveryDesc"))}
+              {@render stepper("remindEvery", settings.remindEvery, 0, 240, 15, tr("s.min"))}
+            </div>
+          </div>
+        {/if}
+      {/if}
+
+      {#if shows("calendar")}
+        <h1>{tr("nav.calendar")}</h1>
+        <div class="group">
+          <div class="row column">
+            {@render row(tr("s.calendarUrl"), tr("s.calendarDesc"))}
+            <input
+              type="password"
+              class="text"
+              value={settings.calendarUrl}
+              placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
+              onchange={(e) => save({ calendarUrl: e.currentTarget.value.trim() })}
+            />
+          </div>
+        </div>
+        <p class="hint">{tr("settings.calendarHint")}</p>
+      {/if}
+
+      {#if shows("shortcuts")}
+        <h1>{tr("nav.shortcuts")}</h1>
+        <div class="group">
+          {#each settings.shortcuts as s, i}
+            <div class="row shortcut">
+              <input class="text name" value={s.name} placeholder={tr("settings.shortcutNamePlaceholder")} onchange={(e) => editShortcut(i, { name: e.currentTarget.value.trim() })} />
+              <select value={s.action} onchange={(e) => editShortcut(i, { action: e.currentTarget.value })}>
+                {#each ACTION_ITEMS as [val, label]}<option value={val}>{tr(label)}</option>{/each}
+              </select>
+              <button class="icon-btn" title={tr("settings.deleteShortcut")} onclick={() => save({ shortcuts: settings!.shortcuts.filter((_, j) => j !== i) })}>✕</button>
+              {#if s.action === "open"}
+                <input class="text target" value={s.target} placeholder={tr("settings.shortcutTargetPlaceholder")} onchange={(e) => editShortcut(i, { target: e.currentTarget.value.trim() })} />
               {/if}
-            </section>
+            </div>
+          {/each}
+        </div>
+        <div class="actions">
+          {#if settings.shortcuts.length < 8}
+            <button class="btn" onclick={() => save({ shortcuts: [...settings!.shortcuts, { name: tr("shortcuts.title"), action: "open", target: "" }] })}>
+              {tr("settings.addShortcut")}
+            </button>
           {/if}
+          <button class="btn ghost" onclick={() => save({ shortcuts: defaultShortcuts() })}>{tr("settings.restoreDefaults")}</button>
+        </div>
+      {/if}
 
-          {#if matches("Kecepatan Jaringan Network Speed Download Upload Internet Traffic")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">🚀</div>
-                <div class="card-info">
-                  <h3>{tr("settings.netSpeedMonitorTitle")}</h3>
-                  <p>{tr("settings.netSpeedMonitorDesc")}</p>
-                </div>
-              </div>
+      {#if shows("notifications")}
+        <h1>{tr("nav.notifications")}</h1>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.mirror"), tr("s.mirrorDesc"))}
+            {@render toggle("mirrorNotifications", settings.mirrorNotifications)}
+          </div>
+          <div class="row">
+            {@render row(tr("s.dnd"), tr("s.dndDesc"))}
+            <button class="btn" onclick={() => invoke("open_dnd_settings")}>{tr("s.open")}</button>
+          </div>
+        </div>
+      {/if}
 
-              <div class="toggle-list">
-                <div class="toggle-item">
-                  <div class="toggle-text">
-                    <strong>{tr("settings.netSpeedIslandTitle")}</strong>
-                    <small>{tr("settings.netSpeedIslandDesc")}</small>
-                  </div>
-                  <label class="switch">
-                    <input
-                      type="checkbox"
-                      checked={settings.netSpeedIsland === true}
-                      onchange={(e) => save({ netSpeedIsland: e.currentTarget.checked })}
-                    />
-                    <span class="slider"></span>
-                  </label>
-                </div>
-
-                {#if settings.netSpeedIsland}
-                  <div class="nested-grid" transition:slide={{ duration: 160 }}>
-                    <label class="input-inline">
-                      <span>{tr("settings.netDownThreshold")}</span>
-                      <div class="number-unit">
-                        <input
-                          type="number"
-                          min="50"
-                          value={settings.netSpeedThresholdDownKb ?? 500}
-                          onchange={(e) => save({ netSpeedThresholdDownKb: Math.max(0, Number(e.currentTarget.value)) })}
-                        />
-                        <em>KB/s</em>
-                      </div>
-                    </label>
-                    <label class="input-inline">
-                      <span>{tr("settings.netUpThreshold")}</span>
-                      <div class="number-unit">
-                        <input
-                          type="number"
-                          min="50"
-                          value={settings.netSpeedThresholdUpKb ?? 250}
-                          onchange={(e) => save({ netSpeedThresholdUpKb: Math.max(0, Number(e.currentTarget.value)) })}
-                        />
-                        <em>KB/s</em>
-                      </div>
-                    </label>
-                  </div>
-                {/if}
-
-                <div class="toggle-item">
-                  <div class="toggle-text">
-                    <strong>{tr("settings.netSpeedStatusTitle")}</strong>
-                    <small>{tr("settings.netSpeedStatusDesc")}</small>
-                  </div>
-                  <label class="switch">
-                    <input
-                      type="checkbox"
-                      checked={settings.netSpeedStatus !== false}
-                      onchange={(e) => save({ netSpeedStatus: e.currentTarget.checked })}
-                    />
-                    <span class="slider"></span>
-                  </label>
-                </div>
-              </div>
-            </section>
+      {#if shows("system")}
+        <h1>{tr("nav.system")}</h1>
+        <h2>{tr("s.keyboard")}</h2>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.caps"), tr("s.capsDesc"))}
+            {@render toggle("capsLockPeek", settings.capsLockPeek)}
+          </div>
+          <div class="row">
+            {@render row(tr("s.hideOsd"), tr("s.hideOsdDesc"))}
+            {@render toggle("hideVolumeOsd", settings.hideVolumeOsd === true)}
+          </div>
+        </div>
+        <p class="hint">{tr("s.restartHint")}</p>
+        <h2>Bluetooth</h2>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.bluetooth"), tr("s.bluetoothDesc"))}
+            {@render toggle("bluetoothPeek", settings.bluetoothPeek === true)}
+          </div>
+          {#if settings.bluetoothPeek}
+            <div class="row" transition:slide={{ duration: 150 }}>
+              {@render row(tr("s.lowBattery"), "")}
+              {@render stepper("bluetoothLowThreshold", settings.bluetoothLowThreshold ?? 20, 5, 50, 5, "%")}
+            </div>
           {/if}
-
-          {#if matches("Notifikasi Windows Do Not Disturb DND Teams WhatsApp Email Notification")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">🔔</div>
-                <div class="card-info">
-                  <h3>{tr("settings.mirrorTitle")}</h3>
-                  <p>{tr("settings.mirrorDesc")}</p>
-                </div>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    checked={settings.mirrorNotifications}
-                    onchange={(e) => save({ mirrorNotifications: e.currentTarget.checked })}
-                  />
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <div class="action-footer">
-                <span class="tip-text">
-                  {tr("settings.mirrorTip")}
-                </span>
-                <button class="btn-secondary" onclick={() => invoke("open_dnd_settings")}>
-                  {tr("settings.openDnd")}
-                </button>
-              </div>
-            </section>
-          {/if}
-
-          {#if matches("Keyboard Caps Lock Peek Bahasa Input Language Layout")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">⌨️</div>
-                <div class="card-info">
-                  <h3>{tr("settings.capsLockTitle")}</h3>
-                  <p>{tr("settings.capsLockDesc")}</p>
-                </div>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    checked={settings.capsLockPeek}
-                    onchange={(e) => save({ capsLockPeek: e.currentTarget.checked })}
-                  />
-                  <span class="slider"></span>
-                </label>
-              </div>
-            </section>
-          {/if}
-
-          {#if matches("Volume Overlay OSD Suara Windows Sembunyikan Hide Volume Audio")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">🔊</div>
-                <div class="card-info">
-                  <h3>{tr("settings.hideVolumeOsdTitle")}</h3>
-                  <p>{tr("settings.hideVolumeOsdDesc")}</p>
-                </div>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    checked={settings.hideVolumeOsd}
-                    onchange={(e) => save({ hideVolumeOsd: e.currentTarget.checked })}
-                  />
-                  <span class="slider"></span>
-                </label>
-              </div>
-            </section>
+        </div>
+        <h2>{tr("s.network")}</h2>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.netStatus"), tr("s.netStatusDesc"))}
+            {@render toggle("netSpeedStatus", settings.netSpeedStatus !== false)}
+          </div>
+          <div class="row">
+            {@render row(tr("s.netIsland"), tr("s.netIslandDesc"))}
+            {@render toggle("netSpeedIsland", settings.netSpeedIsland === true)}
+          </div>
+          {#if settings.netSpeedIsland}
+            <div class="row" transition:slide={{ duration: 150 }}>
+              {@render row(tr("s.netDown"), "")}
+              {@render stepper("netSpeedThresholdDownKb", settings.netSpeedThresholdDownKb ?? 500, 50, 100000, 250, "KB/s")}
+            </div>
+            <div class="row" transition:slide={{ duration: 150 }}>
+              {@render row(tr("s.netUp"), "")}
+              {@render stepper("netSpeedThresholdUpKb", settings.netSpeedThresholdUpKb ?? 250, 50, 100000, 250, "KB/s")}
+            </div>
           {/if}
         </div>
       {/if}
 
-      <!-- TAB 3: PRODUKTIVITAS / PRODUCTIVITY -->
-      {#if activeTab === "productivity" || searchQuery}
-        <div class="tab-panel" in:fade={{ duration: 180 }}>
-          {#if matches("Halaman Menu Notch Aktif Pomodoro Air Todo Shelf Clipboard Shortcuts Pages Focus")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">📑</div>
-                <div class="card-info">
-                  <h3>{tr("settings.activePagesTitle")}</h3>
-                  <p>
-                    {tr("settings.activePagesDesc")}
-                    {#if enabledPagesCount <= 1}
-                      <strong class="warn-text"> {tr("settings.activePagesMinWarn")}</strong>
-                    {/if}
-                  </p>
-                </div>
-              </div>
-
-              <div class="pages-grid">
-                {#each PAGE_ITEMS as [key, titleKey, descKey]}
-                  <label class="page-checkbox-card" class:disabled={settings[key] !== false && enabledPagesCount <= 1}>
-                    <input
-                      type="checkbox"
-                      checked={settings[key] !== false}
-                      disabled={settings[key] !== false && enabledPagesCount <= 1}
-                      onchange={(e) => save({ [key]: e.currentTarget.checked })}
-                    />
-                    <div class="page-checkbox-content">
-                      <strong>{tr(titleKey)}</strong>
-                      <small>{tr(descKey)}</small>
-                    </div>
-                  </label>
-                {/each}
-              </div>
-            </section>
-          {/if}
-
-          {#if matches("Pomodoro Fokus Istirahat Timer Menit Focus Break Minutes")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">⏳</div>
-                <div class="card-info">
-                  <h3>{tr("settings.pomodoroTitle")}</h3>
-                  <p>{tr("settings.pomodoroDesc")}</p>
-                </div>
-              </div>
-              <div class="inline-fields-row">
-                <label class="input-inline">
-                  <span>{tr("settings.focusSession")}</span>
-                  <div class="number-unit">
-                    <input
-                      type="number"
-                      min="1"
-                      value={settings.focusMinutes}
-                      onchange={(e) => save({ focusMinutes: Math.max(1, Number(e.currentTarget.value) || 25) })}
-                    />
-                    <em>{tr("settings.minutes")}</em>
-                  </div>
-                </label>
-                <label class="input-inline">
-                  <span>{tr("settings.shortBreak")}</span>
-                  <div class="number-unit">
-                    <input
-                      type="number"
-                      min="1"
-                      value={settings.breakMinutes}
-                      onchange={(e) => save({ breakMinutes: Math.max(1, Number(e.currentTarget.value) || 5) })}
-                    />
-                    <em>{tr("settings.minutes")}</em>
-                  </div>
-                </label>
-              </div>
-            </section>
-          {/if}
-
-          {#if matches("Minum Air Hidrasi Glass Target Pengingat ml Water Hydration Drink Reminder")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">💧</div>
-                <div class="card-info">
-                  <h3>{tr("settings.waterTitle")}</h3>
-                  <p>{tr("settings.waterDesc")}</p>
-                </div>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    checked={settings.waterEnabled}
-                    onchange={(e) => save({ waterEnabled: e.currentTarget.checked })}
-                  />
-                  <span class="slider"></span>
-                </label>
-              </div>
-
-              {#if settings.waterEnabled}
-                <div class="water-grid" transition:slide={{ duration: 160 }}>
-                  <label class="input-inline">
-                    <span>{tr("settings.glassSize")}</span>
-                    <div class="number-unit">
-                      <input
-                        type="number"
-                        min="50"
-                        step="50"
-                        value={settings.glassMl}
-                        onchange={(e) => save({ glassMl: Math.max(50, Number(e.currentTarget.value)) })}
-                      />
-                      <em>ml</em>
-                    </div>
-                  </label>
-                  <label class="input-inline">
-                    <span>{tr("settings.waterTarget")}</span>
-                    <div class="number-unit">
-                      <input
-                        type="number"
-                        min="500"
-                        step="100"
-                        value={settings.goalMl}
-                        onchange={(e) => save({ goalMl: Math.max(500, Number(e.currentTarget.value)) })}
-                      />
-                      <em>ml</em>
-                    </div>
-                  </label>
-                  <label class="input-inline">
-                    <span>{tr("settings.waterFrom")}</span>
-                    <div class="number-unit">
-                      <input
-                        type="number"
-                        min="0"
-                        max="23"
-                        value={settings.waterFrom}
-                        onchange={(e) => save({ waterFrom: Math.max(0, Math.min(23, Number(e.currentTarget.value))) })}
-                      />
-                      <em>:00</em>
-                    </div>
-                  </label>
-                  <label class="input-inline">
-                    <span>{tr("settings.waterTo")}</span>
-                    <div class="number-unit">
-                      <input
-                        type="number"
-                        min="0"
-                        max="23"
-                        value={settings.waterTo}
-                        onchange={(e) => save({ waterTo: Math.max(0, Math.min(23, Number(e.currentTarget.value))) })}
-                      />
-                      <em>:00</em>
-                    </div>
-                  </label>
-                  <label class="input-inline">
-                    <span>{tr("settings.remindEvery")}</span>
-                    <div class="number-unit">
-                      <input
-                        type="number"
-                        min="0"
-                        value={settings.remindEvery}
-                        onchange={(e) => save({ remindEvery: Math.max(0, Number(e.currentTarget.value)) })}
-                      />
-                      <em>{tr("settings.minutesOff")}</em>
-                    </div>
-                  </label>
-                </div>
-              {/if}
-            </section>
-          {/if}
-
-          {#if matches("Kalender Calendar Google Outlook ICS Rapat Meeting Schedule")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">📅</div>
-                <div class="card-info">
-                  <h3>{tr("settings.calendarTitle")}</h3>
-                  <p>{tr("settings.calendarDesc")}</p>
-                </div>
-              </div>
-              <div class="input-block">
-                <input
-                  type="password"
-                  class="text-input"
-                  value={settings.calendarUrl}
-                  placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
-                  onchange={(e) => save({ calendarUrl: e.currentTarget.value.trim() })}
-                />
-                <small class="hint-muted">{tr("settings.calendarHint")}</small>
-              </div>
-            </section>
-          {/if}
-
-          {#if matches("Pintasan Shortcuts Cepat Launcher Tombol App File Quick Action")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">⚡</div>
-                <div class="card-info">
-                  <h3>{tr("settings.shortcutsTitle")}</h3>
-                  <p>{tr("settings.shortcutsDesc")}</p>
-                </div>
-              </div>
-
-              <div class="shortcuts-list">
-                {#each settings.shortcuts as s, i}
-                  <div class="shortcut-item">
-                    <input
-                      class="shortcut-name"
-                      value={s.name}
-                      placeholder={tr("settings.shortcutNamePlaceholder")}
-                      onchange={(e) => editShortcut(i, { name: e.currentTarget.value.trim() })}
-                    />
-                    <select
-                      class="select-input select-action"
-                      value={s.action}
-                      onchange={(e) => editShortcut(i, { action: e.currentTarget.value })}
-                    >
-                      {#each ACTION_ITEMS as [val, lblKey]}
-                        <option value={val}>{tr(lblKey)}</option>
-                      {/each}
-                    </select>
-                    <button
-                      class="btn-delete"
-                      onclick={() => save({ shortcuts: settings!.shortcuts.filter((_, j) => j !== i) })}
-                      title={tr("settings.deleteShortcut")}
-                    >
-                      ✕
-                    </button>
-                    {#if s.action === "open"}
-                      <div class="shortcut-target-row">
-                        <input
-                          class="text-input target-input"
-                          value={s.target}
-                          placeholder={tr("settings.shortcutTargetPlaceholder")}
-                          onchange={(e) => editShortcut(i, { target: e.currentTarget.value.trim() })}
-                        />
-                      </div>
-                    {/if}
-                  </div>
-                {/each}
-              </div>
-
-              <div class="card-actions">
-                {#if settings.shortcuts.length < 8}
-                  <button
-                    class="btn-secondary"
-                    onclick={() => save({ shortcuts: [...settings!.shortcuts, { name: tr("shortcuts.title"), action: "open", target: "" }] })}
-                  >
-                    {tr("settings.addShortcut")}
-                  </button>
-                {/if}
-                <button class="btn-link" onclick={() => save({ shortcuts: defaultShortcuts() })}>
-                  {tr("settings.restoreDefaults")}
-                </button>
-              </div>
-            </section>
-          {/if}
-        </div>
-      {/if}
-
-      <!-- TAB 4: CUACA & MEDIA / MEDIA -->
-      {#if activeTab === "media" || searchQuery}
-        <div class="tab-panel" in:fade={{ duration: 180 }}>
-          {#if matches("Musik Music Lirik Lyrics LRCLIB Lagu Player Song")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">🎵</div>
-                <div class="card-info">
-                  <h3>{tr("settings.lyricsTitle")}</h3>
-                  <p>{tr("settings.lyricsDesc")}</p>
-                </div>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    checked={settings.smallLyrics}
-                    onchange={(e) => save({ smallLyrics: e.currentTarget.checked })}
-                  />
-                  <span class="slider"></span>
-                </label>
-              </div>
-            </section>
-          {/if}
-
-          {#if matches("Cuaca Weather Lokasi City Suhu Derajat Forecast Temperature")}
-            <section class="setting-card">
-              <div class="card-header">
-                <div class="card-icon">⛅</div>
-                <div class="card-info">
-                  <h3>{tr("settings.weatherTitle")}</h3>
-                  <p>{tr("settings.weatherDesc")}</p>
-                </div>
-              </div>
-
-              <div class="weather-current-box">
-                <span class="weather-label">{tr("settings.currentLocation")}</span>
-                {#if settings.weatherCity}
-                  <strong class="weather-city-name">{settings.weatherCity.name}</strong>
-                  <button class="btn-link" onclick={() => save({ weatherCity: null })}>
-                    {tr("settings.switchToAutoLocation")}
-                  </button>
-                {:else}
-                  <strong class="weather-city-name">{tr("settings.windowsLocationAuto")}</strong>
-                {/if}
-              </div>
-
-              <form class="city-search-form" onsubmit={searchCityHandler}>
-                <input
-                  type="text"
-                  class="text-input"
-                  bind:value={cityQuery}
-                  placeholder={tr("settings.searchCityPlaceholder")}
-                />
-                <button type="submit" class="btn-primary" disabled={searchingCity}>
-                  {searchingCity ? tr("settings.searchingCity") : tr("settings.searchCityBtn")}
-                </button>
-              </form>
-
-              {#if cityResults.length > 0}
-                <div class="city-results-list" transition:slide={{ duration: 160 }}>
-                  {#each cityResults as place}
-                    <button
-                      class="city-result-item"
-                      onclick={() => save({ weatherCity: { name: place.name, latitude: place.latitude, longitude: place.longitude } })}
-                    >
-                      <strong class="place-name">{place.name}</strong>
-                      <span class="place-detail">{place.detail}</span>
-                    </button>
-                  {/each}
-                </div>
-              {/if}
-            </section>
-          {/if}
+      {#if shows("weather")}
+        <h1>{tr("nav.weather")}</h1>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.location"), settings.weatherCity ? settings.weatherCity.name : tr("s.locationAuto"))}
+            {#if settings.weatherCity}
+              <button class="btn ghost" onclick={() => save({ weatherCity: null })}>{tr("s.useAuto")}</button>
+            {/if}
+          </div>
+          <form class="row" onsubmit={searchCityHandler}>
+            <input class="text grow" bind:value={cityQuery} placeholder={tr("s.cityPlaceholder")} />
+            <button class="btn" type="submit" disabled={searchingCity}>{searchingCity ? "…" : tr("s.search")}</button>
+          </form>
+          {#each cityResults as place}
+            <button
+              class="row pick"
+              onclick={() => {
+                save({ weatherCity: { name: place.name, latitude: place.latitude, longitude: place.longitude } });
+                cityResults = [];
+                cityQuery = "";
+              }}
+            >
+              {@render row(place.name, place.detail)}
+            </button>
+          {/each}
         </div>
       {/if}
     {/if}
   </main>
 
-  <!-- Auto-save Toast Floating Notification -->
   {#if saved}
-    <div class="saved-toast" transition:fade={{ duration: 150 }}>
-      <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-      </svg>
-      <span>{tr("settings.savedToast")}</span>
-    </div>
+    <div class="toast" transition:fade={{ duration: 140 }}>✓ {tr("settings.saved")}</div>
   {/if}
 </div>
 
@@ -987,765 +521,343 @@
   :global(html),
   :global(body) {
     margin: 0;
-    padding: 0;
-    background: #0d1117 !important;
-    background-color: #0d1117 !important;
-    color: #e6edf3;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", sans-serif;
-    user-select: none;
-    -webkit-user-select: none;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
     height: 100%;
+    background: #1e1e20;
+    color: #f5f5f7;
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+    color-scheme: dark;
+  }
+  .shell {
+    display: flex;
+    height: 100vh;
   }
 
-  :global(body)::-webkit-scrollbar,
-  :global(html)::-webkit-scrollbar {
-    width: 6px;
-  }
-  :global(body)::-webkit-scrollbar-track,
-  :global(html)::-webkit-scrollbar-track {
-    background: #0d1117;
-  }
-  :global(body)::-webkit-scrollbar-thumb,
-  :global(html)::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.18);
-    border-radius: 999px;
-  }
-  :global(body)::-webkit-scrollbar-thumb:hover,
-  :global(html)::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.35);
-  }
-
-  .settings-shell {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 24px 20px 48px;
-    min-height: 100vh;
+  /* Sidebar */
+  .sidebar {
+    flex: none;
+    width: 212px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 10px;
+    background: #262628;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
     box-sizing: border-box;
-    background: #0d1117;
   }
-
-  /* Header */
-  .app-header {
+  .search {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 8px;
+    height: 28px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.07);
   }
-
-  .brand {
+  .search svg {
+    flex: none;
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.45);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+  }
+  .search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+  }
+  .search button {
+    border: 0;
+    background: none;
+    color: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    font-size: 11px;
+  }
+  nav {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  nav button {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 9px;
+    padding: 5px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
-
-  .logo-badge {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #1f6feb 0%, #38bdf8 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(31, 111, 235, 0.35);
+  nav button:hover {
+    background: rgba(255, 255, 255, 0.05);
   }
-
-  .logo-badge svg {
+  nav button.on {
+    background: #0a84ff;
+  }
+  nav button.hit {
+    background: rgba(10, 132, 255, 0.22);
+  }
+  nav i {
+    flex: none;
+    display: grid;
+    place-items: center;
     width: 22px;
     height: 22px;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.15);
+  }
+  nav i svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
-  .app-title {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: #f0f6fc;
-  }
-
-  .version-tag {
-    font-size: 11px;
-    color: #8b949e;
-  }
-
-  /* Search */
-  .search-box {
-    position: relative;
+  /* Content */
+  .content {
     flex: 1;
-    min-width: 220px;
-    max-width: 320px;
-  }
-
-  .search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 15px;
-    height: 15px;
-    color: #8b949e;
-    pointer-events: none;
-  }
-
-  .search-box input {
-    width: 100%;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 18px 24px 40px;
     box-sizing: border-box;
-    padding: 8px 30px 8px 32px;
-    border-radius: 8px;
-    border: 1px solid rgba(240, 246, 252, 0.12);
-    background: rgba(22, 27, 34, 0.8);
-    color: #f0f6fc;
-    font-size: 12.5px;
-    transition: all 0.2s ease;
   }
-
-  .search-box input:focus {
-    outline: none;
-    border-color: #38bdf8;
-    background: #161b22;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+  h1 {
+    margin: 0 0 14px;
+    font-size: 19px;
+    font-weight: 700;
   }
-
-  .clear-search {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #8b949e;
-    cursor: pointer;
-    font-size: 12px;
+  h1:not(:first-child) {
+    margin-top: 26px;
   }
-
-  /* Tabs (Minimalist 4-Column Grid, Zero Scroll) */
-  .tabs-nav {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
-    background: rgba(22, 27, 34, 0.6);
-    padding: 4px;
+  h2 {
+    margin: 18px 0 6px 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .lead,
+  .hint,
+  .muted {
+    margin: -6px 4px 10px;
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .hint {
+    margin: -4px 4px 12px;
+  }
+  .group {
+    margin-bottom: 12px;
     border-radius: 10px;
-    border: 1px solid rgba(240, 246, 252, 0.08);
-    margin-bottom: 20px;
+    background: #2c2c2e;
+    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.07);
     overflow: hidden;
   }
-
-  .tabs-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tab-btn {
+  .row {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 7px 4px;
-    border-radius: 7px;
-    border: none;
-    background: transparent;
-    color: #8b949e;
-    font-size: 11.5px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.16s ease;
+    gap: 12px;
+    min-height: 44px;
+    padding: 7px 12px;
+    box-sizing: border-box;
+    margin: 0;
   }
-
-  .tab-btn:hover {
-    color: #f0f6fc;
-    background: rgba(255, 255, 255, 0.04);
+  .row + .row {
+    box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.09);
   }
-
-  .tab-btn.active {
-    background: rgba(56, 189, 248, 0.14);
-    color: #38bdf8;
-    font-weight: 600;
+  .row.column {
+    flex-direction: column;
+    align-items: stretch;
   }
-
-  /* Cards */
-  .tab-panel {
+  .row-text {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 2px;
   }
-
-  .setting-card {
-    background: rgba(22, 27, 34, 0.7);
-    border: 1px solid rgba(240, 246, 252, 0.09);
-    border-radius: 12px;
-    padding: 16px 18px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-    backdrop-filter: blur(12px);
+  .row-text small {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.35;
   }
-
-  .setting-card:hover {
-    border-color: rgba(240, 246, 252, 0.16);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  button.row.pick {
+    width: 100%;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
-
-  .card-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .card-icon {
-    font-size: 20px;
-    line-height: 1;
-    padding-top: 2px;
-  }
-
-  .card-info {
-    flex: 1;
-  }
-
-  .card-info h3 {
-    margin: 0 0 3px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #f0f6fc;
-  }
-
-  .card-info p {
-    margin: 0;
-    font-size: 12.5px;
-    color: #8b949e;
-    line-height: 1.4;
+  button.row.pick:hover {
+    background: rgba(255, 255, 255, 0.05);
   }
 
   /* Controls */
-  .control-row {
-    margin-top: 14px;
-    display: flex;
-    justify-content: flex-end;
+  select,
+  .text,
+  .btn,
+  .stepper {
+    height: 26px;
+    border-radius: 6px;
+    border: 0;
+    background: rgba(255, 255, 255, 0.1);
+    color: inherit;
+    font: inherit;
+    box-sizing: border-box;
   }
-
-  .select-input {
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(240, 246, 252, 0.12);
-    background: #0d1117;
-    color: #f0f6fc;
-    font-size: 13px;
+  select {
+    flex: none;
+    max-width: 210px;
+    padding: 0 8px;
     cursor: pointer;
-    outline: none;
-    transition: border-color 0.18s ease;
   }
-
-  .select-input:focus {
-    border-color: #38bdf8;
+  select option {
+    background: #2c2c2e;
   }
-
-  /* Toggle Switch */
+  .text {
+    padding: 0 9px;
+    outline: 0;
+  }
+  .text:focus {
+    box-shadow: 0 0 0 2px #0a84ff;
+  }
+  .grow {
+    flex: 1;
+    min-width: 0;
+  }
+  .btn {
+    flex: none;
+    padding: 0 12px;
+    cursor: pointer;
+  }
+  .btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
+  }
+  .btn.ghost {
+    background: none;
+    color: #0a84ff;
+  }
+  .actions {
+    display: flex;
+    gap: 6px;
+    margin: -4px 0 12px;
+  }
+  .stepper {
+    flex: none;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .stepper button {
+    width: 26px;
+    height: 100%;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .stepper button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .stepper button:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+  .stepper span {
+    min-width: 64px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
   .switch {
     position: relative;
-    display: inline-block;
+    flex: none;
     width: 38px;
     height: 22px;
-    flex-shrink: 0;
+    cursor: pointer;
   }
-
   .switch input {
+    position: absolute;
     opacity: 0;
     width: 0;
     height: 0;
   }
-
-  .slider {
+  .switch span {
     position: absolute;
-    cursor: pointer;
     inset: 0;
-    background-color: rgba(240, 246, 252, 0.14);
-    transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 999px;
-    border: 1px solid rgba(240, 246, 252, 0.1);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.16);
+    transition: background 0.18s;
   }
-
-  .slider:before {
-    position: absolute;
+  .switch span::after {
     content: "";
-    height: 16px;
-    width: 16px;
+    position: absolute;
+    top: 2px;
     left: 2px;
-    bottom: 2px;
-    background-color: #f0f6fc;
-    transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
+    background: #fff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    transition: transform 0.18s;
   }
-
-  input:checked + .slider {
-    background-color: #38bdf8;
-    border-color: #38bdf8;
+  .switch input:checked + span {
+    background: #0a84ff;
   }
-
-  input:checked + .slider:before {
+  .switch input:checked + span::after {
     transform: translateX(16px);
-    background-color: #0d1117;
+  }
+  .switch input:disabled + span {
+    opacity: 0.45;
+  }
+  .switch input:focus-visible + span {
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.6);
   }
 
-  /* Accent status box */
-  .accent-status-box {
-    margin-top: 14px;
-    padding: 10px 14px;
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid rgba(240, 246, 252, 0.06);
-  }
-
-  .accent-preview {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-  }
-
-  .color-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    display: inline-block;
-    box-shadow: 0 0 8px currentColor;
-  }
-
-  .color-hex {
-    background: rgba(240, 246, 252, 0.08);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 11px;
-    margin-left: 6px;
-    color: #38bdf8;
-  }
-
-  .accent-hint {
-    margin: 6px 0 0;
-    font-size: 11.5px;
-    color: #8b949e;
-  }
-
-  /* Toggle list */
-  .toggle-list {
-    margin-top: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .toggle-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(240, 246, 252, 0.05);
-  }
-
-  .toggle-text strong {
-    display: block;
-    font-size: 13px;
-    color: #f0f6fc;
-  }
-
-  .toggle-text small {
-    display: block;
-    font-size: 11.5px;
-    color: #8b949e;
-    margin-top: 1px;
-  }
-
-  /* Nested grid & controls */
-  .nested-control,
-  .nested-grid {
-    margin-top: 12px;
-    padding: 12px;
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(240, 246, 252, 0.05);
-  }
-
-  .nested-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .input-inline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 12.5px;
-    color: #8b949e;
-  }
-
-  .number-unit {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .number-unit input {
-    width: 68px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid rgba(240, 246, 252, 0.12);
-    background: #0d1117;
-    color: #f0f6fc;
-    font-size: 13px;
-    text-align: right;
-  }
-
-  .number-unit em {
-    font-style: normal;
-    font-size: 12px;
-    color: #8b949e;
-  }
-
-  /* Pages multi-checkbox grid */
-  .pages-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 10px;
-    margin-top: 14px;
-  }
-
-  .page-checkbox-card {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(240, 246, 252, 0.06);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .page-checkbox-card:hover {
-    background: rgba(0, 0, 0, 0.35);
-    border-color: rgba(56, 189, 248, 0.3);
-  }
-
-  .page-checkbox-card.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .page-checkbox-card input[type="checkbox"] {
-    margin-top: 3px;
-    accent-color: #38bdf8;
-  }
-
-  .page-checkbox-content strong {
-    display: block;
-    font-size: 13px;
-    color: #f0f6fc;
-  }
-
-  .page-checkbox-content small {
-    display: block;
-    font-size: 11px;
-    color: #8b949e;
-    margin-top: 2px;
-    line-height: 1.3;
-  }
-
-  .warn-text {
-    color: #fb923c;
-    font-size: 12px;
-  }
-
-  /* Productivity grids */
-  .inline-fields-row {
-    display: flex;
-    gap: 20px;
-    margin-top: 14px;
-  }
-
-  .water-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 12px;
-    margin-top: 14px;
-    padding: 12px;
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.2);
-  }
-
-  .input-block {
-    margin-top: 12px;
-  }
-
-  .text-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(240, 246, 252, 0.12);
-    background: #0d1117;
-    color: #f0f6fc;
-    font-size: 13px;
-  }
-
-  .text-input:focus {
-    outline: none;
-    border-color: #38bdf8;
-  }
-
-  .hint-muted {
-    display: block;
-    margin-top: 5px;
-    font-size: 11.5px;
-    color: #8b949e;
-  }
-
-  /* Shortcuts */
-  .shortcuts-list {
-    margin-top: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .shortcut-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .shortcut {
     flex-wrap: wrap;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(240, 246, 252, 0.05);
   }
-
-  .shortcut-name {
-    width: 90px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid rgba(240, 246, 252, 0.12);
-    background: #0d1117;
-    color: #f0f6fc;
-    font-size: 12.5px;
-  }
-
-  .select-action {
+  .shortcut .name {
     flex: 1;
-    min-width: 130px;
+    min-width: 0;
   }
-
-  .btn-delete {
+  .shortcut .target {
+    flex-basis: 100%;
+  }
+  .icon-btn {
+    border: 0;
     background: none;
-    border: none;
-    color: #f87171;
+    color: rgba(255, 255, 255, 0.45);
     cursor: pointer;
-    padding: 6px 8px;
-    font-size: 13px;
-    border-radius: 6px;
+  }
+  .icon-btn:hover {
+    color: #ff453a;
   }
 
-  .btn-delete:hover {
-    background: rgba(248, 113, 113, 0.15);
-  }
-
-  .shortcut-target-row {
-    width: 100%;
-    margin-top: 4px;
-  }
-
-  .target-input {
-    font-size: 12px;
-    padding: 6px 10px;
-  }
-
-  .card-actions {
-    margin-top: 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  /* Weather */
-  .weather-current-box {
-    margin-top: 10px;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .weather-label {
-    color: #8b949e;
-  }
-
-  .weather-city-name {
-    color: #38bdf8;
-  }
-
-  .city-search-form {
-    margin-top: 12px;
-    display: flex;
-    gap: 8px;
-  }
-
-  .city-results-list {
-    margin-top: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-height: 180px;
-    overflow-y: auto;
-    border: 1px solid rgba(240, 246, 252, 0.08);
-    border-radius: 8px;
-    padding: 4px;
-  }
-
-  .city-result-item {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 8px 10px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: #f0f6fc;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.15s ease;
-  }
-
-  .city-result-item:hover {
-    background: rgba(56, 189, 248, 0.12);
-  }
-
-  .place-name {
-    font-size: 13px;
-  }
-
-  .place-detail {
-    font-size: 11.5px;
-    color: #8b949e;
-  }
-
-  /* Buttons */
-  .btn-primary {
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: none;
-    background: #1f6feb;
-    color: #fff;
-    font-weight: 500;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.18s ease;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: #388bfd;
-  }
-
-  .btn-secondary {
-    padding: 8px 14px;
-    border-radius: 8px;
-    border: 1px solid rgba(240, 246, 252, 0.14);
-    background: rgba(240, 246, 252, 0.06);
-    color: #f0f6fc;
-    font-size: 12.5px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.18s ease;
-  }
-
-  .btn-secondary:hover {
-    background: rgba(240, 246, 252, 0.12);
-    border-color: rgba(240, 246, 252, 0.25);
-  }
-
-  .btn-link {
-    background: none;
-    border: none;
-    color: #38bdf8;
-    font-size: 12px;
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
-  .btn-link:hover {
-    color: #7dd3fc;
-  }
-
-  .action-footer {
-    margin-top: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding-top: 10px;
-    border-top: 1px solid rgba(240, 246, 252, 0.05);
-  }
-
-  .tip-text {
-    font-size: 12px;
-    color: #8b949e;
-  }
-
-  /* Saved Toast */
-  .saved-toast {
+  .toast {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
+    right: 16px;
+    bottom: 14px;
+    padding: 5px 12px;
     border-radius: 999px;
-    background: rgba(35, 134, 54, 0.95);
-    color: #fff;
-    font-size: 12.5px;
-    font-weight: 500;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px);
-    z-index: 1000;
-  }
-
-  .check-icon {
-    width: 16px;
-    height: 16px;
-  }
-
-  /* Loading */
-  .loading-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 0;
-    color: #8b949e;
-  }
-
-  .spinner {
-    width: 28px;
-    height: 28px;
-    border: 3px solid rgba(240, 246, 252, 0.12);
-    border-top-color: #38bdf8;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-bottom: 12px;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+    background: rgba(48, 209, 88, 0.16);
+    color: #30d158;
+    font-size: 12px;
   }
 </style>

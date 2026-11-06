@@ -18,6 +18,9 @@ use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
 static MANAGER: OnceLock<Manager> = OnceLock::new();
 /// The session we listen to, with its event tokens so they can be removed when it changes.
 static CURRENT: Mutex<Option<(Session, [i64; 3])>> = Mutex::new(None);
+/// Player the user picked by clicking the cover (app id), instead of the one
+/// Windows considers current. Cleared when Windows switches by itself.
+static CHOSEN: Mutex<Option<String>> = Mutex::new(None);
 /// Album art is costly to read, so the last one is kept: (track key, data URL).
 static ART: Mutex<Option<(String, String)>> = Mutex::new(None);
 
@@ -32,6 +35,8 @@ pub struct NowPlaying {
     /// App id of the player, e.g. "Spotify.exe" or "MSEdge".
     source: String,
     playing: bool,
+    /// How many players Windows lists; above 1 the cover switches between them.
+    sources: u32,
     /// Seconds.
     position: f64,
     duration: f64,
@@ -48,6 +53,12 @@ pub fn start(app: AppHandle) {
         let Ok(manager) = Manager::RequestAsync().and_then(|op| op.get()) else { return };
         let handle = app.clone();
         let _ = manager.CurrentSessionChanged(&TypedEventHandler::new(move |_, _| {
+            *CHOSEN.lock().unwrap() = None;
+            watch_current(&handle);
+            Ok(())
+        }));
+        let handle = app.clone();
+        let _ = manager.SessionsChanged(&TypedEventHandler::new(move |_, _| {
             watch_current(&handle);
             Ok(())
         }));
@@ -61,14 +72,16 @@ pub fn start(app: AppHandle) {
 
 /// Moves our event handlers to whichever session Windows now considers current.
 fn watch_current(app: &AppHandle) {
-    let Some(manager) = MANAGER.get() else { return };
+    if MANAGER.get().is_none() {
+        return;
+    }
     let mut current = CURRENT.lock().unwrap();
     if let Some((session, [props, playback, timeline])) = current.take() {
         let _ = session.RemoveMediaPropertiesChanged(props);
         let _ = session.RemovePlaybackInfoChanged(playback);
         let _ = session.RemoveTimelinePropertiesChanged(timeline);
     }
-    if let Ok(session) = manager.GetCurrentSession() {
+    if let Some(session) = session() {
         let (a, b, c) = (app.clone(), app.clone(), app.clone());
         let tokens = [
             session
@@ -91,7 +104,23 @@ fn publish(app: &AppHandle) {
     let _ = app.emit("media", now_playing());
 }
 
+fn sessions() -> Vec<Session> {
+    MANAGER.get().and_then(|m| m.GetSessions().ok()).map(|list| list.into_iter().collect()).unwrap_or_default()
+}
+
+fn app_id(session: &Session) -> String {
+    session.SourceAppUserModelId().map(|s| s.to_string()).unwrap_or_default()
+}
+
+/// The chosen player while it's still there, otherwise Windows' current one.
 fn session() -> Option<Session> {
+    let chosen = CHOSEN.lock().unwrap().clone();
+    if let Some(id) = chosen {
+        if let Some(s) = sessions().into_iter().find(|s| app_id(s) == id) {
+            return Some(s);
+        }
+        *CHOSEN.lock().unwrap() = None;
+    }
     MANAGER.get()?.GetCurrentSession().ok()
 }
 
@@ -135,8 +164,9 @@ fn now_playing() -> Option<NowPlaying> {
         artist,
         album,
         art,
-        source: session.SourceAppUserModelId().map(|s| s.to_string()).unwrap_or_default(),
+        source: app_id(&session),
         playing,
+        sources: sessions().len() as u32,
         position,
         duration,
         updated_at,
@@ -171,6 +201,20 @@ pub(crate) fn read_art(thumbnail: IRandomAccessStreamReference) -> Option<String
 #[tauri::command]
 pub async fn media_now() -> Option<NowPlaying> {
     now_playing()
+}
+
+/// Clicking the cover: show the next player Windows lists.
+#[tauri::command]
+pub async fn media_next_source(app: AppHandle) {
+    let list = sessions();
+    if list.len() < 2 {
+        return;
+    }
+    let current = session().map(|s| app_id(&s)).unwrap_or_default();
+    let at = list.iter().position(|s| app_id(s) == current).unwrap_or(0);
+    let next = app_id(&list[(at + 1) % list.len()]);
+    *CHOSEN.lock().unwrap() = Some(next);
+    watch_current(&app);
 }
 
 #[tauri::command]

@@ -8,6 +8,8 @@ export type NowPlaying = {
   art: string | null;
   source: string;
   playing: boolean;
+  /** Players Windows lists right now; above 1 the cover switches between them. */
+  sources?: number;
   position: number;
   duration: number;
   /** Unix ms at which `position` was true (as reported by the player). */
@@ -34,3 +36,5 @@ export const toggle = () => invoke("media_toggle");
 export const next = () => invoke("media_next");
 export const prev = () => invoke("media_prev");
 export const seek = (seconds: number) => invoke("media_seek", { seconds });
+
+export const nextSource = () => invoke("media_next_source");
