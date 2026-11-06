@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import type { Water } from "./productivity.svelte";
-  import { t } from "./i18n";
+  import { getLocale, t } from "./i18n";
 
   let { water }: { water: Water } = $props();
 
@@ -11,7 +11,7 @@
   const hours = $derived(water.byHour());
   // A round top for the chart's scale, so its labels read nicely (250, 500, 750...).
   const top = $derived(Math.ceil(Math.max(s ? s.glassMl * 2 : 500, ...hours.map((h) => h.ml)) / 250) * 250);
-  const liters = (ml: number) => (ml / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 });
+  const liters = (ml: number) => (ml / 1000).toLocaleString(getLocale() === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 2 });
   const reminders = $derived(s?.waterReminders !== false);
 
   // The switch saves through Settings, which sends the new settings back to the page.

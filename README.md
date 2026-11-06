@@ -63,9 +63,18 @@ A small black island at the top of your screen that shows what's happening (musi
 
 <p align="center">
   <img src="docs/player.png" width="49%" alt="Music player with lyrics" />
-  <img src="docs/timer.png" width="49%" alt="Focus timer" />
-  <img src="docs/todo.png" width="49%" alt="To-do list" />
+  <img src="docs/today.png" width="49%" alt="Today page: next meeting, tasks and water" />
+  <img src="docs/todo.png" width="49%" alt="To-do list with a week strip" />
   <img src="docs/water.png" width="49%" alt="Water reminder" />
+</p>
+
+<p align="center">
+  <img src="docs/island.png" width="49%" alt="The line being sung, in the small notch" />
+  <img src="docs/floating.png" width="49%" alt="Floating style with a status ring" />
+</p>
+
+<p align="center">
+  <img src="docs/settings.png" width="70%" alt="Settings" />
 </p>
 
 ## Install

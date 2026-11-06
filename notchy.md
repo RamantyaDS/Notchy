@@ -271,6 +271,8 @@ Di-merge sebagai a1950a3, setelah dua putaran review. Build lokal kode PR ditola
 - **Clipboard** 50 item, tapi gambar maksimal 10 (gambar bisa megabyte per item).
 - **Klik cover untuk ganti pemutar**: `media_next_source` memilih sesi berikutnya dari `GetSessions()`; pilihan ini dipakai sampai Windows sendiri mengganti sesi aktif. Label nama aplikasi muncul di cover kalau ada lebih dari satu pemutar.
 - **`notchy.exe --settings`** saat Notchy jalan membuka Settings (lewat single-instance).
+- **Setelan dari PR #4** (gaya mata `mascotTheme`, mata di pulau musik `musicMascot`) dipindah ke menu **Mata**.
+- **Angka liter di halaman air** kini ikut bahasa (sebelumnya selalu format Indonesia, mis. "1,25").
 - **Bug lama ikut diperbaiki:** status daya tidak dibaca saat start, jadi tampilan mengecas baru muncul setelah daya berubah. Sekarang `power_state` dipanggil sekali saat halaman dimuat.
 - **Kaca buram belum dikerjakan:** efek buram di WebView hanya memburamkan isi halaman, bukan desktop. Acrylic/Mica Windows berlaku untuk seluruh kotak jendela 600×200 yang transparan, bukan bentuk notch, dan di Windows 10 terkenal patah-patah.
 - **Diuji 6 Nov 2026:** CPU saat diam ~1,6% (45 detik). Gaya melayang, cincin baterai di tampilan mengecas, dan Settings dicek lewat screenshot. Halaman Hari ini, strip minggu, dan klik cover belum dicoba langsung.
@@ -359,3 +361,9 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 3. Salinan teman yang sudah v0.1.2 ke atas akan update sendiri (saat menyala, atau lewat peek dalam 6 jam). Yang masih v0.1.0/v0.1.1 perlu menjalankan setup terbaru sekali secara manual (ada di halaman Releases).
 
 **Video promo** (bukan bagian repo ini): `D:\Projects\notchy-promo` – Reels 9:16, 27 detik, konsep "Satu garis, semuanya"; render lewat `render-par.mjs` (batas segmen dikunci ke frame), musik `music.html`, campur VO `mix.mjs`.
+
+**Konten promo v0.2.9** (6 Nov 2026), juga di `D:\Projects\notchy-promo\live`: UI Notchy **asli** (server Vite `:1420`) dijalankan di Playwright dengan `mock.js` sebagai pengganti sisi Rust (perintah `invoke` dijawab data contoh, event Rust diputar lewat `window.__emit`). Lagu fiktif "Langit Kertas" dan liriknya karangan sendiri.
+- `node live/shoot.mjs` → gambar README di `live/out` (latar wallpaper); `BARE=1` → panel notch saja (transparan) untuk `readme/banner.html`.
+- `node live/record.mjs` → `out/live-promo.mp4`: 9:16, 27 detik, tanpa VO, musik `out/music.wav`, 7 adegan tiap 2 bar (lirik di notch kecil, pemutar, Hari ini, strip minggu, notifikasi, gaya melayang, kartu penutup). Direkam real-time lewat screencast DevTools (~25 fps), lalu dijadikan 60 fps. `docs/demo.gif` dibuat dari video itu (12 fps, lebar 360).
+- Klik di dalam iframe yang diperbesar harus lewat DOM (`element.click()`), karena posisi pointer Playwright meleset.
+- Jangan mengambil screenshot dari app yang sedang dipakai dengan mouse otomatis: notifikasi asli ikut terekam, dan klik bisa jatuh ke jendela lain.
