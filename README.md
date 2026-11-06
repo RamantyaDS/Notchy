@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/RamantyaDS/Notchy/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/RamantyaDS/Notchy?style=flat-square&color=000000&label=download" /></a>
+  <a href="https://ramantyads.github.io/Notchy/"><img alt="Interactive Website" src="https://img.shields.io/badge/Website-Live%20Demo-000000?style=flat-square&logo=googlechrome" /></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%26%2011-000000?style=flat-square&logo=windows" />
   <img alt="Built with Tauri" src="https://img.shields.io/badge/Tauri%202-Rust%20%2B%20Svelte-000000?style=flat-square&logo=tauri" />
   <a href="https://github.com/RamantyaDS/Notchy/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/RamantyaDS/Notchy/total?style=flat-square&color=000000" /></a>
@@ -13,7 +14,8 @@
 A small black island at the top of your screen that shows what's happening (music, lyrics, notifications, timers) and grows when you hover it.</p>
 
 <p align="center">
-  <a href="https://github.com/RamantyaDS/Notchy/releases/latest"><b>⬇️ Download for Windows</b></a>
+  <a href="https://github.com/RamantyaDS/Notchy/releases/latest"><b>⬇️ Download for Windows</b></a> &nbsp;·&nbsp;
+  <a href="https://ramantyads.github.io/Notchy/"><b>🌐 Interactive Website & Demo</b></a>
 </p>
 
 ---
@@ -190,7 +192,7 @@ Design notes and every decision behind the app are in [`notchy.md`](notchy.md) (
 
 **Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), halaman Hari ini, timer fokus, pengingat minum, to-do dengan strip minggu, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, kecepatan internet, dan status sistem. Mata maskot punya 5 gaya (Classic, Anime, Pixel, Cat, Cartoon) yang bisa melirik kursor, berkedip, dan berekspresi. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, notch bisa melayang sebagai pil di bawah tepi atas, dan bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
 
-Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
+Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest) atau coba demonya langsung di [Website Notchy](https://ramantyads.github.io/Notchy/). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
 
 Tidak bisa menjalankan installer, misalnya di laptop kantor? Unduh **`Notchy_x.y.z_x64-portable.zip`** dari rilis yang sama, ekstrak, lalu jalankan `notchy.exe`. Versi portable tidak update sendiri: kalau ada versi baru, notch memberi tahu dan klik membuka halaman rilis.
 
