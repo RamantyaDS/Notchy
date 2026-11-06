@@ -38,6 +38,7 @@
     sync: "M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3M4 4v4h4M20 20v-4h-4",
     alert: "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
     code: "M8 9l-3 3 3 3M16 9l3 3-3 3M13 6l-2 12",
+    crescent: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z",
   };
 
   // ring: 0..100, the icon sits inside a battery ring and the value is shown big.
@@ -116,6 +117,13 @@
           detail: p.battery != null ? `${t("peek.battery")}: ${p.battery}%` : (p.low ? p.name : t("peek.bluetoothDevice")),
           ring: p.battery ?? undefined,
           value: p.battery != null ? `${p.battery}%` : undefined,
+        };
+      case "prayer":
+        return {
+          icon: "crescent",
+          tone: p.preAlert ? "#38bdf8" : "#34d399",
+          title: p.title,
+          detail: p.detail,
         };
       default:
         return null;

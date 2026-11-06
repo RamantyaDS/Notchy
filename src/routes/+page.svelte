@@ -23,6 +23,8 @@
   import { cleanTrack, currentLine, findLyrics, type Lyrics } from "$lib/lyrics";
   import { Pomodoro, Shelf, Todo, Water, type Settings } from "$lib/productivity.svelte";
   import { fetchWeather, type Weather } from "$lib/weather";
+  import { calculatePrayerTimes, getNextPrayer, type PrayerMethod } from "$lib/prayer";
+  import { chime } from "$lib/chime";
   import { upcoming, type CalEvent } from "$lib/calendar";
   import { ALL_PAGES, filterPages, PAGE_LABELS, getPageLabel, resolvePageDirection, type PageName } from "$lib/pages";
   import { setLocale, t } from "$lib/i18n";
@@ -194,6 +196,17 @@
   const shelf = new Shelf();
 
   let weather = $state<Weather | null>(null);
+  let prayerEnabled = $state(false);
+  let prayerPreAlert = $state(true);
+  let prayerMethod = $state("kemenag");
+  let prayerFajr = $state(true);
+  let prayerDhuhr = $state(true);
+  let prayerAsr = $state(true);
+  let prayerMaghrib = $state(true);
+  let prayerIsha = $state(true);
+  let prayerSound = $state(true);
+  let prayerLocation = $state<[number, number] | null>(null);
+  const prayerAlerted = new Set<string>();
 
   const charging = $derived(power.battery && power.charging);
   const timerActive = $derived(pomo.running || pomo.left < pomo.length());
@@ -508,6 +521,15 @@
     netSpeedThresholdUpKb?: number;
     springPhysics?: string;
     windowsAccentGlow?: boolean;
+    prayerEnabled?: boolean;
+    prayerPreAlert?: boolean;
+    prayerMethod?: string;
+    prayerFajr?: boolean;
+    prayerDhuhr?: boolean;
+    prayerAsr?: boolean;
+    prayerMaghrib?: boolean;
+    prayerIsha?: boolean;
+    prayerSound?: boolean;
     language?: string;
   };
 
@@ -567,8 +589,10 @@
       clearTimeout(weatherTimer);
       s ??= await invoke<AllSettings>("get_settings");
       const city = s.weatherCity;
-      const at = city ? [city.latitude, city.longitude] : await invoke<[number, number] | null>("locate");
+      const at: [number, number] | null = city ? [city.latitude, city.longitude] : await invoke<[number, number] | null>("locate");
+      prayerLocation = at;
       weather = at ? await fetchWeather(at[0], at[1]) : null;
+      checkPrayer(new Date());
       weatherTimer = setTimeout(loadWeather, 30 * 60_000);
     };
 
@@ -606,6 +630,19 @@
       setLocale(currentLanguage);
       const newIdx = pages.indexOf(current);
       page = newIdx !== -1 ? newIdx : Math.min(page, Math.max(0, pages.length - 1));
+      prayerEnabled = s.prayerEnabled === true;
+      prayerPreAlert = s.prayerPreAlert !== false;
+      prayerMethod = s.prayerMethod ?? "kemenag";
+      prayerFajr = s.prayerFajr !== false;
+      prayerDhuhr = s.prayerDhuhr !== false;
+      prayerAsr = s.prayerAsr !== false;
+      prayerMaghrib = s.prayerMaghrib !== false;
+      prayerIsha = s.prayerIsha !== false;
+      prayerSound = s.prayerSound !== false;
+      if (s.weatherCity) {
+        prayerLocation = [s.weatherCity.latitude, s.weatherCity.longitude] as [number, number];
+      }
+      checkPrayer(new Date());
       pomo.configure(s);
       water.configure(s);
       loadWeather(s);
@@ -780,9 +817,66 @@
 
     calendarPoll = setInterval(loadCalendar, 15 * 60_000);
 
+        const checkPrayer = (nowDate: Date) => {
+      if (!prayerEnabled || !prayerLocation) return;
+      try {
+        const times = calculatePrayerTimes(
+          prayerLocation[0],
+          prayerLocation[1],
+          nowDate,
+          prayerMethod as PrayerMethod,
+        );
+        const next = getNextPrayer(times, nowDate, {
+          fajr: prayerFajr,
+          dhuhr: prayerDhuhr,
+          asr: prayerAsr,
+          maghrib: prayerMaghrib,
+          isha: prayerIsha,
+        });
+        if (!next) return;
+
+        const dayKey = `${nowDate.getFullYear()}-${nowDate.getMonth() + 1}-${nowDate.getDate()}`;
+        const prayerNameKey = `s.prayer${next.name.charAt(0).toUpperCase() + next.name.slice(1)}`;
+
+        if (next.isExact) {
+          const exactKey = `${dayKey}_${next.name}_exact`;
+          if (!prayerAlerted.has(exactKey)) {
+            prayerAlerted.add(exactKey);
+            showPeek({
+              kind: "prayer",
+              preAlert: false,
+              title: t("peek.prayerTime", { prayer: t(prayerNameKey) }),
+              detail: t("peek.prayerTimeDetail", { time: next.time }),
+            });
+            if (prayerSound) chime();
+          }
+        } else if (prayerPreAlert && next.isPreAlert) {
+          const preKey = `${dayKey}_${next.name}_pre`;
+          if (!prayerAlerted.has(preKey)) {
+            prayerAlerted.add(preKey);
+            showPeek({
+              kind: "prayer",
+              preAlert: true,
+              title: t("peek.prayer10Min", { prayer: t(prayerNameKey) }),
+              detail: t("peek.prayer10MinDetail", { time: next.time }),
+            });
+          }
+        }
+
+        if (prayerAlerted.size > 50) {
+          for (const k of prayerAlerted) {
+            if (!k.startsWith(dayKey)) prayerAlerted.delete(k);
+          }
+        }
+      } catch (err) {
+        logJs(`prayer check: ${err}`);
+      }
+    };
+
     const schedule = () => {
       now = new Date();
       nowMs = Date.now();
+      checkPrayer(now);
       tick = setTimeout(schedule, 60_000 - (Date.now() % 60_000));
     };
     schedule();

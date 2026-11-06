@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import { fade, slide } from "svelte/transition";
   import { searchCity, type Place } from "$lib/weather";
+  import { calculatePrayerTimes, type PrayerMethod } from "$lib/prayer";
   import { t, setLocale, getLocale, subscribeLocale } from "$lib/i18n";
 
   type City = { name: string; latitude: number; longitude: number };
@@ -48,6 +49,15 @@
     monitorPlacement: string;
     springPhysics: string;
     windowsAccentGlow: boolean;
+    prayerEnabled?: boolean;
+    prayerPreAlert?: boolean;
+    prayerMethod?: string;
+    prayerFajr?: boolean;
+    prayerDhuhr?: boolean;
+    prayerAsr?: boolean;
+    prayerMaghrib?: boolean;
+    prayerIsha?: boolean;
+    prayerSound?: boolean;
   };
   type Key = keyof Settings;
 
@@ -71,7 +81,8 @@
     | "shortcuts"
     | "notifications"
     | "system"
-    | "weather";
+    | "weather"
+    | "prayer";
   const SECTIONS: { id: SectionId; color: string; icon: string; words: string }[] = [
     { id: "general", color: "#8e8e93", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z", words: "language bahasa monitor layar screen cursor kursor animation animasi spring" },
     { id: "appearance", color: "#5e5ce6", icon: "M3 7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4zM8 3v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V3", words: "floating melayang minimal ring cincin battery baterai accent aksen glow warna color" },
@@ -85,6 +96,7 @@
     { id: "notifications", color: "#ff453a", icon: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0", words: "notifications notifikasi do not disturb dnd whatsapp teams" },
     { id: "system", color: "#636366", icon: "M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 9h.01M11 9h.01M15 9h.01M7 13h10", words: "keyboard caps lock volume overlay osd bluetooth network jaringan speed kecepatan download upload" },
     { id: "weather", color: "#30b0c7", icon: "M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 1 0 6 16.4M6 19h11.5", words: "weather cuaca city kota location lokasi" },
+    { id: "prayer", color: "#34d399", icon: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z", words: "azan adhan sholat prayer subuh dzuhur ashar maghrib isya muslim islam jadwal prealert" },
   ];
 
   let section = $state<SectionId>("general");
@@ -96,6 +108,31 @@
   let cityQuery = $state("");
   let cityResults = $state<Place[]>([]);
   let searchingCity = $state(false);
+
+    let userCoords = $state<[number, number] | null>(null);
+  $effect(() => {
+    if (settings?.weatherCity) {
+      userCoords = [settings.weatherCity.latitude, settings.weatherCity.longitude];
+    } else {
+      invoke<[number, number] | null>("locate").then((loc) => {
+        if (loc) userCoords = loc;
+      });
+    }
+  });
+
+  const previewPrayerTimes = $derived.by(() => {
+    if (!userCoords || !settings?.prayerEnabled) return null;
+    try {
+      return calculatePrayerTimes(
+        userCoords[0],
+        userCoords[1],
+        new Date(),
+        (settings.prayerMethod as PrayerMethod) || "kemenag",
+      );
+    } catch {
+      return null;
+    }
+  });
 
   const query = $derived(searchQuery.trim().toLowerCase());
   const visible = $derived(
@@ -508,6 +545,70 @@
             </button>
           {/each}
         </div>
+      {/if}
+
+      {#if shows("prayer")}
+        <h1>{tr("nav.prayer")}</h1>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.prayerOn"), tr("s.prayerOnDesc"))}
+            {@render toggle("prayerEnabled", settings.prayerEnabled === true)}
+          </div>
+          {#if settings.prayerEnabled}
+            <div class="row" transition:slide={{ duration: 150 }}>
+              {@render row(tr("s.prayerWeatherSync"), settings.weatherCity ? settings.weatherCity.name : tr("s.prayerAutoGps"))}
+            </div>
+          {/if}
+        </div>
+
+        {#if settings.prayerEnabled}
+          <div transition:slide={{ duration: 150 }}>
+            <h2>{tr("nav.notifications")}</h2>
+            <div class="group">
+              <div class="row">
+                {@render row(tr("s.prayerPreAlert"), tr("s.prayerPreAlertDesc"))}
+                {@render toggle("prayerPreAlert", settings.prayerPreAlert !== false)}
+              </div>
+              <div class="row">
+                {@render row(tr("s.prayerSound"), tr("s.prayerSoundDesc"))}
+                {@render toggle("prayerSound", settings.prayerSound !== false)}
+              </div>
+              <div class="row">
+                {@render row(tr("s.prayerMethod"), tr("s.prayerMethodDesc"))}
+                <select value={settings.prayerMethod ?? "kemenag"} onchange={(e) => save({ prayerMethod: e.currentTarget.value })}>
+                  <option value="kemenag">{tr("s.prayerMethodKemenag")}</option>
+                  <option value="mwl">{tr("s.prayerMethodMwl")}</option>
+                  <option value="egyptian">{tr("s.prayerMethodEgyptian")}</option>
+                  <option value="isna">{tr("s.prayerMethodIsna")}</option>
+                </select>
+              </div>
+            </div>
+
+            <h2>{tr("nav.prayer")}</h2>
+            <div class="group">
+              <div class="row">
+                {@render row(tr("s.prayerFajr"), previewPrayerTimes ? previewPrayerTimes.fajr : "")}
+                {@render toggle("prayerFajr", settings.prayerFajr !== false)}
+              </div>
+              <div class="row">
+                {@render row(tr("s.prayerDhuhr"), previewPrayerTimes ? previewPrayerTimes.dhuhr : "")}
+                {@render toggle("prayerDhuhr", settings.prayerDhuhr !== false)}
+              </div>
+              <div class="row">
+                {@render row(tr("s.prayerAsr"), previewPrayerTimes ? previewPrayerTimes.asr : "")}
+                {@render toggle("prayerAsr", settings.prayerAsr !== false)}
+              </div>
+              <div class="row">
+                {@render row(tr("s.prayerMaghrib"), previewPrayerTimes ? previewPrayerTimes.maghrib : "")}
+                {@render toggle("prayerMaghrib", settings.prayerMaghrib !== false)}
+              </div>
+              <div class="row">
+                {@render row(tr("s.prayerIsha"), previewPrayerTimes ? previewPrayerTimes.isha : "")}
+                {@render toggle("prayerIsha", settings.prayerIsha !== false)}
+              </div>
+            </div>
+          </div>
+        {/if}
       {/if}
     {/if}
   </main>
