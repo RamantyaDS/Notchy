@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Notchy — Dynamic Island untuk Windows 10 & 11</title>
-  <meta name="description" content="Pulau interaktif kecil di atas layar Windows. Musik, lirik sinkron, kecepatan internet, notifikasi, dan maskot lucu. 100% Gratis, open-source, dan super enteng (~1% CPU)." />
+  <meta name="description" content="Pulau interaktif kecil di atas layar Windows. Musik, lirik sinkron, notifikasi, status Claude Code, volume per aplikasi, dan maskot lucu. 100% Gratis, open-source, dan super enteng (~1% CPU)." />
   
   <!-- Open Graph -->
   <meta property="og:title" content="Notchy — Dynamic Island untuk Windows 10 & 11" />
@@ -47,6 +47,10 @@
         <a href="#playground" class="hover:text-white transition-colors">
           <span data-lang="id">Uji Coba</span>
           <span data-lang="en">Demo</span>
+        </a>
+        <a href="#new" class="hover:text-white transition-colors">
+          <span data-lang="id">Baru</span>
+          <span data-lang="en">New</span>
         </a>
         <a href="#features" class="hover:text-white transition-colors">
           <span data-lang="id">Fitur</span>
@@ -105,10 +109,10 @@
       <!-- Subtitle -->
       <p class="max-w-2xl mx-auto text-base sm:text-lg text-slate-400 mb-8 leading-relaxed">
         <span data-lang="id">
-          Pulau kecil pintar di atas layar yang menampilkan musik dengan lirik sinkron, pantauan kecepatan internet, intip notifikasi WhatsApp, dan maskot mata lucu yang menemani harimu. Ringan (~1% CPU) dan menyingkir saat menghalangi.
+          Pulau kecil pintar di atas layar yang menampilkan musik dengan lirik sinkron, notifikasi WhatsApp, status Claude Code, volume per aplikasi, dan maskot mata lucu yang menemani harimu. Ringan (~1% CPU) dan menyingkir saat menghalangi.
         </span>
         <span data-lang="en">
-          A small black island at the top of your screen that shows what's happening—music, live synced lyrics, network speed, notifications—and tucks away when you need space. Built with Tauri 2, Rust, and Svelte 5.
+          A small black island at the top of your screen that shows what's happening—music, live synced lyrics, notifications, Claude Code status, per-app volume—and tucks away when you need space. Built with Tauri 2, Rust, and Svelte 5.
         </span>
       </p>
 
@@ -438,6 +442,190 @@
           <button data-sim-theme="cartoon" class="sim-theme-btn">Cartoon 👀</button>
         </div>
 
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       SECTION 1b: BARU DI v0.3
+       ======================================================================== -->
+  <section id="new" class="py-20 border-t border-white/[0.06]">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="text-center max-w-2xl mx-auto mb-14">
+        <h2 class="text-xs uppercase font-mono tracking-widest text-emerald-400 mb-2">
+          <span data-lang="id">Baru di v0.3</span>
+          <span data-lang="en">New in v0.3</span>
+        </h2>
+        <h3 class="text-3xl sm:text-4xl font-extrabold text-white mb-3">
+          <span data-lang="id">Notch yang ikut bekerja</span>
+          <span data-lang="en">A notch that works with you</span>
+        </h3>
+        <p class="text-slate-400 text-sm sm:text-base">
+          <span data-lang="id">Status Claude Code, volume per aplikasi, salin teks dari layar, peringatan hujan, dan banyak lagi. Semuanya bisa dinyalakan atau dimatikan di Settings.</span>
+          <span data-lang="en">Claude Code status, per-app volume, copy text from the screen, rain alerts and more. Every one of them can be turned on or off in Settings.</span>
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Claude Code (span 2) -->
+        <div class="premium-card p-6 md:col-span-2 flex flex-col justify-between">
+          <div class="mb-5">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">
+              🤖 Claude Code
+            </span>
+            <h4 class="text-xl font-bold text-white mt-3 mb-2">
+              <span data-lang="id">Tahu kapan Claude butuh kamu</span>
+              <span data-lang="en">Know when Claude needs you</span>
+            </h4>
+            <p class="text-slate-400 text-sm leading-relaxed max-w-xl">
+              <span data-lang="id">Notch menunjukkan saat Claude sedang bekerja, memberi tahu begitu Claude menunggu persetujuanmu, dan saat tugasnya selesai. Hook-nya tinggal disalin dari Settings → Keyboard & sistem.</span>
+              <span data-lang="en">The notch shows when Claude is working, lets you know the moment it waits for your approval, and tells you when it's done. Copy the hooks from Settings → Keyboard & system.</span>
+            </p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center p-4 rounded-xl bg-black/60 border border-white/[0.08]">
+            <img src="assets/claude.png" alt="Claude Code menunggu persetujuan" class="w-full h-auto" loading="lazy" />
+            <img src="assets/claude-working.png" alt="Claude Code sedang bekerja" class="w-full h-auto" loading="lazy" />
+          </div>
+        </div>
+
+        <!-- Per-app volume -->
+        <div class="premium-card p-6 flex flex-col justify-between">
+          <div class="mb-5">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-pink-500/10 text-pink-300 border border-pink-500/20 font-mono">
+              🔉 <span data-lang="id">Suara</span><span data-lang="en">Sound</span>
+            </span>
+            <h4 class="text-lg font-bold text-white mt-3 mb-2">
+              <span data-lang="id">Volume per aplikasi</span>
+              <span data-lang="en">Volume for each app</span>
+            </h4>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">
+              <span data-lang="id">Spotify keras, Zoom pelan. Setiap aplikasi yang bersuara punya slider dan tombol bisu sendiri.</span>
+              <span data-lang="en">Spotify loud, Zoom quiet. Every app that's playing gets its own slider and mute button.</span>
+            </p>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-white/[0.08]">
+            <img src="assets/sound.png" alt="Volume per aplikasi" class="w-full h-auto" loading="lazy" />
+          </div>
+        </div>
+
+        <!-- Shortcuts -->
+        <div class="premium-card p-6 flex flex-col justify-between">
+          <div class="mb-5">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">
+              ⚡ <span data-lang="id">Pintasan</span><span data-lang="en">Shortcuts</span>
+            </span>
+            <h4 class="text-lg font-bold text-white mt-3 mb-2">
+              <span data-lang="id">Sekali klik dari notch</span>
+              <span data-lang="en">One click from the notch</span>
+            </h4>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">
+              <span data-lang="id">Jaga laptop tetap menyala, kunci keyboard untuk dibersihkan, salin teks dari layar (OCR bawaan Windows, offline), dan mode gelap.</span>
+              <span data-lang="en">Keep the laptop awake, lock the keyboard to clean it, copy text from the screen (Windows' own OCR, offline), and dark mode.</span>
+            </p>
+          </div>
+          <div class="space-y-3">
+            <img src="assets/shortcuts.png" alt="Halaman pintasan" class="w-full h-auto rounded-xl border border-white/[0.08]" loading="lazy" />
+            <img src="assets/keylock.png" alt="Keyboard dikunci untuk dibersihkan" class="w-full h-auto rounded-xl border border-white/[0.08]" loading="lazy" />
+          </div>
+        </div>
+
+        <!-- Teleprompter (span 2) -->
+        <div class="premium-card p-6 md:col-span-2 flex flex-col justify-between">
+          <div class="mb-5">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono">
+              🎬 Teleprompter
+            </span>
+            <h4 class="text-xl font-bold text-white mt-3 mb-2">
+              <span data-lang="id">Baca naskah sambil menatap kamera</span>
+              <span data-lang="en">Read your script while looking at the camera</span>
+            </h4>
+            <p class="text-slate-400 text-sm leading-relaxed max-w-xl">
+              <span data-lang="id">Naskahmu bergulir tepat di bawah webcam, jadi waktu presentasi atau rekam video matamu tetap ke kamera. Ada juga halaman Snippet untuk teks yang sering kamu ketik.</span>
+              <span data-lang="en">Your script scrolls right under the webcam, so your eyes stay on the camera while you present or record. There's also a Snippets page for text you type often.</span>
+            </p>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-white/[0.08]">
+            <img src="assets/prompter.png" alt="Teleprompter di bawah webcam" class="w-full h-auto" loading="lazy" />
+          </div>
+        </div>
+
+        <!-- Little heads-ups (span 2) -->
+        <div class="premium-card p-6 md:col-span-2 flex flex-col justify-between">
+          <div class="mb-5">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 font-mono">
+              🌧️ <span data-lang="id">Pemberitahuan kecil</span><span data-lang="en">Little heads-ups</span>
+            </span>
+            <h4 class="text-xl font-bold text-white mt-3 mb-2">
+              <span data-lang="id">Diingatkan sebelum terlambat</span>
+              <span data-lang="en">A nudge before it's too late</span>
+            </h4>
+            <p class="text-slate-400 text-sm leading-relaxed max-w-xl">
+              <span data-lang="id">Hujan sekitar 30 menit lagi, cabut charger di 80%, istirahat mata 20-20-20, dan ringkasan notifikasi yang masuk selama kamu presentasi. Teks yang kamu salin dari layar juga muncul di sini.</span>
+              <span data-lang="en">Rain in about 30 minutes, unplug the charger at 80%, a 20-20-20 eye break, and a summary of notifications that came in while you were presenting. Text you copy from the screen shows up here too.</span>
+            </p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center p-4 rounded-xl bg-black/60 border border-white/[0.08]">
+            <img src="assets/rain.png" alt="Peringatan hujan" class="w-full h-auto" loading="lazy" />
+            <img src="assets/ocr.png" alt="Teks disalin dari layar" class="w-full h-auto" loading="lazy" />
+          </div>
+        </div>
+
+        <!-- Today + countdowns -->
+        <div class="premium-card p-6 flex flex-col justify-between">
+          <div class="mb-5">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">
+              📋 <span data-lang="id">Hari ini</span><span data-lang="en">Today</span>
+            </span>
+            <h4 class="text-lg font-bold text-white mt-3 mb-2">
+              <span data-lang="id">Hitung mundur & timer cepat</span>
+              <span data-lang="en">Countdowns & quick timers</span>
+            </h4>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">
+              <span data-lang="id">"Gajian 16 hari lagi" di halaman Hari ini, plus timer sekali ketuk 1 sampai 15 menit.</span>
+              <span data-lang="en">"Payday in 16 days" on the Today page, plus one-tap timers from 1 to 15 minutes.</span>
+            </p>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-white/[0.08]">
+            <img src="assets/today.png" alt="Halaman Hari ini dengan hitung mundur" class="w-full h-auto" loading="lazy" />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Scripts + keyboard -->
+      <div class="mt-7 premium-card p-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <div>
+            <span class="text-xs font-mono uppercase tracking-wider text-emerald-400 font-semibold">
+              <span data-lang="id">Untuk script-mu</span>
+              <span data-lang="en">For your scripts</span>
+            </span>
+            <h4 class="text-2xl font-bold text-white mt-1 mb-3">
+              <span data-lang="id">Apa pun bisa muncul di notch</span>
+              <span data-lang="en">Anything can show up in the notch</span>
+            </h4>
+            <p class="text-slate-400 text-sm leading-relaxed mb-4">
+              <span data-lang="id">Build selesai, backup gagal, deploy beres: script apa pun bisa memunculkan pesan di notch. Hanya teks, Notchy tidak pernah menjalankan apa pun. Ada juga link <code class="text-indigo-300">notchy://</code> untuk aplikasi yang bisa membuka URL.</span>
+              <span data-lang="en">Build done, backup failed, deploy finished: any script can put a message in the notch. Text only, Notchy never runs anything. There's also a <code class="text-indigo-300">notchy://</code> link for apps that open URLs.</span>
+            </p>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">⌨️ <span data-lang="id">Ctrl+Alt+N membuka notch</span><span data-lang="en">Ctrl+Alt+N opens the notch</span></span>
+              <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">💿 <span data-lang="id">Cincin status CPU / RAM</span><span data-lang="en">CPU / RAM status ring</span></span>
+              <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">👆 <span data-lang="id">Geser dua jari ganti lagu</span><span data-lang="en">Two-finger swipe to skip songs</span></span>
+              <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">📤 <span data-lang="id">Klik kanan file di Shelf untuk berbagi</span><span data-lang="en">Right-click a Shelf file to share</span></span>
+            </div>
+          </div>
+          <div class="p-5 rounded-2xl bg-black/60 border border-white/[0.08] font-mono text-xs sm:text-sm leading-relaxed text-slate-300 overflow-x-auto">
+            <div class="text-slate-500"># PowerShell, cmd, bash…</div>
+            <div class="whitespace-nowrap"><span class="text-emerald-400">notchy</span> --peek "Build selesai" --icon done --sound</div>
+            <div class="whitespace-nowrap"><span class="text-emerald-400">notchy</span> --peek "Backup gagal" --detail "Disk penuh" --icon error</div>
+            <div class="mt-3 text-slate-500"># <span data-lang="id">Status Claude Code (dipakai oleh hook)</span><span data-lang="en">Claude Code status (used by the hooks)</span></div>
+            <div class="whitespace-nowrap"><span class="text-emerald-400">notchy</span> --agent working | waiting | done</div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -857,10 +1045,42 @@
           </summary>
           <div class="mt-2.5 text-xs text-slate-400 leading-relaxed border-t border-white/[0.06] pt-2.5">
             <span data-lang="id">
-              <strong>Sama sekali tidak.</strong> Notchy hanya memantau penekanan tombol Volume, Brightness, Caps Lock, dan pergantian bahasa keyboard untuk menampilkan overlay-nya. Isi ketikan tidak pernah dibaca atau disimpan.
+              <strong>Sama sekali tidak.</strong> Notchy hanya memantau penekanan tombol Volume, Brightness, Caps Lock, dan pergantian bahasa keyboard untuk menampilkan overlay-nya. Isi ketikan tidak pernah dibaca atau disimpan. Kunci keyboard untuk dibersihkan juga butuh keyboard, jadi Notchy baru memantaunya setelah kunci itu kamu pakai.
             </span>
             <span data-lang="en">
-              <strong>Never.</strong> Notchy solely listens for Volume, Brightness, Caps Lock, and Language switch key events to display overlays. Keystroke contents are never captured.
+              <strong>Never.</strong> Notchy solely listens for Volume, Brightness, Caps Lock, and Language switch key events to display overlays. Keystroke contents are never captured. The keyboard-cleaning lock also needs the keyboard, so it only starts watching it once you use that lock.
+            </span>
+          </div>
+        </details>
+
+        <details class="premium-card p-4 group cursor-pointer">
+          <summary class="text-sm font-semibold text-white list-none flex items-center justify-between">
+            <span data-lang="id">"Salin teks dari layar" tidak menemukan teks</span>
+            <span data-lang="en">"Copy text from screen" doesn't find any text</span>
+            <span class="text-slate-400 group-open:rotate-180 transition-transform text-xs">▼</span>
+          </summary>
+          <div class="mt-2.5 text-xs text-slate-400 leading-relaxed border-t border-white/[0.06] pt-2.5">
+            <span data-lang="id">
+              Fitur ini memakai pengenal teks bawaan Windows, untuk bahasa yang terpasang di Windows (Settings → Time & language → Language), dan berjalan offline di PC-mu. Pilih area yang lebih tajam atau lebih besar; teks yang sangat kecil atau bergaya mungkin tidak terbaca.
+            </span>
+            <span data-lang="en">
+              It uses Windows' own text recognition, for the languages installed in Windows (Settings → Time & language → Language), and runs offline on your PC. Pick a sharper or larger area; very small or stylized text may not be read.
+            </span>
+          </div>
+        </details>
+
+        <details class="premium-card p-4 group cursor-pointer">
+          <summary class="text-sm font-semibold text-white list-none flex items-center justify-between">
+            <span data-lang="id">Ctrl+Alt+N tidak membuka notch</span>
+            <span data-lang="en">Ctrl+Alt+N doesn't open the notch</span>
+            <span class="text-slate-400 group-open:rotate-180 transition-transform text-xs">▼</span>
+          </summary>
+          <div class="mt-2.5 text-xs text-slate-400 leading-relaxed border-t border-white/[0.06] pt-2.5">
+            <span data-lang="id">
+              Mungkin sudah dipakai aplikasi lain. Pilih kombinasi lain di Settings → Keyboard & sistem → Tombol pintas, misalnya <code class="text-slate-300">Ctrl+Alt+Shift+N</code>.
+            </span>
+            <span data-lang="en">
+              Another app may already use it. Pick another one in Settings → Keyboard & system → Hotkeys, like <code class="text-slate-300">Ctrl+Alt+Shift+N</code>.
             </span>
           </div>
         </details>
