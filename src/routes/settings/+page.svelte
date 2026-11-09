@@ -112,6 +112,7 @@
   let cityQuery = $state("");
   let cityResults = $state<Place[]>([]);
   let searchingCity = $state(false);
+  let cityNotFound = $state(false);
 
   const query = $derived(searchQuery.trim().toLowerCase());
   const visible = $derived(
@@ -233,6 +234,7 @@
     if (!cityQuery.trim()) return;
     searchingCity = true;
     cityResults = await searchCity(cityQuery.trim()).catch(() => []);
+    cityNotFound = cityResults.length === 0;
     searchingCity = false;
   }
 </script>
@@ -668,6 +670,9 @@
             <input class="text grow" bind:value={cityQuery} placeholder={tr("s.cityPlaceholder")} />
             <button class="btn" type="submit" disabled={searchingCity}>{searchingCity ? "…" : tr("s.search")}</button>
           </form>
+          {#if cityNotFound}
+            <div class="row"><small class="muted">{tr("s.cityNotFound")}</small></div>
+          {/if}
           {#each cityResults as place}
             <button
               class="row pick"

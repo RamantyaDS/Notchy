@@ -66,8 +66,21 @@ export function firstRain(times: string[], mm: number[], offsetSeconds: number, 
 
 export type Place = { name: string; latitude: number; longitude: number; detail: string };
 
-/** City search for the settings window. */
+/**
+ * City search for the settings window. Open-Meteo knows cities, not every
+ * district: "Jakarta Timur" finds nothing, so words are dropped from the end
+ * until something matches ("Jakarta"), which has the same weather.
+ */
 export async function searchCity(name: string): Promise<Place[]> {
+  const words = name.trim().split(/\s+/);
+  for (let n = words.length; n > 0; n--) {
+    const found = await searchExact(words.slice(0, n).join(" "));
+    if (found.length) return found;
+  }
+  return [];
+}
+
+async function searchExact(name: string): Promise<Place[]> {
   const q = new URLSearchParams({ name, count: "6", language: "id" });
   const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${q}`);
   if (!res.ok) return [];

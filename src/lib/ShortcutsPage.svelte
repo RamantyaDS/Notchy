@@ -158,6 +158,7 @@
     /* Up to two lines, so names like "Copy text from screen" still fit. */
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     text-align: center;
     line-height: 1.15;
