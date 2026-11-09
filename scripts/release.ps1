@@ -85,5 +85,10 @@ $sha = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
 $zipSha = (Get-FileHash $portable -Algorithm SHA256).Hash.ToLower()
 $zipName = Split-Path $portable -Leaf
 $page = "$Notes`n`n**Portable** (tanpa instal, tanpa update otomatis): ``$zipName```n`n**SHA-256**`n- ``$name``: ``$sha```n- ``$zipName``: ``$zipSha``"
-gh release create "v$Version" $setup "$setup.sig" $latest $portable --title "Notchy $Version" --notes $page
+# Through a file: Windows PowerShell mangles double quotes inside native arguments,
+# which broke `--notes` for v0.3.0 (the tag was pushed but no release was made).
+$pageFile = Join-Path $env:TEMP "notchy-release-notes.md"
+[IO.File]::WriteAllText($pageFile, $page)
+gh release create "v$Version" $setup "$setup.sig" $latest $portable --title "Notchy $Version" --notes-file $pageFile
+if ($LASTEXITCODE -ne 0) { throw "gh release create failed; the tag is pushed, create the release by hand." }
 Write-Host "Released v$Version. Installed copies (v0.2.1+) pick it up within an hour, after waking from sleep, or on their next start."
