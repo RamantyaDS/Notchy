@@ -7,7 +7,8 @@
 
   const left = $derived(pomo.remaining(now));
   const done = $derived(pomo.progress(now));
-  const focus = $derived(pomo.phase === "focus");
+  const focus = $derived(pomo.phase !== "break");
+  const QUICK = [1, 3, 5, 10, 15];
 </script>
 
 <div class="page">
@@ -25,7 +26,11 @@
       <button class="reset" onclick={() => pomo.reset()} aria-label={t("timer.reset")} title={t("timer.reset")}>↺</button>
     </div>
     <div class="phase">
-      {focus ? t("timer.focus") : t("timer.break")} · {focus ? pomo.focusMin : pomo.breakMin} {t("timer.minutesUnit")}
+      {pomo.phase === "quick" ? t("timer.quick") : focus ? t("timer.focus") : t("timer.break")} ·
+      {pomo.phase === "quick" ? pomo.quickMin : focus ? pomo.focusMin : pomo.breakMin} {t("timer.minutesUnit")}
+      <span class="quick" title={t("timer.quick")}>
+        ⏲{#each QUICK as m}<button class:on={pomo.phase === "quick" && pomo.quickMin === m} onclick={() => pomo.quick(m)}>{m}</button>{/each}
+      </span>
     </div>
     <!-- Quick starts on either side of the main button. -->
     <div class="buttons">
@@ -53,6 +58,34 @@
     width: 80px;
     height: 80px;
     color: #fb7185;
+  }
+  .dial:not(.rest):has(+ .info .quick button.on) {
+    color: #fbbf24;
+  }
+  .quick {
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .quick button {
+    border: 0;
+    padding: 0 6px;
+    height: 17px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    font: inherit;
+    font-size: 10.5px;
+    cursor: pointer;
+  }
+  .quick button:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .quick button.on {
+    background: #fbbf24;
+    color: #000;
+    font-weight: 600;
   }
   .dial.rest {
     color: #34d399;

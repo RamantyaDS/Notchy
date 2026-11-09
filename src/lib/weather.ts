@@ -30,10 +30,57 @@ export async function fetchWeather(latitude: number, longitude: number): Promise
   }
 }
 
+/**
+ * Minutes until rain starts within the next hour (0 = now), or null for a dry
+ * hour. Open-Meteo's 15-minute forecast, in the place's own time zone.
+ */
+export async function rainSoon(latitude: number, longitude: number): Promise<number | null> {
+  try {
+    const q = new URLSearchParams({
+      latitude: String(latitude),
+      longitude: String(longitude),
+      minutely_15: "precipitation",
+      forecast_minutely_15: "6",
+      timezone: "auto",
+    });
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${q}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return firstRain(data.minutely_15?.time ?? [], data.minutely_15?.precipitation ?? [], data.utc_offset_seconds ?? 0, Date.now());
+  } catch {
+    return null;
+  }
+}
+
+/** Pure part of `rainSoon`: local ISO times ("2026-11-09T14:15") with mm of rain each. */
+export function firstRain(times: string[], mm: number[], offsetSeconds: number, now: number): number | null {
+  for (let i = 0; i < times.length; i++) {
+    // The times are local to the place; turn them into real instants.
+    const at = Date.parse(`${times[i]}:00Z`) - offsetSeconds * 1000;
+    // Each slot covers the 15 minutes before its time stamp.
+    if (at < now || at - now > 75 * 60_000) continue;
+    if ((mm[i] ?? 0) >= 0.2) return Math.max(0, Math.round((at - 15 * 60_000 - now) / 60_000));
+  }
+  return null;
+}
+
 export type Place = { name: string; latitude: number; longitude: number; detail: string };
 
-/** City search for the settings window. */
+/**
+ * City search for the settings window. Open-Meteo knows cities, not every
+ * district: "Jakarta Timur" finds nothing, so words are dropped from the end
+ * until something matches ("Jakarta"), which has the same weather.
+ */
 export async function searchCity(name: string): Promise<Place[]> {
+  const words = name.trim().split(/\s+/);
+  for (let n = words.length; n > 0; n--) {
+    const found = await searchExact(words.slice(0, n).join(" "));
+    if (found.length) return found;
+  }
+  return [];
+}
+
+async function searchExact(name: string): Promise<Place[]> {
   const q = new URLSearchParams({ name, count: "6", language: "id" });
   const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${q}`);
   if (!res.ok) return [];

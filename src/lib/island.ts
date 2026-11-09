@@ -11,9 +11,11 @@ export type Activity =
   | { kind: "timer" }
   | { kind: "download"; download: Download }
   | { kind: "music"; lyric: boolean }
-  | { kind: "network"; speed: NetworkSpeed };
+  | { kind: "network"; speed: NetworkSpeed }
+  /** Claude Code working (or waiting for you), reported by its hooks. */
+  | { kind: "agent"; waiting: boolean };
 
-const ORDER: Activity["kind"][] = ["call", "timer", "download", "music", "network"];
+const ORDER: Activity["kind"][] = ["call", "agent", "timer", "download", "music", "network"];
 
 /** Main activity and the ones beside it. `turn` (from horizontal swipes) cycles the main one. */
 export function arrange(activities: Activity[], turn = 0): { main: Activity | null; side: Activity[] } {
@@ -41,6 +43,8 @@ export function mainWidth(a: Activity): number {
       return 200;
     case "network":
       return 210;
+    case "agent":
+      return 220;
   }
 }
 
@@ -57,6 +61,8 @@ export function sideWidth(a: Activity): number {
       return 56;
     case "network":
       return 82;
+    case "agent":
+      return 40;
   }
 }
 

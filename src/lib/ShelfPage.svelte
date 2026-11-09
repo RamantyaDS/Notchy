@@ -42,11 +42,27 @@
     pressed = null;
   }
 
+  // Right-click menu on a file: open, show in folder, share, remove.
+  let menu = $state<{ item: ShelfItem; x: number } | null>(null);
+  function context(e: MouseEvent, item: ShelfItem) {
+    e.preventDefault();
+    const box = (e.currentTarget as HTMLElement).closest(".page")!.getBoundingClientRect();
+    menu = { item, x: Math.min(e.clientX - box.left, box.width - 170) };
+  }
+  function act(what: "open" | "reveal" | "share" | "remove") {
+    const item = menu!.item;
+    menu = null;
+    if (what === "open") invoke("open_path", { path: item.path });
+    if (what === "reveal") invoke("reveal_path", { path: item.path });
+    if (what === "share") invoke("share_files", { paths: [item.path] });
+    if (what === "remove") shelf.remove(item.path);
+  }
+
   const size = (bytes: number) =>
     bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : bytes >= 1e3 ? `${Math.round(bytes / 1e3)} KB` : `${bytes} B`;
 </script>
 
-<svelte:window onpointermove={move} onpointerup={() => (pressed = null)} />
+<svelte:window onpointermove={move} onpointerup={() => (pressed = null)} onpointerdown={(e) => !(e.target as HTMLElement).closest(".menu") && (menu = null)} />
 
 <div class="page" class:dropping>
   <div class="header">
@@ -74,7 +90,7 @@
     <div class="items scroll">
       {#each shelf.items as item (item.path)}
         <div class="item" role="button" tabindex="-1" title={item.name}
-          onpointerdown={(e) => down(e, item)} onpointerup={up}>
+          onpointerdown={(e) => down(e, item)} onpointerup={up} oncontextmenu={(e) => context(e, item)}>
           {#if IMAGE.test(item.name)}
             <img src={convertFileSrc(item.path)} alt="" draggable="false" />
           {:else}
@@ -85,6 +101,16 @@
           <button class="remove" onpointerdown={(e) => e.stopPropagation()} onclick={() => shelf.remove(item.path)} aria-label={t("shelf.removeFromShelf")}>×</button>
         </div>
       {/each}
+    </div>
+  {/if}
+
+  {#if menu}
+    <div class="menu" style:left="{menu.x}px" role="menu">
+      <button onclick={() => act("open")}>{t("peek.open")}</button>
+      <button onclick={() => act("reveal")}>{t("peek.showInFolder")}</button>
+      {#if !menu.item.dir}<button class="cur" onclick={() => act("share")}>{t("shelf.share")}…</button>{/if}
+      <hr />
+      <button onclick={() => act("remove")}>{t("shelf.removeFromShelf")}</button>
     </div>
   {/if}
 </div>
@@ -110,6 +136,34 @@
     flex: 1;
     font-size: 11px;
     color: rgba(255, 255, 255, 0.45);
+  }
+  .menu {
+    position: absolute;
+    top: 30px;
+    z-index: 20;
+    width: 160px;
+    padding: 4px;
+    border-radius: 9px;
+    background: #2a2e38;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+  }
+  .menu button {
+    padding: 5px 9px;
+    border-radius: 6px;
+    text-align: left;
+    font-size: 12px;
+  }
+  .menu button:hover {
+    background: #38bdf8;
+    color: #04121d;
+  }
+  .menu hr {
+    width: 100%;
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 3px 0;
   }
   button {
     border: 0;

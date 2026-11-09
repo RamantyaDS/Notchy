@@ -13,6 +13,7 @@
     nextEvent,
     clockOf,
     waterOn,
+    countdowns = [],
   }: {
     todo: Todo;
     water: Water;
@@ -20,7 +21,10 @@
     nextEvent: CalEvent | null | undefined;
     clockOf: (t: number) => string;
     waterOn: boolean;
+    /** Upcoming countdowns, nearest first. */
+    countdowns?: { name: string; days: number }[];
   } = $props();
+  const daysText = (n: number) => (n === 0 ? t("today.isToday") : n === 1 ? t("today.day") : t("today.days", { n }));
 
   const tasks = $derived(todo.forDay(dayKey()));
   const open = $derived(tasks.filter((x) => !x.done));
@@ -42,6 +46,12 @@
     {#if weather}
       <div class="weather">{weather.icon} <b>{weather.temp}°</b></div>
     {/if}
+    {#each countdowns.slice(0, weather ? 1 : 2) as c (c.name)}
+      <div class="countdown" class:today={c.days === 0} title={c.name}>
+        <b>{daysText(c.days)}</b>
+        <span>{c.name}</span>
+      </div>
+    {/each}
   </div>
 
   <div class="main">
@@ -100,6 +110,26 @@
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.45);
     margin-bottom: 2px;
+  }
+  .countdown {
+    display: flex;
+    gap: 5px;
+    align-items: baseline;
+    min-width: 0;
+    font-size: 11.5px;
+  }
+  .countdown b {
+    flex: none;
+    color: #fbbf24;
+  }
+  .countdown.today b {
+    color: #34d399;
+  }
+  .countdown span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.7);
   }
   .event {
     display: flex;

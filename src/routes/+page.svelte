@@ -13,6 +13,10 @@
   import RestEyes from "$lib/RestEyes.svelte";
   import ShelfPage from "$lib/ShelfPage.svelte";
   import ShortcutsPage, { type Shortcut } from "$lib/ShortcutsPage.svelte";
+  import SoundPage from "$lib/SoundPage.svelte";
+  import SnippetsPage from "$lib/SnippetsPage.svelte";
+  import PrompterPage from "$lib/PrompterPage.svelte";
+  import { upcomingCountdowns, type Countdown } from "$lib/countdown";
   import StatusBar from "$lib/StatusBar.svelte";
   import TimerPage from "$lib/TimerPage.svelte";
   import TodayPage from "$lib/TodayPage.svelte";
@@ -21,8 +25,8 @@
   import { arrange, islandWidth, type Activity, type Call, type Download } from "$lib/island";
   import { nextSource, positionAt, type NowPlaying } from "$lib/media";
   import { cleanTrack, currentLine, findLyrics, type Lyrics } from "$lib/lyrics";
-  import { Pomodoro, Shelf, Todo, Water, type Settings } from "$lib/productivity.svelte";
-  import { fetchWeather, type Weather } from "$lib/weather";
+  import { dayKey, Pomodoro, Shelf, Todo, Water, type Settings } from "$lib/productivity.svelte";
+  import { fetchWeather, rainSoon, type Weather } from "$lib/weather";
   import { calculatePrayerTimes, getNextPrayer, type PrayerMethod } from "$lib/prayer";
   import { chime } from "$lib/chime";
   import { upcoming, type CalEvent } from "$lib/calendar";
@@ -72,6 +76,10 @@
     clipboard: { w: 420, h: 154, r: 32, e: 22 },
     shortcuts: { w: 420, h: 154, r: 32, e: 22 },
     mirror: { w: 420, h: 140, r: 32, e: 22 },
+    sound: { w: 420, h: 154, r: 32, e: 22 },
+    snippets: { w: 420, h: 154, r: 32, e: 22 },
+    prompter: { w: 440, h: 154, r: 32, e: 22 },
+    keylock: { w: 420, h: 92, r: 28, e: 18 },
   };
 
   let musicEnabled = $state(true);
@@ -82,6 +90,31 @@
   let shelfEnabled = $state(true);
   let clipboardEnabled = $state(true);
   let shortcutsEnabled = $state(true);
+  let soundEnabled = $state(true);
+  let snippetsEnabled = $state(false);
+  let prompterEnabled = $state(false);
+
+  // Newer features (see Settings)
+  let swipeTracks = $state(true);
+  let rainAlert = $state(true);
+  let chargeReminder = $state(0);
+  let presentationSummary = $state(true);
+  let eyeBreak = $state(false);
+  let privacyIndicators = $state(true);
+  let countdownList = $state<Countdown[]>([]);
+  /** Keep-awake: 0 off, otherwise when it ends (unix ms; huge = until turned off). */
+  let keepAwake = $state(0);
+  /** Keyboard-cleaning lock: 0 off, otherwise when it unlocks by itself. */
+  let keyLockUntil = $state(0);
+  /** Claude Code, from its hooks: working, or waiting for you. */
+  let agent = $state<{ waiting: boolean } | null>(null);
+  let agentTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Hidden for a full-screen app or presentation; notifications are held meanwhile. */
+  let hidden = $state(false);
+  let held: string[] = [];
+  /** Opened with the hotkey: arrows change page, Esc closes. */
+  let keyboardMode = $state(false);
+  let load = $state<[number, number]>([0, 0]);
 
   const pages = $derived(
     filterPages(ALL_PAGES, {
@@ -93,6 +126,9 @@
       shelfEnabled,
       clipboardEnabled,
       shortcutsEnabled,
+      soundEnabled,
+      snippetsEnabled,
+      prompterEnabled,
     })
   );
 
@@ -215,6 +251,7 @@
   // What runs right now, for the closed notch
   const running = $derived.by((): Activity[] => [
     ...(call ? [{ kind: "call", call } as const] : []),
+    ...(agent ? [{ kind: "agent", waiting: agent.waiting } as const] : []),
     ...(timerActive ? [{ kind: "timer" } as const] : []),
     ...(download ? [{ kind: "download", download } as const] : []),
     ...(musicEnabled && media?.playing ? [{ kind: "music", lyric: false } as const] : []),
@@ -264,7 +301,9 @@
   const view = $derived(
     mirror
       ? "mirror"
-      : scrollingVolume && peekMgr.peek?.kind === "volume"
+      : keyLockUntil
+        ? "keylock"
+        : scrollingVolume && peekMgr.peek?.kind === "volume"
         ? "peek"
         : paged
           ? pages[page] === "now"
@@ -336,13 +375,20 @@
       ? power.percent
       : statusRing === "water" && waterEnabled
         ? Math.min(100, Math.round((water.today() / (water.settings?.goalMl || 2000)) * 100))
-        : null,
+        : statusRing === "cpu"
+          ? load[0]
+          : statusRing === "ram"
+            ? load[1]
+            : null,
   );
   const ringed = $derived(view === "rest" && ringValue !== null);
   const floating = $derived(floatingNotch && view !== "tucked");
   const FLOAT_GAP = 8;
 
-  const islandDots = $derived((inUse.camera.length > 0 ? 10 : 0) + (inUse.mic.length > 0 && !call ? 10 : 0));
+  const camOn = $derived(privacyIndicators && inUse.camera.length > 0);
+  const micOn = $derived(privacyIndicators && inUse.mic.length > 0);
+  const islandDots = $derived((camOn ? 10 : 0) + (micOn && !call ? 10 : 0));
+  const countdownsAhead = $derived(upcomingCountdowns(countdownList, now));
   const baseSize = $derived(
     view === "island" && island.main
       ? { ...SIZES.island, w: islandWidth(island.main, island.side) + islandDots }
@@ -350,7 +396,9 @@
         ? { ...SIZES.rest, w: weather && mascot && mascotMode === "always" ? 184 : 170 }
         : SIZES[view as keyof typeof SIZES] ?? SIZES.rest,
   );
-  const size = $derived(ringed ? { ...baseSize, w: baseSize.w + 22 } : baseSize);
+  // Status dots (camera, mic, keep-awake) in the resting notch get room beside the clock.
+  const restDots = $derived(view === "rest" && (camOn || micOn || micMuted || !!keepAwake));
+  const size = $derived({ ...baseSize, w: baseSize.w + (ringed ? 22 : 0) + (restDots ? 18 : 0) });
   const closedView = $derived(view === "rest" || view === "island" || view === "charging");
   const withStatus = $derived(paged && !mirror && view !== "peek" && view !== "clock");
 
@@ -367,6 +415,73 @@
 
   $effect(() => {
     invoke("set_notch_size", { w: size.w, h: view === "minimal" ? 10 : size.h, top: floating ? FLOAT_GAP : 0 });
+  });
+
+  // CPU / RAM for the status ring, only while the ring is showing.
+  $effect(() => {
+    if (!(statusRing === "cpu" || statusRing === "ram") || view !== "rest") return;
+    const read = () => invoke<[number, number]>("system_load").then((l) => (load = l)).catch(() => {});
+    read();
+    const id = setInterval(read, 2000);
+    return () => clearInterval(id);
+  });
+
+  // Charger reminder: unplug at the chosen level, plug in at 20%. Once per charge.
+  let chargeNoted = false;
+  let lowNoted = false;
+  $effect(() => {
+    const p = power;
+    if (!chargeReminder || !p.battery) return;
+    untrack(() => {
+      if (p.charging && p.percent >= chargeReminder && !chargeNoted) {
+        chargeNoted = true;
+        showPeek({ kind: "charge-full", percent: p.percent });
+      }
+      if (!p.charging && p.percent <= 20 && !lowNoted) {
+        lowNoted = true;
+        showPeek({ kind: "battery-low", percent: p.percent });
+      }
+      if (!p.charging) chargeNoted = false;
+      if (p.charging) lowNoted = false;
+    });
+  });
+
+  // 20-20-20: after 20 active minutes, a 20-second eye break. Away for 5 minutes resets it.
+  $effect(() => {
+    if (!eyeBreak) return;
+    let active = 0;
+    const id = setInterval(async () => {
+      const idle = await invoke<number>("idle_seconds").catch(() => 0);
+      active = idle >= 300 ? 0 : active + 1;
+      if (active >= 20 && !hidden && pomo.phase !== "break" && !call) {
+        active = 0;
+        showPeek({ kind: "eyes" });
+      }
+    }, 60_000);
+    return () => clearInterval(id);
+  });
+
+  // A countdown reaching its day gets one peek that day.
+  $effect(() => {
+    const today = countdownsAhead.filter((c) => c.days === 0);
+    untrack(() => {
+      for (const c of today) {
+        const key = `countdown:${dayKey()}:${c.name}`;
+        try {
+          if (localStorage.getItem(key)) continue;
+          localStorage.setItem(key, "1");
+        } catch {}
+        showPeek({ kind: "countdown", name: c.name });
+      }
+    });
+  });
+
+  // The keyboard-lock countdown ticks every second.
+  $effect(() => {
+    if (!keyLockUntil) return;
+    nowMs = Date.now();
+    const id = setInterval(() => (nowMs = Date.now()), 1000);
+    return () => clearInterval(id);
   });
 
   $effect(() => {
@@ -397,6 +512,20 @@
     invoke(on ? "begin_typing" : "end_typing");
     if (!on && !hovered) closeTimer = setTimeout(() => (open = false), 220);
   }
+  function endKeyboardMode() {
+    if (!keyboardMode) return;
+    keyboardMode = false;
+    setTyping(false);
+    setPinned(false);
+    open = false;
+  }
+  function keydown(e: KeyboardEvent) {
+    if (!keyboardMode || (e.target as HTMLElement).closest("input, textarea")) return;
+    if (e.key === "ArrowRight") goPage(page + 1, 1);
+    else if (e.key === "ArrowLeft") goPage(page - 1, -1);
+    else if (e.key === "Escape") endKeyboardMode();
+  }
+
   function openMirror(title = "", link = "") {
     mirror = { title, link };
     invoke("set_mirror", { on: true });
@@ -420,6 +549,10 @@
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
       if (Date.now() - lastWheel < 450 || Math.abs(e.deltaX) < 8) return;
       lastWheel = Date.now();
+      if (swipeTracks && paged && pages[page] === "now" && media) {
+        invoke(e.deltaX > 0 ? "media_next" : "media_prev");
+        return;
+      }
       turn += e.deltaX > 0 ? 1 : -1;
       return;
     }
@@ -531,6 +664,16 @@
     prayerIsha?: boolean;
     prayerSound?: boolean;
     language?: string;
+    soundEnabled?: boolean;
+    snippetsEnabled?: boolean;
+    prompterEnabled?: boolean;
+    swipeTracks?: boolean;
+    rainAlert?: boolean;
+    chargeReminder?: number;
+    presentationSummary?: boolean;
+    eyeBreak?: boolean;
+    privacyIndicators?: boolean;
+    countdowns?: Countdown[];
   };
 
   const loadCalendar = async () => {
@@ -585,16 +728,30 @@
       }
     };
 
+    let place: number[] | null = null;
+    let rainQuietUntil = 0;
     const loadWeather = async (s?: AllSettings) => {
       clearTimeout(weatherTimer);
       s ??= await invoke<AllSettings>("get_settings");
       const city = s.weatherCity;
       const at: [number, number] | null = city ? [city.latitude, city.longitude] : await invoke<[number, number] | null>("locate");
+      place = at;
       prayerLocation = at;
       weather = at ? await fetchWeather(at[0], at[1]) : null;
+      checkRain();
       checkPrayer(new Date());
       weatherTimer = setTimeout(loadWeather, 30 * 60_000);
     };
+    // Rain alert: one peek per rainy spell (quiet for 3 hours after).
+    const checkRain = async () => {
+      if (!rainAlert || !place || Date.now() < rainQuietUntil) return;
+      const minutes = await rainSoon(place[0], place[1]);
+      if (minutes !== null && minutes <= 40) {
+        rainQuietUntil = Date.now() + 3 * 3600_000;
+        showPeek({ kind: "rain", minutes });
+      }
+    };
+    const rainPoll = setInterval(checkRain, 15 * 60_000);
 
     const applySettings = (s: AllSettings) => {
       smallLyrics = s.smallLyrics && s.musicEnabled !== false;
@@ -620,6 +777,16 @@
       shelfEnabled = s.shelfEnabled !== false;
       clipboardEnabled = s.clipboardEnabled !== false;
       shortcutsEnabled = s.shortcutsEnabled !== false;
+      soundEnabled = s.soundEnabled !== false;
+      snippetsEnabled = s.snippetsEnabled === true;
+      prompterEnabled = s.prompterEnabled === true;
+      swipeTracks = s.swipeTracks !== false;
+      rainAlert = s.rainAlert !== false;
+      chargeReminder = s.chargeReminder ?? 0;
+      presentationSummary = s.presentationSummary !== false;
+      eyeBreak = s.eyeBreak === true;
+      privacyIndicators = s.privacyIndicators !== false;
+      countdownList = s.countdowns ?? [];
       netSpeedIsland = s.netSpeedIsland === true;
       netSpeedStatus = s.netSpeedStatus !== false;
       netSpeedThresholdDownKb = s.netSpeedThresholdDownKb ?? 500;
@@ -653,6 +820,7 @@
     invoke<AllSettings>("get_settings").then(applySettings);
     // Windows only reports power changes, so read the current state once.
     invoke<Power>("power_state").then((p) => (power = p)).catch(() => {});
+    invoke<number>("keep_awake_state").then((u) => (keepAwake = u)).catch(() => {});
 
     let lastLx = 0;
     let dirChanges = 0;
@@ -753,6 +921,11 @@
         if (!m) lyricsOn = false;
       },
       onPeek: (p) => {
+        if (!privacyIndicators && (p.kind === "camera" || p.kind === "mic-in-use")) return;
+        if (hidden && presentationSummary && p.kind === "notification") {
+          held.push(String(p.app || p.title || ""));
+          return;
+        }
         if (mascot && (p.kind === "notification" || p.kind === "meeting" || p.kind === "download-done" || p.kind === "screenshot")) {
           shocked = true;
           clearTimeout(shockedTimer);
@@ -766,6 +939,50 @@
       onMicMuted: (m) => (micMuted = m),
       onSettings: (s) => applySettings(s),
       onAccentColor: (a) => (accentColor = a),
+      onHidden: (h) => {
+        hidden = h;
+        if (!h && held.length) {
+          const names = [...new Set(held)].filter(Boolean);
+          showPeek({ kind: "held", count: held.length, names: names.slice(0, 3).join(", ") });
+          held = [];
+        }
+      },
+      onHotkey: () => {
+        if (keyboardMode) return endKeyboardMode();
+        keyboardMode = true;
+        open = true;
+        setPinned(true);
+        setTyping(true);
+      },
+      onKeepAwake: (until) => {
+        const was = keepAwake;
+        keepAwake = until;
+        if (!!until !== !!was) {
+          const label = until > 4e15 ? t("peek.untilOff") : `${Math.round((until - Date.now()) / 60_000)} min`;
+          showPeek({ kind: "keep-awake", on: !!until, label });
+        }
+      },
+      onKeyLock: (until) => {
+        keyLockUntil = until;
+        if (until) {
+          open = false;
+          setPinned(true);
+        } else {
+          setPinned(false);
+        }
+      },
+      onAgent: (a) => {
+        clearTimeout(agentTimer);
+        if (a.state === "working" || a.state === "waiting") {
+          agent = { waiting: a.state === "waiting" };
+          if (a.state === "waiting") showPeek({ kind: "agent", state: "waiting", text: a.text });
+          // A session that stops reporting (closed terminal) clears itself.
+          agentTimer = setTimeout(() => (agent = null), 20 * 60_000);
+        } else {
+          if (agent && a.state === "done") showPeek({ kind: "agent", state: "done", text: a.text });
+          agent = null;
+        }
+      },
       onMonitorLeave: async () => {
         if (monitorTransition !== "idle") return;
         if (springPhysics === "off") {
@@ -905,6 +1122,8 @@
       clearTimeout(tickleTimer);
       clearTimeout(weatherTimer);
       clearInterval(calendarPoll);
+      clearInterval(rainPoll);
+      clearTimeout(agentTimer);
       calendarTimers.forEach(clearTimeout);
       clearTimeout(closeTimer);
       clearTimeout(pageLabelTimer);
@@ -935,9 +1154,11 @@
   );
 </script>
 
+<svelte:window onkeydown={keydown} />
+
 {#snippet statusRingSvg(value: number, inline = false)}
   <svg class="status-ring" class:inline viewBox="0 0 20 20" aria-label="{value}%">
-    <title>{statusRing === "battery" ? `${value}%` : `💧 ${value}%`}</title>
+    <title>{statusRing === "battery" ? `${value}%` : statusRing === "cpu" ? `CPU ${value}%` : statusRing === "ram" ? `RAM ${value}%` : `💧 ${value}%`}</title>
     <circle cx="10" cy="10" r="7.5" />
     <circle
       cx="10"
@@ -945,6 +1166,8 @@
       r="7.5"
       class="fill"
       class:water={statusRing === "water"}
+      class:load={statusRing === "cpu" || statusRing === "ram"}
+      class:busy={(statusRing === "cpu" || statusRing === "ram") && value >= 90}
       class:low={statusRing === "battery" && value <= 20}
       pathLength="100"
       stroke-dasharray="{value} 100"
@@ -961,6 +1184,7 @@
   class:minimal={view === "minimal"}
   class:floating
   class:ringed
+  class:dotted={restDots}
   class:greet={greeting && view === "rest"}
   class:charging
   class:tinted
@@ -1027,8 +1251,8 @@
         {levels}
         {micMuted}
         active={view === "island"}
-        camera={inUse.camera.length > 0}
-        mic={inUse.mic.length > 0 && !call}
+        camera={camOn}
+        mic={micOn && !call}
         {mascot}
         {mascotMode}
         {mascotTheme}
@@ -1099,18 +1323,31 @@
     </div>
   {/if}
 
+  {#if keyLockUntil}
+    {@const left = Math.max(0, Math.ceil((keyLockUntil - nowMs) / 1000))}
+    <div class="layer on keylock" in:fade={{ duration: 220, delay: 120 }} out:fade={{ duration: 100 }}>
+      <span class="lock-ring">
+        <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" /><circle cx="20" cy="20" r="17" class="fill" pathLength="100" stroke-dasharray="{Math.min(100, (left / 60) * 100)} 100" /></svg>
+        <svg class="lock" viewBox="0 0 24 24"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4" /></svg>
+      </span>
+      <span class="lock-text"><b>{t("keylock.title")}</b><small>{t("keylock.detail", { s: left })}</small></span>
+      <button class="unlock" onclick={() => invoke("unlock_keyboard")}>{t("keylock.unlock")}</button>
+    </div>
+  {/if}
+
   {#if mirror}
     <div class="layer on" in:fade={{ duration: 260, delay: 160 }} out:fade={{ duration: 100 }}>
       <Mirror title={mirror.title} link={mirror.link} onDone={closeMirror} onJoin={joinMeeting} />
     </div>
   {/if}
 
-  {#if closedView && view !== "island" && (inUse.camera.length || inUse.mic.length || micMuted)}
+  {#if closedView && view !== "island" && (camOn || micOn || micMuted || keepAwake)}
     <div class="dots" class:wide={view !== "rest"}>
-      {#if inUse.camera.length}<i class="cam" title="Kamera: {inUse.camera.join(', ')}"></i>{/if}
+      {#if keepAwake}<svg class="awake" viewBox="0 0 24 24"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 11h1.5a2.5 2.5 0 0 1 0 5H17" /></svg>{/if}
+      {#if camOn}<i class="cam" title="Kamera: {inUse.camera.join(', ')}"></i>{/if}
       {#if micMuted}
         <svg class="muted" viewBox="0 0 24 24"><path d="M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V6a3 3 0 0 0-5.7-1.3M19 11a7 7 0 0 1-1.2 3.9M5 11a7 7 0 0 0 10.6 6M12 18v3M3 3l18 18" /></svg>
-      {:else if inUse.mic.length}<i class="mic" title="Mikrofon: {inUse.mic.join(', ')}"></i>{/if}
+      {:else if micOn}<i class="mic" title="Mikrofon: {inUse.mic.join(', ')}"></i>{/if}
     </div>
   {/if}
 
@@ -1184,7 +1421,13 @@
         out:fly={{ x: -pageDirection * 48, duration: 120, easing: cubicOut }}
       >
         {#if pages[page] === "today"}
-          <TodayPage {todo} {water} {weather} {nextEvent} {clockOf} waterOn={waterEnabled} />
+          <TodayPage {todo} {water} {weather} {nextEvent} {clockOf} waterOn={waterEnabled} countdowns={countdownsAhead} />
+        {:else if pages[page] === "sound"}
+          <SoundPage {output} onSwitch={switchOutput} />
+        {:else if pages[page] === "snippets"}
+          <SnippetsPage onTyping={setTyping} />
+        {:else if pages[page] === "prompter"}
+          <PrompterPage onTyping={setTyping} />
         {:else if pages[page] === "pomodoro"}
           <TimerPage {pomo} now={nowMs} />
         {:else if pages[page] === "water"}
@@ -1194,7 +1437,7 @@
         {:else if pages[page] === "clipboard"}
           <ClipboardPage items={clipItems} />
         {:else if pages[page] === "shortcuts"}
-          <ShortcutsPage {shortcuts} onCamera={() => openMirror(nextEvent?.link ? nextEvent.title : "", nextEvent?.link ?? "")} />
+          <ShortcutsPage {shortcuts} {keepAwake} now={nowMs} onCamera={() => openMirror(nextEvent?.link ? nextEvent.title : "", nextEvent?.link ?? "")} />
         {:else}
           <ShelfPage {shelf} {dropping} {dropTarget} />
         {/if}
@@ -1375,6 +1618,78 @@
   .status-ring .fill.water {
     stroke: #38bdf8;
   }
+  .status-ring .fill.load {
+    stroke: #a78bfa;
+  }
+  .status-ring .fill.load.busy {
+    stroke: #f87171;
+  }
+  .layer.keylock {
+    flex-direction: row;
+    gap: 14px;
+    padding: 0 22px;
+  }
+  .lock-ring {
+    position: relative;
+    flex: none;
+    width: 46px;
+    height: 46px;
+    color: #fbbf24;
+  }
+  .lock-ring svg:first-child {
+    width: 46px;
+    height: 46px;
+    transform: rotate(-90deg);
+  }
+  .lock-ring circle {
+    fill: none;
+    stroke: currentColor;
+    stroke-opacity: 0.2;
+    stroke-width: 3.5;
+  }
+  .lock-ring .fill {
+    stroke-opacity: 1;
+    stroke-linecap: round;
+    transition: stroke-dasharray 1s linear;
+  }
+  .lock-ring .lock {
+    position: absolute;
+    inset: 14px;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+  }
+  .lock-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .lock-text b {
+    font-size: 14px;
+  }
+  .lock-text small {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .unlock {
+    flex: none;
+    border: 0;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: #fff;
+    color: #000;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .dotted :global(.rest-time-side) {
+    right: 30px;
+  }
   .ringed :global(.weather) {
     left: 33px;
   }
@@ -1538,6 +1853,15 @@
   .dots .mic {
     background: #fb923c;
     box-shadow: 0 0 6px rgba(251, 146, 60, 0.6);
+  }
+  .dots .awake {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: #34d399;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
   .dots .muted {
     width: 13px;

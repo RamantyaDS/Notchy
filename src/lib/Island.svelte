@@ -11,6 +11,7 @@
   import { formatTime } from "./media";
   import type { NowPlaying } from "./media";
   import type { Pomodoro } from "./productivity.svelte";
+  import { t } from "./i18n";
 
   let {
     main,
@@ -94,6 +95,10 @@
   <svg class="icon" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" /></svg>
 {/snippet}
 
+{#snippet spark()}
+  <svg class="icon" viewBox="0 0 24 24"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z" /></svg>
+{/snippet}
+
 {#snippet arrow()}
   <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16" /></svg>
 {/snippet}
@@ -157,6 +162,10 @@
       <span class="label name">{main.download.name}</span>
       <span class="dim num">{bytes(main.download.bytes)}</span>
       <span class="run" class:on={active}></span>
+    {:else if main.kind === "agent"}
+      <span class="spark" class:wait={main.waiting}>{@render spark()}</span>
+      <span class="label">{main.waiting ? t("peek.agentWaiting") : t("peek.agentWorking")}</span>
+      <span class="run" class:on={active && !main.waiting}></span>
     {:else if main.kind === "network"}
       <span class="net-pill down">
         <svg class="mini-arrow" viewBox="0 0 24 24"><path d="M12 4v13M7 12l5 5 5-5" /></svg>
@@ -186,6 +195,8 @@
         <span class="blue num">{bytes(a.download.speed)}/s</span>
       {:else if a.kind === "network"}
         <span class="blue num">↓{formatSpeed(a.speed.down)}</span>
+      {:else if a.kind === "agent"}
+        <span class="spark" class:wait={a.waiting}>{@render spark()}</span>
       {/if}
     </div>
   {/each}
@@ -199,6 +210,21 @@
 </div>
 
 <style>
+  .spark {
+    display: flex;
+    color: #d97757;
+    animation: agent-pulse 1.6s ease-in-out infinite;
+  }
+  .spark.wait {
+    color: #fbbf24;
+    animation: none;
+  }
+  @keyframes agent-pulse {
+    50% {
+      opacity: 0.45;
+      transform: rotate(45deg) scale(0.85);
+    }
+  }
   .island {
     position: absolute;
     inset: 0;

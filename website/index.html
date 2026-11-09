@@ -19,21 +19,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          }
-        }
-      }
-    }
-  </script>
+  <!-- Pre-compiled Standalone Tailwind CSS (Zero CDN / No JIT Console Warning) -->
+  <link rel="stylesheet" href="tailwind.css" />
 
   <!-- Bespoke Refined Styles -->
   <link rel="stylesheet" href="styles.css" />
@@ -51,7 +38,7 @@
         <img src="assets/icon.png" alt="Notchy Logo" class="w-8 h-8 rounded-xl shadow-md group-hover:scale-105 transition-transform" />
         <div class="flex items-baseline gap-2">
           <span class="font-bold text-lg text-white group-hover:text-indigo-300 transition-colors">Notchy</span>
-          <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 border border-white/[0.08]">v0.2.8</span>
+          <span class="hidden sm:inline-block text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 border border-white/[0.08] data-version-text">v0.2.9</span>
         </div>
       </a>
 
@@ -127,14 +114,14 @@
 
       <!-- Clean CTA Buttons -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-6">
-        <a href="https://github.com/RamantyaDS/Notchy/releases/latest" 
+        <a href="https://github.com/RamantyaDS/Notchy/releases/latest" data-download-installer 
            class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold btn-primary">
           <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
           <span data-lang="id">Unduh Notchy Installer (.exe)</span>
           <span data-lang="en">Download Installer (.exe)</span>
         </a>
 
-        <a href="https://github.com/RamantyaDS/Notchy/releases/latest" 
+        <a href="https://github.com/RamantyaDS/Notchy/releases/latest" data-download-portable 
            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold btn-secondary">
           <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -203,10 +190,10 @@
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
-                      <span class="text-xs font-semibold text-white truncate">A Sky Full of Stars</span>
+                      <span class="text-xs font-semibold text-white truncate">Langit Kertas</span>
                       <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.08] text-slate-300 font-medium">Spotify</span>
                     </div>
-                    <div class="text-[11px] text-slate-400 truncate">Coldplay · Ghost Stories</div>
+                    <div class="text-[11px] text-slate-400 truncate">Arunika · Lampu Kota</div>
                     <div class="flex items-center gap-2 mt-1.5">
                       <span class="text-[9px] text-pink-400 font-mono">2:14</span>
                       <div class="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
@@ -249,7 +236,7 @@
                     <span data-lang="en">Live Synced Lyrics</span>
                   </div>
                   <div id="sim-lyric-line" class="text-sm font-semibold text-white transition-all duration-300 leading-snug">
-                    'Cause you're a sky, 'cause you're a sky full of stars 🌟
+                    Kita lipat malam jadi perahu ⛵
                   </div>
                   <div class="text-xs text-slate-400 mt-1 truncate">
                     <span data-lang="id">Ngetik tugas sambil denger lagu tanpa ribet buka tab lirik.</span>
@@ -301,8 +288,8 @@
                     </span>
                   </div>
                   <div class="text-xs text-slate-300 truncate">
-                    <span data-lang="id">Ramantya: PR #2 sudah di-merge! Coba cek versi v0.2.7 ya 🔥</span>
-                    <span data-lang="en">Ramantya: PR #2 is merged! Check out v0.2.7 release 🔥</span>
+                    <span data-lang="id">Ramantya: PR #4 sudah di-merge! Coba cek versi <span class="data-version-text">v0.2.9</span> ya 🔥</span>
+                    <span data-lang="en">Ramantya: PR #4 is merged! Check out <span class="data-version-text">v0.2.9</span> release 🔥</span>
                   </div>
                 </div>
                 <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-white/[0.08] text-slate-200">
@@ -412,8 +399,8 @@
         </div>
 
         <!-- Clean Segmented Mode Selector -->
-        <div class="mt-4 flex justify-center">
-          <div class="segmented-control">
+        <div class="mt-4 w-full overflow-x-auto pb-2 flex sm:justify-center justify-start px-2 scrollbar-none">
+          <div class="segmented-control flex-shrink-0">
             <button data-sim-mode="eyes" class="segmented-btn active">
               👀 <span data-lang="id">Maskot</span><span data-lang="en">Mascot</span>
             </button>
@@ -563,15 +550,15 @@
               💧 <span data-lang="id">Kesehatan Kerja</span><span data-lang="en">Daily Wellness</span>
             </span>
             <h4 class="text-xl font-bold text-white mt-3 mb-2">
-              <span data-lang="id">Pomodoro, Pengingat Minum & Istirahat Mata</span>
-              <span data-lang="en">Pomodoro, Hydration & Eye Rest</span>
+              <span data-lang="id">Pomodoro & Pengingat Hidrasi Sehat</span>
+              <span data-lang="en">Pomodoro & Mindful Hydration</span>
             </h4>
             <p class="text-slate-400 text-sm leading-relaxed mb-5">
               <span data-lang="id">
-                Pengingat ramah untuk minum air, istirahat mata setiap 20 menit, dan sesi Pomodoro tanpa perlu mengunduh aplikasi terpisah.
+                Pengingat ramah untuk minum air teratur dan sesi fokus Pomodoro tanpa perlu mengunduh aplikasi terpisah.
               </span>
               <span data-lang="en">
-                Gentle reminders to hydrate, take 20-20-20 eye breaks, and run focus blocks without noisy separate apps.
+                Gentle reminders to stay hydrated and structured Pomodoro focus blocks without noisy separate apps.
               </span>
             </p>
           </div>
@@ -608,7 +595,7 @@
               <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">👾 Retro Pixel</span>
               <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">🐱 Cat Slit Gaze</span>
               <span class="px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300">👀 Parallax Pupil</span>
-              <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">🔋 Option C Charging</span>
+              <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">🔋 <span data-lang="id">Tampilan Mengecas</span><span data-lang="en">Charging View</span></span>
             </div>
           </div>
           <div class="flex items-center justify-center p-8 rounded-2xl bg-black/60 border border-white/[0.08] shadow-inner min-h-[180px]">
@@ -673,7 +660,7 @@
             </div>
           </div>
           <div class="rounded-xl overflow-hidden border border-white/[0.08] shadow-lg">
-            <img src="assets/settings_preview.png" alt="Pengaturan Notchy" class="w-full h-auto object-cover" />
+            <img src="assets/settings.png" alt="Pengaturan Notchy" class="w-full h-auto object-cover" />
           </div>
         </div>
       </div>
@@ -781,7 +768,7 @@
                 <span data-lang="id">Rekomendasi</span>
                 <span data-lang="en">Recommended</span>
               </span>
-              <span class="text-xs font-mono text-slate-400">v0.2.8</span>
+              <span class="text-xs font-mono text-slate-400 data-version-text">v0.2.9</span>
             </div>
             <h4 class="text-lg font-bold text-white mb-1">
               <span data-lang="id">Installer Standar (.exe)</span>
@@ -792,7 +779,7 @@
               <span data-lang="en">Standard per-user installer. Updates itself automatically when new versions are published.</span>
             </p>
           </div>
-          <a href="https://github.com/RamantyaDS/Notchy/releases/latest" 
+          <a href="https://github.com/RamantyaDS/Notchy/releases/latest" data-download-installer 
              class="w-full py-2.5 rounded-xl text-center text-xs font-bold btn-primary">
             <span data-lang="id">⬇️ Unduh Notchy Setup (.exe)</span>
             <span data-lang="en">⬇️ Download Setup (.exe)</span>
@@ -807,7 +794,7 @@
                 <span data-lang="id">Tanpa Install</span>
                 <span data-lang="en">No Install Required</span>
               </span>
-              <span class="text-xs font-mono text-slate-400">v0.2.8</span>
+              <span class="text-xs font-mono text-slate-400 data-version-text">v0.2.9</span>
             </div>
             <h4 class="text-lg font-bold text-white mb-1">
               <span data-lang="id">Versi Portable (.zip)</span>
@@ -818,34 +805,13 @@
               <span data-lang="en">Unzip and run directly. Ideal for restricted corporate environments without install rights.</span>
             </p>
           </div>
-          <a href="https://github.com/RamantyaDS/Notchy/releases/latest" 
+          <a href="https://github.com/RamantyaDS/Notchy/releases/latest" data-download-portable 
              class="w-full py-2.5 rounded-xl text-center text-xs font-semibold btn-secondary">
             <span data-lang="id">📦 Unduh Portable (.zip)</span>
             <span data-lang="en">📦 Download Portable (.zip)</span>
           </a>
         </div>
 
-      </div>
-
-      <!-- Hash Integrity Check -->
-      <div class="p-4 rounded-xl bg-black/40 border border-white/[0.06] text-left text-xs font-mono text-slate-400">
-        <div class="flex items-center justify-between mb-1.5">
-          <span class="text-emerald-400 text-[11px] font-semibold">
-            <span data-lang="id">Cek Integritas SHA-256 (PowerShell)</span>
-            <span data-lang="en">SHA-256 Integrity Check (PowerShell)</span>
-          </span>
-          <button id="copy-hash-btn" class="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 border border-white/[0.08]">
-            <span data-lang="id">Salin Perintah</span>
-            <span data-lang="en">Copy Command</span>
-          </button>
-        </div>
-        <div class="text-[11px] text-slate-300">
-          <code>Get-FileHash .\Notchy_0.2.7_x64-setup.exe -Algorithm SHA256</code>
-        </div>
-        <div id="copy-hash-feedback" class="hidden text-emerald-400 text-[10px] mt-1 font-mono">
-          <span data-lang="id">✓ Perintah berhasil disalin ke clipboard!</span>
-          <span data-lang="en">✓ Command copied to clipboard!</span>
-        </div>
       </div>
 
     </div>
@@ -941,7 +907,6 @@
           <span data-lang="id">Laporkan Masalah</span>
           <span data-lang="en">Report Issue</span>
         </a>
-        <a href="https://github.com/RamantyaDS/Notchy/blob/main/LICENSE" target="_blank" class="hover:text-slate-300 transition-colors">MIT License</a>
       </div>
 
     </div>

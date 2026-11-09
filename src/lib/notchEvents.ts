@@ -22,6 +22,16 @@ export interface EventHandlers {
   onSettings: (settings: any) => void;
   onAccentColor: (accent: string) => void;
   onMonitorLeave?: () => void;
+  /** The window was hidden for a full-screen app or presentation (true) or shown again. */
+  onHidden?: (hidden: boolean) => void;
+  /** The "open the notch" hotkey. */
+  onHotkey?: () => void;
+  /** Keep-awake: 0 off, otherwise when it ends (unix ms; huge = until turned off). */
+  onKeepAwake?: (until: number) => void;
+  /** Keyboard lock: 0 unlocked, otherwise when it unlocks by itself (unix ms). */
+  onKeyLock?: (until: number) => void;
+  /** Claude Code hook: working, waiting, done or idle. */
+  onAgent?: (agent: { state: string; text: string }) => void;
 }
 
 export async function setupNotchEvents(handlers: EventHandlers): Promise<() => void> {
@@ -54,6 +64,11 @@ export async function setupNotchEvents(handlers: EventHandlers): Promise<() => v
     add(listen("settings", (e) => handlers.onSettings(e.payload))),
     add(listen<string>("accent-color", (e) => handlers.onAccentColor(e.payload))),
     add(listen("monitor-transition-leave", () => handlers.onMonitorLeave?.())),
+    add(listen<boolean>("notch-hidden", (e) => handlers.onHidden?.(e.payload))),
+    add(listen("notch-hotkey", () => handlers.onHotkey?.())),
+    add(listen<number>("keep-awake", (e) => handlers.onKeepAwake?.(e.payload))),
+    add(listen<number>("keyboard-lock", (e) => handlers.onKeyLock?.(e.payload))),
+    add(listen<{ state: string; text: string }>("agent", (e) => handlers.onAgent?.(e.payload))),
   ]);
 
   return () => {

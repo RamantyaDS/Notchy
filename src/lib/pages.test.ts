@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ALL_PAGES, filterPages, PAGE_LABELS, resolvePageDirection, type PageToggles } from "./pages";
 
 describe("pages configuration and labels", () => {
-  it("defines all 8 pages with appropriate Indonesian labels", () => {
-    expect(ALL_PAGES).toEqual(["now", "today", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"]);
+  it("defines all 11 pages with appropriate Indonesian labels", () => {
+    expect(ALL_PAGES).toEqual(["now", "sound", "today", "pomodoro", "water", "todo", "shelf", "clipboard", "snippets", "shortcuts", "prompter"]);
     expect(PAGE_LABELS.now).toBe("Pemutar Musik");
     expect(PAGE_LABELS.today).toBe("Hari Ini");
     expect(PAGE_LABELS.pomodoro).toBe("Fokus Pomodoro");
@@ -15,7 +15,8 @@ describe("pages configuration and labels", () => {
   });
 
   it("returns all pages when all toggles are true or undefined", () => {
-    expect(filterPages(ALL_PAGES, {})).toEqual(ALL_PAGES);
+    // Snippets and the teleprompter are opt-in.
+    expect(filterPages(ALL_PAGES, {})).toEqual(ALL_PAGES.filter((p) => p !== "snippets" && p !== "prompter"));
     const allTrue: PageToggles = {
       musicEnabled: true,
       todayEnabled: true,
@@ -25,6 +26,9 @@ describe("pages configuration and labels", () => {
       shelfEnabled: true,
       clipboardEnabled: true,
       shortcutsEnabled: true,
+      soundEnabled: true,
+      snippetsEnabled: true,
+      prompterEnabled: true,
     };
     expect(filterPages(ALL_PAGES, allTrue)).toEqual(ALL_PAGES);
   });
@@ -32,7 +36,7 @@ describe("pages configuration and labels", () => {
   it("filters out disabled pages accurately", () => {
     const withoutMusic = filterPages(ALL_PAGES, { musicEnabled: false });
     expect(withoutMusic).not.toContain("now");
-    expect(withoutMusic).toHaveLength(7);
+    expect(withoutMusic).toHaveLength(8);
 
     const onlyTodoAndPomodoro = filterPages(ALL_PAGES, {
       musicEnabled: false,
@@ -41,6 +45,7 @@ describe("pages configuration and labels", () => {
       clipboardEnabled: false,
       shortcutsEnabled: false,
       todayEnabled: false,
+      soundEnabled: false,
       pomodoroEnabled: true,
       todoEnabled: true,
     });
@@ -52,7 +57,7 @@ describe("pages configuration and labels", () => {
       pomodoroEnabled: false,
       todoEnabled: false,
     });
-    expect(res).toEqual(["now", "today", "water", "shelf", "clipboard", "shortcuts"]);
+    expect(res).toEqual(["now", "sound", "today", "water", "shelf", "clipboard", "shortcuts"]);
   });
 
   it("safety fallback: returns at least one page ('now') if all toggles are set to false", () => {
@@ -65,6 +70,7 @@ describe("pages configuration and labels", () => {
       shelfEnabled: false,
       clipboardEnabled: false,
       shortcutsEnabled: false,
+      soundEnabled: false,
     };
     const fallback = filterPages(ALL_PAGES, allFalse);
     expect(fallback).toEqual(["now"]);

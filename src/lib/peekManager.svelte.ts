@@ -12,6 +12,9 @@ export class PeekManager {
 
   peekLength(p: PeekData): number {
     if (p.kind === "meeting") return 30_000;
+    if (p.kind === "eyes") return 21_000;
+    if (p.kind === "custom") return Math.min(30, Math.max(2, Number(p.seconds) || 5)) * 1000;
+    if (["rain", "held", "agent", "ocr", "charge-full", "battery-low", "countdown"].includes(p.kind)) return 5000;
     if (["screenshot", "update", "download-done"].includes(p.kind)) return 6000;
     if (["bluetooth"].includes(p.kind)) return 4500;
     if (p.kind === "notification") return this.peekQueue.length ? 3200 : 4500;

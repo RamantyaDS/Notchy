@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.2.8 (5 November 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
+**Status:** v0.3.0 (9 November 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
 
 ---
 
@@ -277,6 +277,32 @@ Di-merge sebagai a1950a3, setelah dua putaran review. Build lokal kode PR ditola
 - **Kaca buram belum dikerjakan:** efek buram di WebView hanya memburamkan isi halaman, bukan desktop. Acrylic/Mica Windows berlaku untuk seluruh kotak jendela 600×200 yang transparan, bukan bentuk notch, dan di Windows 10 terkenal patah-patah.
 - **Diuji 6 Nov 2026:** CPU saat diam ~1,6% (45 detik). Gaya melayang, cincin baterai di tampilan mengecas, dan Settings dicek lewat screenshot. Halaman Hari ini, strip minggu, dan klik cover belum dicoba langsung.
 
+### N. Paket fitur 0.3: ide dari aplikasi notch open source, 9 Nov 2026
+Ide fitur diambil dari README aplikasi notch lain (boring.notch, Atoll, DynamicWin, DynamicNotch, cyclop, ILoveNotch, vortex, gobbl, CodeIsland). Hanya idenya; tidak ada kode yang disalin (kebanyakan Swift, sebagian GPL/CC-BY-SA). Mockup ada di `notchy-promo/mockups/fitur-baru.html`. Semua ada sakelarnya di Settings; kode Rust-nya di `src-tauri/src/extras.rs`.
+- **Status Claude Code**: hook Claude Code memanggil `notchy --agent working|waiting|done`. `working`/`waiting` jadi aktivitas `agent` di pulau (bintang berdenyut), `waiting` juga peek, `done` peek lalu hilang. Hilang sendiri setelah 20 menit tanpa kabar. Settings → Keyboard & sistem menampilkan JSON hook (dengan path exe) untuk disalin. Allow/Deny dari notch **tidak** dibuat (hook harus menunggu jawaban; nanti kalau perlu).
+- **Peek dari luar**: `notchy --peek "teks" [--detail] [--icon done|error|info|bell] [--sound] [--seconds]` dan link `notchy://peek?...` (didaftarkan di HKCU\Software\Classes\notchy selama `externalPeeks` nyala). Hanya teks, dipotong 120 karakter, tidak ada yang dijalankan. Copy kedua yang membawa argumen ini diperlakukan seperti watchdog: kalau user sudah Exit dari tray, Notchy tidak ikut hidup lagi.
+- **Halaman Suara** (`soundEnabled`, default nyala): `IAudioSessionManager2` di output default, satu baris per nama exe (Chrome punya banyak sesi), slider + bisu, di-refresh tiap 1,5 detik selama halaman terbuka.
+- **Pintasan baru** (aksi `keepawake`, `keyboardclean`, `ocr`, `darkmode`, `nightlight`, `batterysaver`, `focus`):
+  - Jaga menyala: `SetThreadExecutionState` di thread sendiri; klik berputar 30 → 60 → 120 menit → sampai dimatikan → mati. Ikon cangkir di notch saat aktif. Pengaturan daya Windows tidak diubah.
+  - Kunci keyboard: hook keyboard menelan semua tombol selama 60 detik (maks 120), buka lewat tombol di notch. Hook keyboard tetap hanya dipasang kalau Caps Lock/volume peek nyala, atau saat kunci ini pertama dipakai (pesan `WM_APP+8` ke thread hook).
+  - Salin teks: membuka `ms-screenclip:` (overlay Win+Shift+S); gambar berikutnya di clipboard dalam 60 detik di-OCR dengan `Windows.Media.Ocr` (offline, bahasa sesuai Windows), teksnya masuk clipboard dan riwayat. Bisa juga lewat tombol pintas `ocrHotkey`.
+  - Mode gelap: tulis `AppsUseLightTheme`/`SystemUsesLightTheme` lalu broadcast `ImmersiveColorSet`. Night light, hemat baterai, dan jangan ganggu tidak punya API resmi, jadi membuka halaman Settings Windows-nya.
+- **Tombol pintas** (`openHotkey` default **Ctrl+Alt+N**, `ocrHotkey` kosong): `RegisterHotKey` tanpa jendela di thread hook; didaftar ulang lewat `WM_APP+7` saat Settings disimpan. **Win+Alt+huruf ternyata sudah dipakai Windows**, jadi tidak bisa jadi default. Membuka notch lewat tombol: notch disematkan dan dapat fokus keyboard; panah ganti halaman, Esc menutup.
+- **Cincin status CPU/RAM**: `GetSystemTimes` + `GlobalMemoryStatusEx` tiap 2 detik, hanya saat cincin terlihat. GPU tidak dibuat (tergantung driver).
+- **Peringatan hujan** (`rainAlert`, default nyala): `minutely_15=precipitation` Open-Meteo dicek tiap 15 menit; ≥0,2 mm dalam ±1 jam → peek sekali, lalu diam 3 jam.
+- **Pengingat charger** (`chargeReminder` 0/80/85/90/100, default 0 = mati): cabut di level itu, colok di 20%, sekali per siklus.
+- **Ringkasan presentasi** (`presentationSummary`): Rust mengirim `notch-hidden` saat jendela disembunyikan untuk layar penuh/presentasi; notifikasi selama itu ditahan lalu muncul satu peek "N notifikasi selama presentasi". (Menyembunyikan notch saat presentasi sudah ada sejak lama.)
+- **Istirahat mata 20-20-20** (`eyeBreak`, default mati): tiap menit cek `GetLastInputInfo`; 20 menit aktif → peek 20 detik dengan hitung mundur. Diam ≥5 menit mengulang hitungan; dilewati saat break Pomodoro, panggilan, atau layar penuh.
+- **Hitung mundur** (`countdowns` di settings, diatur di Settings → Kalender): sekali/tiap bulan/tiap tahun, tanggal 31 dibulatkan ke akhir bulan. Tampil di halaman Hari ini; peek sekali di hari-H (ditandai di localStorage).
+- **Timer cepat**: fase `quick` di `Pomodoro` (1/3/5/10/15 menit dari chip di halaman timer); selesai = bunyi + peek, lalu kembali ke fase fokus tanpa mulai sendiri.
+- **Snippet** dan **Teleprompter**: halaman opt-in (`snippetsEnabled`, `prompterEnabled`, default mati), data di `snippets.json`/`prompter.json`. Teleprompter bergulir `speed × 12 px/detik`.
+- **Shelf**: klik kanan → Buka, Tampilkan di folder (`reveal_path`), Bagikan (dialog Share Windows, bukan untuk folder), Hapus.
+- **Gestur**: geser horizontal di halaman musik = lagu berikut/sebelumnya (`swipeTracks`). Scroll ganti halaman dan scroll volume di notch tertutup sudah ada sebelumnya.
+- **Sakelar untuk yang sudah ada**: `privacyIndicators` (titik + peek kamera/mikrofon) dan `connectionPeek` (peek internet putus/sambung).
+- **Visualizer**: bar musik sudah mengikuti level suara asli (IAudioMeterInformation) sejak lama, jadi tidak dibuat ulang. Spektrum FFT penuh tidak dikerjakan (CPU).
+- **Clipboard melewati password** sudah ada sejak awal (`ExcludeClipboardContentFromMonitorProcessing` dll.).
+- **Diuji 9 Nov 2026:** cargo test (34) dan vitest (51) hijau, `svelte-check` bersih, clippy tanpa peringatan baru. `--peek` dan `--agent` dikirim ke build yang jalan (satu proses tetap). `Ctrl+Alt+N` terdaftar, link `notchy://` terdaftar, CPU proses utama ~0,04% saat diam. Tampilan tiap fitur dicek lewat harness Playwright (`notchy-promo/live/check-new.mjs`). **Belum dicoba langsung di layar:** OCR, mode gelap, mixer dengan aplikasi asli, kunci keyboard, dan hotkey.
+
 ---
 
 ## 6. Urutan pengerjaan
@@ -353,6 +379,8 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.2.6 | 30 Okt 2026 | PR #2 dari Malik: kecepatan internet (↓/↑ di baris status, opsional di notch kecil), sakelar halaman di Settings, animasi geser sesuai arah, celah sudut notch di layar 125%/150%. |
 | v0.2.7 | 3 Nov 2026 | Opsi "Sembunyikan overlay volume Windows" (Settings → Keyboard & sistem, default mati): tombol volume ditahan keyboard hook dan diatur Notchy, jadi overlay Windows tidak dobel dengan peek Notchy. |
 | v0.2.8 | 5 Nov 2026 | PR #3 dari Malik: multi-monitor (ikuti kursor), mode maskot selalu aktif, animasi pegas, warna aksen Windows, peek Bluetooth (default mati), dua bahasa EN/ID, Settings bertab. |
+| v0.2.9 | 6 Nov 2026 | PR #4 dari Malik (5 gaya mata), Settings sidebar, gaya melayang, cincin status, halaman Hari ini, strip minggu to-do, klik cover ganti pemutar. |
+| v0.3.0 | 9 Nov 2026 | Paket fitur §5N: status Claude Code dan `notchy --peek`, halaman Suara, pintasan jaga menyala/kunci keyboard/salin teks layar/mode gelap, Ctrl+Alt+N, cincin CPU/RAM, peringatan hujan, pengingat charger, istirahat mata, ringkasan presentasi, hitung mundur, timer cepat, Snippet, Teleprompter, bagikan dari Shelf. |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.

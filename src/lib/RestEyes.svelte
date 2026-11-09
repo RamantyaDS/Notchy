@@ -93,9 +93,9 @@
         class:theme-pixel={mascotTheme === "pixel"}
         class:theme-cat={mascotTheme === "cat"}
         class:theme-cartoon={mascotTheme === "cartoon"}
-        style:--lx={look[0]}
-        style:--ly={look[1]}
-        style:--near={look[2]}
+        style:--lx={dozing ? 0 : look[0]}
+        style:--ly={dozing ? 0.2 : look[1]}
+        style:--near={dozing ? 0 : look[2]}
         in:fade={{ duration: 250 }}
       >
         <i></i><i></i>
@@ -429,7 +429,29 @@
 
   /* Expressions */
   .eyes.sleepy i {
-    transform: scaleY(0.4);
+    transform: scaleY(0.2) translateY(2px);
+    border-radius: 4px;
+    background: #ffffff;
+  }
+  .eyes.sleepy.theme-anime i {
+    background: #a5b4fc;
+    box-shadow: 0 0 5px 1px rgba(165, 180, 252, 0.5);
+  }
+  .eyes.sleepy.theme-cat i {
+    background: #ffd166;
+    box-shadow: 0 0 5px 1px rgba(255, 209, 102, 0.5);
+  }
+  .eyes.sleepy.theme-cartoon i {
+    background: #ffffff;
+    box-shadow: 0 0 5px 1px rgba(255, 255, 255, 0.5);
+  }
+  .eyes.sleepy.theme-pixel i {
+    transform: scaleY(0.25) translateY(2px);
+    border-radius: 0 !important;
+  }
+  .eyes.sleepy i::before,
+  .eyes.sleepy i::after {
+    display: none !important;
   }
   .eyes.blink i {
     transform: scaleY(0.1);

@@ -33,7 +33,9 @@ export const dayKey = (d = new Date()) =>
 // ---------------------------------------------------------------- pomodoro
 
 export class Pomodoro {
-  phase = $state<"focus" | "break">("focus");
+  /** "quick": a one-off timer (the chips on the timer page), outside the focus/break cycle. */
+  phase = $state<"focus" | "break" | "quick">("focus");
+  quickMin = $state(3);
   running = $state(false);
   /** Seconds left while paused; while running, derived from `endsAt`. */
   left = $state(25 * 60);
@@ -52,7 +54,7 @@ export class Pomodoro {
   }
 
   length() {
-    return (this.phase === "focus" ? this.focusMin : this.breakMin) * 60;
+    return (this.phase === "focus" ? this.focusMin : this.phase === "quick" ? this.quickMin : this.breakMin) * 60;
   }
 
   remaining(now = Date.now()) {
@@ -100,6 +102,16 @@ export class Pomodoro {
     this.start();
   }
 
+  /** A one-off countdown of `min` minutes, e.g. for noodles. */
+  quick(min: number) {
+    clearTimeout(this.#timer);
+    this.running = false;
+    this.phase = "quick";
+    this.quickMin = min;
+    this.left = this.length();
+    this.start();
+  }
+
   #switch() {
     this.phase = this.phase === "focus" ? "break" : "focus";
     this.left = this.length();
@@ -108,6 +120,13 @@ export class Pomodoro {
   #finish() {
     this.running = false;
     const ended = this.phase;
+    if (ended === "quick") {
+      chime();
+      this.notify({ kind: "timer", phase: "quick", min: this.quickMin });
+      this.phase = "focus";
+      this.left = this.length();
+      return;
+    }
     this.#switch();
     chime();
     this.notify({ kind: "timer", phase: this.phase });
