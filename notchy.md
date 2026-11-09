@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.2.8 (5 November 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
+**Status:** v0.3.0 (9 November 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
 
 ---
 
@@ -379,6 +379,8 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.2.6 | 30 Okt 2026 | PR #2 dari Malik: kecepatan internet (↓/↑ di baris status, opsional di notch kecil), sakelar halaman di Settings, animasi geser sesuai arah, celah sudut notch di layar 125%/150%. |
 | v0.2.7 | 3 Nov 2026 | Opsi "Sembunyikan overlay volume Windows" (Settings → Keyboard & sistem, default mati): tombol volume ditahan keyboard hook dan diatur Notchy, jadi overlay Windows tidak dobel dengan peek Notchy. |
 | v0.2.8 | 5 Nov 2026 | PR #3 dari Malik: multi-monitor (ikuti kursor), mode maskot selalu aktif, animasi pegas, warna aksen Windows, peek Bluetooth (default mati), dua bahasa EN/ID, Settings bertab. |
+| v0.2.9 | 6 Nov 2026 | PR #4 dari Malik (5 gaya mata), Settings sidebar, gaya melayang, cincin status, halaman Hari ini, strip minggu to-do, klik cover ganti pemutar. |
+| v0.3.0 | 9 Nov 2026 | Paket fitur §5N: status Claude Code dan `notchy --peek`, halaman Suara, pintasan jaga menyala/kunci keyboard/salin teks layar/mode gelap, Ctrl+Alt+N, cincin CPU/RAM, peringatan hujan, pengingat charger, istirahat mata, ringkasan presentasi, hitung mundur, timer cepat, Snippet, Teleprompter, bagikan dari Shelf. |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.
