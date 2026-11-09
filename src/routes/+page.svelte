@@ -571,7 +571,7 @@
         if (mascotMode === "always") {
           sleepTimer = setTimeout(() => {
             if (mascot && mascotMode === "always") dozing = true;
-          }, 30_000);
+          }, 60_000);
         } else {
           activeEyes = false;
           dozing = false;
@@ -663,9 +663,14 @@
     setupNotchEvents({
       onNotchHover: (h) => {
         hovered = h;
-        if (h && activeEyes) {
-          activeEyes = false;
-          dozing = false;
+        if (h) {
+          if (dozing) {
+            dozing = false;
+            greeting = true;
+            clearTimeout(greetTimer);
+            greetTimer = setTimeout(() => (greeting = false), 1000);
+          }
+          if (activeEyes) activeEyes = false;
         }
         clearTimeout(closeTimer);
         clearTimeout(openTimer);
@@ -691,6 +696,12 @@
       onEyesLook: (l) => {
         look = l;
         if (mascot) {
+          if (dozing) {
+            dozing = false;
+            greeting = true;
+            clearTimeout(greetTimer);
+            greetTimer = setTimeout(() => (greeting = false), 1000);
+          }
           const dx = l[0] - lastLx;
           const sign = Math.sign(dx);
           const nowMsTime = Date.now();
@@ -711,23 +722,11 @@
           }
           lastLx = l[0];
           if (mascotMode === "always") {
-            if (dozing) {
-              dozing = false;
-              greeting = true;
-              clearTimeout(greetTimer);
-              greetTimer = setTimeout(() => (greeting = false), 1000);
-            }
             clearTimeout(sleepTimer);
             sleepTimer = setTimeout(() => {
               if (mascot && mascotMode === "always") dozing = true;
-            }, 30_000);
+            }, 60_000);
           } else if (activeEyes) {
-            if (dozing) {
-              dozing = false;
-              greeting = true;
-              clearTimeout(greetTimer);
-              greetTimer = setTimeout(() => (greeting = false), 1000);
-            }
             clearTimeout(activeEyesTimer);
             activeEyesTimer = setTimeout(() => {
               if (mascotMode === "idle") {

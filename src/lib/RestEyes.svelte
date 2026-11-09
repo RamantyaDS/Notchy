@@ -48,7 +48,7 @@
   const isHappy = $derived(greeting || tickled);
 
   const showEyes = $derived(
-    mascot && (island || mascotMode === "always" || activeEyes || dozing || shocked || tickled)
+    mascot && (charging || island || mascotMode === "always" || activeEyes || dozing || shocked || tickled)
   );
 
   const showSideClock = $derived(

@@ -292,28 +292,47 @@ fn start_eyes_emitter() {
     EYES_TX.set(tx).ok();
     std::thread::spawn(move || {
         let mut last = (0.0f64, 0.0f64, 0.0f64);
+        let mut last_raw = (0i32, 0i32);
         for _ in rx {
             std::thread::sleep(Duration::from_millis(16));
             EYES_PENDING.store(false, Ordering::Relaxed);
             let ((l, t, r, b), inside) = (hit_rect(), hit_inside());
-            if inside || r <= l || TUCKED.load(Ordering::Relaxed) {
+            if r <= l || TUCKED.load(Ordering::Relaxed) {
                 continue;
             }
-            let dx = (CURSOR_X.load(Ordering::Relaxed) - (l + r) / 2) as f64;
-            let dy = (CURSOR_Y.load(Ordering::Relaxed) - (t + b) / 2) as f64;
+            let cur_x = CURSOR_X.load(Ordering::Relaxed);
+            let cur_y = CURSOR_Y.load(Ordering::Relaxed);
+
+            if inside {
+                let look = (0.0, 0.35, 1.0);
+                if (look.0 - last.0).abs() > 0.005 || (look.1 - last.1).abs() > 0.005 || (look.2 - last.2).abs() > 0.005 {
+                    last = look;
+                    if let Some(window) = main_window() {
+                        let _ = window.emit("eyes-look", look);
+                    }
+                }
+                continue;
+            }
+
+            let dx = (cur_x - (l + r) / 2) as f64;
+            let dy = (cur_y - (t + b) / 2) as f64;
             let dist = dx.hypot(dy).max(1.0);
             // Full deflection once the cursor is ~300px away.
             let reach = (dist / 300.0).min(1.0);
             // 1 when the cursor is right at the notch, 0 from ~250px away.
             let near = 1.0 - (dist / 250.0).min(1.0);
             let look = (dx / dist * reach, dy / dist * reach, near);
-            if (look.0 - last.0).abs() < 0.015
-                && (look.1 - last.1).abs() < 0.015
-                && (look.2 - last.2).abs() < 0.015
-            {
+
+            let raw_moved = (cur_x - last_raw.0).abs() >= 2 || (cur_y - last_raw.1).abs() >= 2;
+            let look_moved = (look.0 - last.0).abs() >= 0.003
+                || (look.1 - last.1).abs() >= 0.003
+                || (look.2 - last.2).abs() >= 0.003;
+
+            if !raw_moved && !look_moved {
                 continue;
             }
             last = look;
+            last_raw = (cur_x, cur_y);
             if let Some(window) = main_window() {
                 let _ = window.emit("eyes-look", look);
             }
