@@ -1,4 +1,4 @@
-export const ALL_PAGES = ["now", "today", "pomodoro", "water", "todo", "shelf", "clipboard", "shortcuts"] as const;
+export const ALL_PAGES = ["now", "sound", "today", "pomodoro", "water", "todo", "shelf", "clipboard", "snippets", "shortcuts", "prompter"] as const;
 export type PageName = (typeof ALL_PAGES)[number];
 
 export type PageToggles = {
@@ -10,6 +10,10 @@ export type PageToggles = {
   shelfEnabled?: boolean;
   clipboardEnabled?: boolean;
   shortcutsEnabled?: boolean;
+  soundEnabled?: boolean;
+  /** Opt-in pages: shown only when true. */
+  snippetsEnabled?: boolean;
+  prompterEnabled?: boolean;
 };
 
 export const PAGE_LABELS: Record<PageName, string> = {
@@ -21,6 +25,9 @@ export const PAGE_LABELS: Record<PageName, string> = {
   shelf: "Laci File",
   clipboard: "Papan Klip",
   shortcuts: "Pintasan",
+  sound: "Suara",
+  snippets: "Snippet",
+  prompter: "Teleprompter",
 };
 
 import { t } from "./i18n";
@@ -35,6 +42,9 @@ export function getPageLabel(page: PageName): string {
     shelf: "pages.shelf",
     clipboard: "pages.clipboard",
     shortcuts: "pages.shortcuts",
+    sound: "pages.sound",
+    snippets: "pages.snippets",
+    prompter: "pages.prompter",
   };
   return t(map[page] || page);
 }
@@ -62,6 +72,12 @@ export function filterPages(allPages: readonly PageName[], toggles: PageToggles)
         return toggles.clipboardEnabled !== false;
       case "shortcuts":
         return toggles.shortcutsEnabled !== false;
+      case "sound":
+        return toggles.soundEnabled !== false;
+      case "snippets":
+        return toggles.snippetsEnabled === true;
+      case "prompter":
+        return toggles.prompterEnabled === true;
       default:
         return true;
     }

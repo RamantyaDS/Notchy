@@ -48,7 +48,23 @@
     monitorPlacement: string;
     springPhysics: string;
     windowsAccentGlow: boolean;
+    soundEnabled?: boolean;
+    snippetsEnabled?: boolean;
+    prompterEnabled?: boolean;
+    externalPeeks?: boolean;
+    agentStatus?: boolean;
+    openHotkey?: string;
+    ocrHotkey?: string;
+    swipeTracks?: boolean;
+    rainAlert?: boolean;
+    chargeReminder?: number;
+    presentationSummary?: boolean;
+    eyeBreak?: boolean;
+    connectionPeek?: boolean;
+    privacyIndicators?: boolean;
+    countdowns?: Countdown[];
   };
+  type Countdown = { name: string; date: string; repeat: string };
   type Key = keyof Settings;
 
   let currentLang = $state(getLocale());
@@ -74,17 +90,17 @@
     | "weather";
   const SECTIONS: { id: SectionId; color: string; icon: string; words: string }[] = [
     { id: "general", color: "#8e8e93", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z", words: "language bahasa monitor layar screen cursor kursor animation animasi spring" },
-    { id: "appearance", color: "#5e5ce6", icon: "M3 7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4zM8 3v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V3", words: "floating melayang minimal ring cincin battery baterai accent aksen glow warna color" },
+    { id: "appearance", color: "#5e5ce6", icon: "M3 7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4zM8 3v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V3", words: "floating melayang minimal ring cincin battery baterai accent aksen glow warna color cpu ram memory memori" },
     { id: "eyes", color: "#1c1c1e", icon: "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", words: "mascot maskot eyes mata cursor kursor idle style gaya theme tema anime pixel cat kucing cartoon kartun" },
-    { id: "pages", color: "#0a84ff", icon: "M4 5h16M4 12h16M4 19h10", words: "pages halaman today hari ini pomodoro water air todo shelf clipboard shortcuts" },
-    { id: "music", color: "#ff375f", icon: "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", words: "music musik lyrics lirik lrclib song lagu" },
-    { id: "focus", color: "#ff9f0a", icon: "M12 22a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 9v4l2.5 2.5M9 2h6", words: "pomodoro focus fokus break istirahat timer minutes menit" },
+    { id: "pages", color: "#0a84ff", icon: "M4 5h16M4 12h16M4 19h10", words: "pages halaman today hari ini pomodoro water air todo shelf clipboard shortcuts sound suara mixer volume snippet teleprompter" },
+    { id: "music", color: "#ff375f", icon: "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", words: "music musik lyrics lirik lrclib song lagu swipe geser gesture gestur" },
+    { id: "focus", color: "#ff9f0a", icon: "M12 22a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 9v4l2.5 2.5M9 2h6", words: "pomodoro focus fokus break istirahat timer minutes menit eye mata 20-20-20 health kesehatan" },
     { id: "water", color: "#64d2ff", icon: "M12 2.7S5 10 5 14.5a7 7 0 0 0 14 0C19 10 12 2.7 12 2.7z", words: "water air minum glass gelas target reminder pengingat ml" },
-    { id: "calendar", color: "#ff453a", icon: "M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M8 2v4M16 2v4", words: "calendar kalender ics google outlook meeting rapat" },
-    { id: "shortcuts", color: "#ffd60a", icon: "M13 2 4 14h7l-1 8 9-12h-7z", words: "shortcuts pintasan launcher app link" },
-    { id: "notifications", color: "#ff453a", icon: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0", words: "notifications notifikasi do not disturb dnd whatsapp teams" },
-    { id: "system", color: "#636366", icon: "M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 9h.01M11 9h.01M15 9h.01M7 13h10", words: "keyboard caps lock volume overlay osd bluetooth network jaringan speed kecepatan download upload" },
-    { id: "weather", color: "#30b0c7", icon: "M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 1 0 6 16.4M6 19h11.5", words: "weather cuaca city kota location lokasi" },
+    { id: "calendar", color: "#ff453a", icon: "M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M8 2v4M16 2v4", words: "calendar kalender ics google outlook meeting rapat countdown hitung mundur gajian payday" },
+    { id: "shortcuts", color: "#ffd60a", icon: "M13 2 4 14h7l-1 8 9-12h-7z", words: "shortcuts pintasan launcher app link keep awake jaga menyala keyboard clean bersihkan ocr text teks dark mode gelap" },
+    { id: "notifications", color: "#ff453a", icon: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0", words: "notifications notifikasi do not disturb dnd whatsapp teams presentation presentasi camera kamera mic mikrofon privacy privasi connection koneksi wifi charger baterai battery" },
+    { id: "system", color: "#636366", icon: "M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 9h.01M11 9h.01M15 9h.01M7 13h10", words: "keyboard caps lock volume overlay osd bluetooth network jaringan speed kecepatan download upload hotkey tombol pintas script peek claude code agent" },
+    { id: "weather", color: "#30b0c7", icon: "M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 1 0 6 16.4M6 19h11.5", words: "weather cuaca city kota location lokasi rain hujan" },
   ];
 
   let section = $state<SectionId>("general");
@@ -109,12 +125,31 @@
     ["screenshot", "actions.screenshot"],
     ["downloads", "actions.downloads"],
     ["camera", "actions.camera"],
+    ["keepawake", "actions.keepawake"],
+    ["keyboardclean", "actions.keyboardclean"],
+    ["ocr", "actions.ocr"],
+    ["darkmode", "actions.darkmode"],
+    ["nightlight", "actions.nightlight"],
+    ["batterysaver", "actions.batterysaver"],
+    ["focus", "actions.focus"],
     ["open", "actions.open"],
   ];
 
-  type PageKey = "musicEnabled" | "todayEnabled" | "pomodoroEnabled" | "waterEnabled" | "todoEnabled" | "shelfEnabled" | "clipboardEnabled" | "shortcutsEnabled";
+  type PageKey =
+    | "musicEnabled"
+    | "todayEnabled"
+    | "pomodoroEnabled"
+    | "waterEnabled"
+    | "todoEnabled"
+    | "shelfEnabled"
+    | "clipboardEnabled"
+    | "shortcutsEnabled"
+    | "soundEnabled"
+    | "snippetsEnabled"
+    | "prompterEnabled";
   const PAGE_ITEMS: [PageKey, string][] = [
     ["musicEnabled", "pageItems.music"],
+    ["soundEnabled", "pageItems.sound"],
     ["todayEnabled", "pageItems.today"],
     ["pomodoroEnabled", "pageItems.pomodoro"],
     ["waterEnabled", "pageItems.water"],
@@ -122,13 +157,49 @@
     ["shelfEnabled", "pageItems.shelf"],
     ["clipboardEnabled", "pageItems.clipboard"],
     ["shortcutsEnabled", "pageItems.shortcuts"],
+    ["snippetsEnabled", "pageItems.snippets"],
+    ["prompterEnabled", "pageItems.prompter"],
   ];
   const enabledPages = $derived(settings ? PAGE_ITEMS.filter(([k]) => settings![k] !== false).length : PAGE_ITEMS.length);
 
+  let exe = $state("");
   onMount(async () => {
     settings = await invoke<Settings>("get_settings");
     if (settings?.language) setLocale(settings.language);
+    exe = (await invoke<string>("exe_path").catch(() => "")).replaceAll("\\", "/");
   });
+
+  // Claude Code hooks that report to the notch (merged into ~/.claude/settings.json by the user).
+  const hookJson = $derived.by(() => {
+    const cmd = (state: string) => [{ type: "command", command: `"${exe || "notchy.exe"}" --agent ${state}` }];
+    return JSON.stringify(
+      {
+        hooks: {
+          UserPromptSubmit: [{ hooks: cmd("working") }],
+          PostToolUse: [{ matcher: "*", hooks: cmd("working") }],
+          Notification: [{ hooks: cmd("waiting") }],
+          Stop: [{ hooks: cmd("done") }],
+        },
+      },
+      null,
+      2,
+    );
+  });
+  let hookCopied = $state(false);
+  async function copyHooks() {
+    await navigator.clipboard.writeText(hookJson).catch(() => {});
+    hookCopied = true;
+    setTimeout(() => (hookCopied = false), 1500);
+  }
+
+  function editCountdown(i: number, patch: Partial<Countdown>) {
+    if (!settings) return;
+    save({ countdowns: (settings.countdowns ?? []).map((c, j) => (j === i ? { ...c, ...patch } : c)) });
+  }
+  const todayIso = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
 
   async function save(patch: Partial<Settings> = {}) {
     if (!settings) return;
@@ -258,6 +329,8 @@
               <option value="off">{tr("s.off")}</option>
               <option value="battery">{tr("s.ringBattery")}</option>
               <option value="water">{tr("s.ringWater")}</option>
+              <option value="cpu">{tr("s.ringCpu")}</option>
+              <option value="ram">{tr("s.ringRam")}</option>
             </select>
           </div>
         </div>
@@ -323,6 +396,10 @@
             {@render row(tr("s.lyrics"), tr("s.lyricsDesc"))}
             {@render toggle("smallLyrics", settings.smallLyrics)}
           </div>
+          <div class="row">
+            {@render row(tr("s.swipe"), tr("s.swipeDesc"))}
+            {@render toggle("swipeTracks", settings.swipeTracks !== false)}
+          </div>
         </div>
         <p class="hint">{tr("s.coverHint")}</p>
       {/if}
@@ -337,6 +414,13 @@
           <div class="row">
             {@render row(tr("s.breakLen"), "")}
             {@render stepper("breakMinutes", settings.breakMinutes, 1, 60, 1, tr("s.min"))}
+          </div>
+        </div>
+        <h2>{tr("s.health")}</h2>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.eyeBreak"), tr("s.eyeBreakDesc"))}
+            {@render toggle("eyeBreak", settings.eyeBreak === true)}
           </div>
         </div>
       {/if}
@@ -390,6 +474,31 @@
           </div>
         </div>
         <p class="hint">{tr("settings.calendarHint")}</p>
+        <h2>{tr("s.countdowns")}</h2>
+        <p class="lead">{tr("s.countdownsDesc")}</p>
+        {#if (settings.countdowns ?? []).length}
+          <div class="group">
+            {#each settings.countdowns ?? [] as c, i}
+              <div class="row shortcut">
+                <input class="text name" value={c.name} placeholder={tr("s.countdownName")} onchange={(e) => editCountdown(i, { name: e.currentTarget.value.trim() })} />
+                <input class="text date" type="date" value={c.date} onchange={(e) => editCountdown(i, { date: e.currentTarget.value })} />
+                <select value={c.repeat || "none"} onchange={(e) => editCountdown(i, { repeat: e.currentTarget.value })}>
+                  <option value="none">{tr("s.repeatNone")}</option>
+                  <option value="monthly">{tr("s.repeatMonthly")}</option>
+                  <option value="yearly">{tr("s.repeatYearly")}</option>
+                </select>
+                <button class="icon-btn" title="✕" onclick={() => save({ countdowns: (settings!.countdowns ?? []).filter((_, j) => j !== i) })}>✕</button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+        <div class="actions">
+          {#if (settings.countdowns ?? []).length < 10}
+            <button class="btn" onclick={() => save({ countdowns: [...(settings!.countdowns ?? []), { name: "", date: todayIso(), repeat: "none" }] })}>
+              {tr("s.addCountdown")}
+            </button>
+          {/if}
+        </div>
       {/if}
 
       {#if shows("shortcuts")}
@@ -398,7 +507,14 @@
           {#each settings.shortcuts as s, i}
             <div class="row shortcut">
               <input class="text name" value={s.name} placeholder={tr("settings.shortcutNamePlaceholder")} onchange={(e) => editShortcut(i, { name: e.currentTarget.value.trim() })} />
-              <select value={s.action} onchange={(e) => editShortcut(i, { action: e.currentTarget.value })}>
+              <select
+                value={s.action}
+                onchange={(e) => {
+                  const action = e.currentTarget.value;
+                  const label = tr(`actions.${action}`).replace(/ \(Settings\)$/, "");
+                  editShortcut(i, action === "open" ? { action } : { action, name: label });
+                }}
+              >
                 {#each ACTION_ITEMS as [val, label]}<option value={val}>{tr(label)}</option>{/each}
               </select>
               <button class="icon-btn" title={tr("settings.deleteShortcut")} onclick={() => save({ shortcuts: settings!.shortcuts.filter((_, j) => j !== i) })}>✕</button>
@@ -429,6 +545,30 @@
             {@render row(tr("s.dnd"), tr("s.dndDesc"))}
             <button class="btn" onclick={() => invoke("open_dnd_settings")}>{tr("s.open")}</button>
           </div>
+          <div class="row">
+            {@render row(tr("s.presentation"), tr("s.presentationDesc"))}
+            {@render toggle("presentationSummary", settings.presentationSummary !== false)}
+          </div>
+        </div>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.privacy"), tr("s.privacyDesc"))}
+            {@render toggle("privacyIndicators", settings.privacyIndicators !== false)}
+          </div>
+          <div class="row">
+            {@render row(tr("s.connection"), tr("s.connectionDesc"))}
+            {@render toggle("connectionPeek", settings.connectionPeek !== false)}
+          </div>
+          <div class="row">
+            {@render row(tr("s.charge"), tr("s.chargeDesc"))}
+            <select value={String(settings.chargeReminder ?? 0)} onchange={(e) => save({ chargeReminder: +e.currentTarget.value })}>
+              <option value="0">{tr("s.off")}</option>
+              <option value="80">80%</option>
+              <option value="85">85%</option>
+              <option value="90">90%</option>
+              <option value="100">100%</option>
+            </select>
+          </div>
         </div>
       {/if}
 
@@ -446,6 +586,35 @@
           </div>
         </div>
         <p class="hint">{tr("s.restartHint")}</p>
+        <h2>{tr("s.hotkeys")}</h2>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.openHotkey"), tr("s.openHotkeyDesc"))}
+            <input class="text hotkey" value={settings.openHotkey ?? ""} placeholder="Ctrl+Alt+N" onchange={(e) => save({ openHotkey: e.currentTarget.value.trim() })} />
+          </div>
+          <div class="row">
+            {@render row(tr("s.ocrHotkey"), tr("s.ocrHotkeyDesc"))}
+            <input class="text hotkey" value={settings.ocrHotkey ?? ""} placeholder="Ctrl+Alt+T" onchange={(e) => save({ ocrHotkey: e.currentTarget.value.trim() })} />
+          </div>
+        </div>
+        <h2>Script & Claude Code</h2>
+        <div class="group">
+          <div class="row">
+            {@render row(tr("s.external"), tr("s.externalDesc"))}
+            {@render toggle("externalPeeks", settings.externalPeeks !== false)}
+          </div>
+          <div class="row">
+            {@render row(tr("s.agent"), tr("s.agentDesc"))}
+            {@render toggle("agentStatus", settings.agentStatus !== false)}
+          </div>
+          {#if settings.agentStatus !== false}
+            <div class="row column" transition:slide={{ duration: 150 }}>
+              {@render row(tr("s.agentHint"), "")}
+              <pre class="code">{hookJson}</pre>
+              <button class="btn" onclick={copyHooks}>{hookCopied ? `✓ ${tr("s.copiedOk")}` : tr("s.copy")}</button>
+            </div>
+          {/if}
+        </div>
         <h2>Bluetooth</h2>
         <div class="group">
           <div class="row">
@@ -490,6 +659,10 @@
             {#if settings.weatherCity}
               <button class="btn ghost" onclick={() => save({ weatherCity: null })}>{tr("s.useAuto")}</button>
             {/if}
+          </div>
+          <div class="row">
+            {@render row(tr("s.rain"), tr("s.rainDesc"))}
+            {@render toggle("rainAlert", settings.rainAlert !== false)}
           </div>
           <form class="row" onsubmit={searchCityHandler}>
             <input class="text grow" bind:value={cityQuery} placeholder={tr("s.cityPlaceholder")} />
@@ -839,6 +1012,25 @@
   }
   .shortcut .target {
     flex-basis: 100%;
+  }
+  .shortcut .date {
+    width: 140px;
+    color-scheme: dark;
+  }
+  .text.hotkey {
+    width: 130px;
+    text-align: center;
+  }
+  .code {
+    margin: 0;
+    max-height: 150px;
+    overflow: auto;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    font: 11px/1.45 "Cascadia Mono", Consolas, monospace;
+    color: rgba(255, 255, 255, 0.8);
+    user-select: text;
   }
   .icon-btn {
     border: 0;

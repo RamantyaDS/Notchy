@@ -95,7 +95,11 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
         if !SELF_COPY.swap(false, Ordering::Relaxed)
             && let Some(data) = unsafe { read(hwnd) }
         {
-            add(data);
+            // A snip taken for "copy text from screen" becomes text instead.
+            let for_ocr = matches!(&data, Data::Image(dib) if crate::extras::clipboard_image(dib));
+            if !for_ocr {
+                add(data);
+            }
         }
         return LRESULT(0);
     }
@@ -237,6 +241,21 @@ pub fn clipboard_copy(id: u32) -> bool {
 pub fn clipboard_clear() {
     ITEMS.lock().unwrap().clear();
     notify();
+}
+
+/// Puts text on the clipboard and in the history (text read from the screen, a snippet).
+pub fn set_text(text: &str) -> bool {
+    let data = Data::Text(text.to_string());
+    let ok = unsafe { write(&data) };
+    if ok {
+        add(data);
+    }
+    ok
+}
+
+#[tauri::command]
+pub fn clipboard_set_text(text: String) -> bool {
+    set_text(&text)
 }
 
 unsafe fn write(data: &Data) -> bool {

@@ -62,6 +62,15 @@ pub fn open_path(path: String) {
     }
 }
 
+/// Shows a shelf file selected in Explorer.
+#[tauri::command]
+pub fn reveal_path(path: String) {
+    if path.starts_with('-') || path.starts_with('/') || !Path::new(&path).exists() {
+        return;
+    }
+    let _ = std::process::Command::new("explorer").arg(format!("/select,{path}")).spawn();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

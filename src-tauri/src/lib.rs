@@ -35,7 +35,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     EVENT_OBJECT_LOCATIONCHANGE, EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZEEND,
     EVENT_SYSTEM_MINIMIZESTART, GWL_EXSTYLE, MSG, MSLLHOOKSTRUCT, OBJID_WINDOW, SW_HIDE,
     SW_SHOWNOACTIVATE, WH_MOUSE_LL, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MOUSEMOVE,
+    WM_MOUSEMOVE, WM_HOTKEY,
     WS_EX_TRANSPARENT,
 };
 
@@ -44,6 +44,7 @@ mod bluetooth;
 mod calls;
 mod clipboard;
 mod downloads;
+mod extras;
 mod health;
 mod media;
 mod network;
@@ -351,8 +352,18 @@ fn start_mouse_hook() {
             SetWinEventHook(min, max, None, Some(win_event_proc), 0, 0, flags);
         }
         system::install_on_hook_thread();
+        extras::register_hotkeys();
         let mut msg = MSG::default();
-        while GetMessageW(&mut msg, None, 0, 0).as_bool() {}
+        // Hotkeys post to this thread's queue (no window), so they're handled here.
+        while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+            if msg.message == WM_HOTKEY {
+                extras::on_hotkey(msg.wParam.0 as i32);
+            } else if msg.message == extras::WM_REREGISTER {
+                extras::register_hotkeys();
+            } else if msg.message == extras::WM_KEYBOARD_HOOK {
+                system::ensure_keyboard_hook();
+            }
+        }
     });
 }
 
@@ -690,8 +701,10 @@ fn start_watcher(window: WebviewWindow) {
             let visible = unsafe { IsWindowVisible(h).as_bool() };
             if hide && visible {
                 unsafe { let _ = ShowWindow(h, SW_HIDE); }
+                let _ = window.emit("notch-hidden", true);
             } else if !hide && !visible {
                 unsafe { let _ = ShowWindow(h, SW_SHOWNOACTIVATE); }
+                let _ = window.emit("notch-hidden", false);
             }
             if !hide && below_ordinary_window(h) {
                 unsafe {
@@ -810,10 +823,13 @@ pub fn run() {
     // is alive, the single-instance plugin ends the new copy at once; if it died, this copy
     // takes over. After Exit from the tray it stays off until Notchy is opened by hand.
     let watchdog = std::env::args().any(|a| a == "--watchdog");
-    if watchdog && exited_flag().exists() {
+    // A script or Claude Code hook calling `notchy --peek/--agent` mustn't bring
+    // back a Notchy the user quit, so it's treated like the watchdog.
+    let external = std::env::args().any(|a| extras::is_external_arg(&a));
+    if (watchdog || external) && exited_flag().exists() {
         return;
     }
-    if !watchdog {
+    if !watchdog && !external {
         let _ = std::fs::remove_file(exited_flag());
     }
 
@@ -823,6 +839,8 @@ pub fn run() {
             if args.iter().any(|a| a == "--settings") {
                 settings::open_window(app);
             }
+            // `notchy --peek ...`, `notchy --agent ...` or a notchy:// link.
+            extras::handle_args(app, &args);
         }))
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_drag::init())
@@ -875,6 +893,18 @@ pub fn run() {
             settings::open_settings,
             move_to_target_monitor,
             finish_monitor_transition,
+            extras::keep_awake,
+            extras::keep_awake_state,
+            extras::lock_keyboard,
+            extras::unlock_keyboard,
+            extras::start_ocr,
+            extras::mixer_list,
+            extras::mixer_set,
+            extras::system_load,
+            extras::idle_seconds,
+            extras::exe_path,
+            clipboard::clipboard_set_text,
+            store::reveal_path,
         ])
         .setup(move |app| {
             // Logged here, not earlier: a second copy (e.g. a watchdog run while Notchy is
@@ -917,6 +947,7 @@ pub fn run() {
             network::update_settings(&s);
             network::start(app.handle().clone());
             bluetooth::start(app.handle().clone());
+            extras::start(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())

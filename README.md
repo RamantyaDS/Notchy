@@ -18,6 +18,8 @@ A small black island at the top of your screen that shows what's happening (musi
   <a href="https://ramantyads.github.io/Notchy/"><b>🌐 Interactive Website & Demo</b></a>
 </p>
 
+> **✨ New in 0.3:** Claude Code status in the notch · per-app volume · copy text from the screen · rain alerts · keep-awake · keyboard-cleaning lock · countdowns · snippets · a teleprompter under your webcam · `notchy --peek` for your own scripts.
+
 ---
 
 <table>
@@ -37,19 +39,29 @@ A small black island at the top of your screen that shows what's happening (musi
 
 🧩 **Two things at once.** Music, a timer, a call or a download can sit side by side in the small notch; swipe to switch which one leads.
 
-📋 **Today page:** your next meeting, today's tasks and water in one glance.
+🤖 **Claude Code, in the notch.** See when Claude is working, get a heads-up the moment it needs your approval, and a peek when it's done. Settings gives you the hooks to paste.
 
-⏱️ **Focus timer**, 💧 **water reminder**, ✅ **to-do list** with reminders and a week strip to plan the next days, 📅 **calendar** reminders from your calendar link.
+🔉 **Sound page:** a volume slider and mute for every app that's playing (Spotify loud, Zoom quiet), plus the output switch.
 
-📁 **Shelf** to park files you'll drag somewhere else, 📋 **clipboard history** (up to 50 items, text and images), ⬇️ **download progress** from your browser, ⚡ **shortcuts** page (lock, sleep, screenshot, your own apps and links), and drop a file on the notch to **share** it.
+📋 **Today page:** your next meeting, today's tasks, water, and countdowns ("Payday in 16 days").
+
+⏱️ **Focus timer** with one-tap timers (1, 3, 5, 10, 15 min), 💧 **water reminder**, ✅ **to-do list** with reminders and a week strip to plan the next days, 📅 **calendar** reminders from your calendar link.
+
+📁 **Shelf** to park files you'll drag somewhere else (right-click to share), 📋 **clipboard history** (up to 50 items, text and images; passwords from password managers are skipped), 📝 **snippets** you type often, ⬇️ **download progress** from your browser, and drop a file on the notch to **share** it.
+
+⚡ **Shortcuts page:** lock, sleep, screenshot, your own apps and links, plus ☕ **keep awake** (30 min to "until I turn it off"), 🧽 **keyboard-cleaning lock**, 🔤 **copy text from the screen** (Windows' own OCR, offline) and 🌗 **dark mode** in one click.
+
+🎬 **Teleprompter:** your script scrolls right under the webcam, so you read while looking at the camera.
+
+🌧️ **Little heads-ups:** rain coming in ~30 minutes, unplug the charger at 80%, a 20-20-20 eye break, and a summary of notifications you missed while presenting.
 
 🔊 **Quick status:** volume, brightness, Caps Lock, keyboard language, charging, Wi-Fi, headphones and earbuds battery, optional Bluetooth connect and low-battery alerts (mouse, keyboard, earbuds), camera and mic in use, mic mute, screenshot preview, weather, one-click audio output switch, and live **network speed** (↓/↑) in the open notch, optionally also in the small notch during heavy downloads or uploads.
 
-🖱️ **Gestures:** scroll on the notch for volume, swipe sideways to switch, press and hold to keep it open.
+🖱️ **Gestures and keys:** scroll on the notch for volume, swipe on the music page to skip songs, press and hold to keep it open, and **Ctrl+Alt+N** opens it from the keyboard (arrows change page, Esc closes).
 
-🎛️ **Only what you use.** Turn pages (music, today, timer, water, to-do, Shelf, clipboard, shortcuts) on or off in Settings.
+🎛️ **Only what you use.** Every page and alert can be turned on or off in Settings, and each one has its own settings.
 
-💊 **Your style:** keep the notch against the top edge or let it float just below it as a pill, and add a small status ring for battery or today's water.
+💊 **Your style:** keep the notch against the top edge or let it float just below it as a pill, and add a small status ring for battery, today's water, CPU or memory.
 
 🖥️ **More than one screen?** Keep the notch on the main screen, the second one, or let it follow your cursor from screen to screen.
 
@@ -76,8 +88,32 @@ A small black island at the top of your screen that shows what's happening (musi
 </p>
 
 <p align="center">
+  <img src="docs/claude.png" width="49%" alt="Claude Code needs your approval" />
+  <img src="docs/claude-working.png" width="49%" alt="Claude Code is working" />
+  <img src="docs/sound.png" width="49%" alt="Per-app volume" />
+  <img src="docs/shortcuts.png" width="49%" alt="Shortcuts: keep awake, clean keyboard, screen text, dark mode" />
+  <img src="docs/ocr.png" width="49%" alt="Text copied from the screen" />
+  <img src="docs/rain.png" width="49%" alt="Rain alert" />
+  <img src="docs/prompter.png" width="49%" alt="Teleprompter under the webcam" />
+  <img src="docs/keylock.png" width="49%" alt="Keyboard locked for cleaning" />
+</p>
+
+<p align="center">
   <img src="docs/settings.png" width="70%" alt="Settings" />
 </p>
+
+## For your scripts (and Claude Code)
+
+Anything that can run a command can put a message in the notch. Text only: nothing is ever run.
+
+```bash
+notchy --peek "Build finished" --icon done --sound
+notchy --peek "Backup failed" --detail "Disk is full" --icon error
+```
+
+Icons: `done`, `error`, `info`, `bell`. There's also a link form, `notchy://peek?text=Hello&icon=info`, for apps that open URLs.
+
+**Claude Code:** turn on *Claude Code status* in Settings → Keyboard & system and copy the hooks shown there into `~/.claude/settings.json`. They call `notchy --agent working | waiting | done`, so the notch shows Claude working, pings you when it's waiting for you, and tells you when it's finished.
 
 ## Install
 
@@ -146,6 +182,16 @@ Anything that shows up in Windows' media controls (the box above the volume slid
 Right-click the tray icon: **Notch minimal** turns the idle notch into a thin black line, and **Mata (maskot)** turns the eyes off. You can also customize Notchy's look in Settings with 5 different eye styles (Classic, Anime ✨, Pixel 👾, Cat 🐱, Cartoon 👀). Things like music, alerts and hover still work.
 </details>
 
+<details><summary>"Copy text from screen" doesn't find any text</summary>
+
+It uses Windows' own text recognition, for the languages installed in Windows (Settings → Time & language → Language). Pick a sharper or larger area; very small or stylized text may not be read.
+</details>
+
+<details><summary>Ctrl+Alt+N doesn't open the notch</summary>
+
+Another app may already use it. Pick another one in Settings → Keyboard & system → Hotkeys, like `Ctrl+Alt+Shift+N`.
+</details>
+
 <details><summary>How do I quit, or stop it starting with Windows?</summary>
 
 Right-click the tray icon → **Exit**, or untick **Start with Windows**. Uninstall anytime from Windows Settings → Apps.
@@ -153,7 +199,7 @@ Right-click the tray icon → **Exit**, or untick **Start with Windows**. Uninst
 
 <details><summary>My antivirus flagged it</summary>
 
-New, unsigned apps sometimes get flagged. Check the SHA-256 against the release page (above). Notchy listens only for volume, brightness, Caps Lock and language keys to show their overlays; it never records what you type. If you'd rather it didn't watch the keyboard at all, turn off **Caps Lock & keyboard language** and **Hide Windows volume overlay** in Settings → **Keyboard & system** (applies after restarting Notchy).
+New, unsigned apps sometimes get flagged. Check the SHA-256 against the release page (above). Notchy listens only for volume, brightness, Caps Lock and language keys to show their overlays; it never records what you type. If you'd rather it didn't watch the keyboard at all, turn off **Caps Lock & keyboard language** and **Hide Windows volume overlay** in Settings → **Keyboard & system** (applies after restarting Notchy). The keyboard-cleaning lock also needs the keyboard, so it starts watching it only once you use that lock.
 </details>
 
 ## Feedback
@@ -165,7 +211,7 @@ Found a bug or have an idea? [Open an issue](https://github.com/RamantyaDS/Notch
 - **~1–2% CPU at rest**, a few % while music animates.
 - **No account, no analytics.** Your to-dos, water log and settings stay in `%APPDATA%\Notchy`.
 - **Careful with clicks.** Programs and scripts on the Shelf or in Downloads are shown in Explorer, never run; links from notifications open only for web, mail and the usual chat/meeting apps.
-- It only goes online for lyrics ([LRCLIB](https://lrclib.net)), weather ([Open-Meteo](https://open-meteo.com)), your own calendar link if you add one, and checking for updates here on GitHub.
+- It only goes online for lyrics ([LRCLIB](https://lrclib.net)), weather and rain alerts ([Open-Meteo](https://open-meteo.com)), your own calendar link if you add one, and checking for updates here on GitHub. Text from the screen is read on your PC, offline.
 
 ## Built with
 
@@ -190,7 +236,7 @@ Design notes and every decision behind the app are in [`notchy.md`](notchy.md) (
 <details>
 <summary>🇮🇩 Bahasa Indonesia</summary>
 
-**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), halaman Hari ini, timer fokus, pengingat minum, to-do dengan strip minggu, kalender, Shelf file, riwayat clipboard, progres unduhan, halaman pintasan, kecepatan internet, dan status sistem. Mata maskot punya 5 gaya (Classic, Anime, Pixel, Cat, Cartoon) yang bisa melirik kursor, berkedip, dan berekspresi. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, notch bisa melayang sebagai pil di bawah tepi atas, dan bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
+**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), status Claude Code, volume per aplikasi, halaman Hari ini dengan hitung mundur, timer fokus dan timer cepat, pengingat minum, to-do dengan strip minggu, kalender, Shelf file, riwayat clipboard, snippet, teleprompter, progres unduhan, halaman pintasan (jaga menyala, kunci keyboard untuk dibersihkan, salin teks dari layar, mode gelap), peringatan hujan, pengingat cabut charger, istirahat mata 20-20-20, kecepatan internet, dan status sistem. Script apa pun bisa memunculkan pesan lewat `notchy --peek "teks"`. Mata maskot punya 5 gaya (Classic, Anime, Pixel, Cat, Cartoon) yang bisa melirik kursor, berkedip, dan berekspresi. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, notch bisa melayang sebagai pil di bawah tepi atas, dan bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
 
 Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest) atau coba demonya langsung di [Website Notchy](https://ramantyads.github.io/Notchy/). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
 

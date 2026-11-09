@@ -13,6 +13,9 @@ use crate::settings::{get_settings, Shortcut};
 pub enum Plan {
     Lock,
     Sleep,
+    /// Text from the screen: Windows' area picker, then OCR.
+    Ocr,
+    DarkMode,
     /// Opens with the shell: an app, file, folder, link, or ms-screenclip:.
     Open(String),
     Nothing,
@@ -23,6 +26,12 @@ pub fn plan(shortcut: &Shortcut, downloads: Option<String>) -> Plan {
         "lock" => Plan::Lock,
         "sleep" => Plan::Sleep,
         "screenshot" => Plan::Open("ms-screenclip:".into()),
+        "ocr" => Plan::Ocr,
+        "darkmode" => Plan::DarkMode,
+        // No public switch for these, so they open the right Windows Settings page.
+        "nightlight" => Plan::Open("ms-settings:nightlight".into()),
+        "batterysaver" => Plan::Open("ms-settings:batterysaver".into()),
+        "focus" => Plan::Open("ms-settings:notifications".into()),
         "downloads" => downloads.map(Plan::Open).unwrap_or(Plan::Nothing),
         "open" => {
             let target = shortcut.target.trim().trim_matches('"').to_string();
@@ -49,15 +58,19 @@ pub fn run_shortcut(index: usize) -> Result<(), String> {
             });
             Ok(())
         }
-        Plan::Open(target) => {
-            let result = unsafe {
-                ShellExecuteW(None, &HSTRING::from("open"), &HSTRING::from(target.as_str()), None, None, SW_SHOWNORMAL)
-            };
-            // ShellExecute reports success as a value above 32.
-            if result.0 as usize > 32 { Ok(()) } else { Err(format!("Tidak bisa membuka {target}")) }
-        }
+        Plan::Ocr => crate::extras::start_ocr(),
+        Plan::DarkMode => crate::extras::toggle_dark_mode().map(|_| ()),
+        Plan::Open(target) => shell_open(&target),
         Plan::Nothing => Err("Pintasan belum diatur".into()),
     }
+}
+
+/// Opens an app, file, folder or URI with the shell.
+pub fn shell_open(target: &str) -> Result<(), String> {
+    let result =
+        unsafe { ShellExecuteW(None, &HSTRING::from("open"), &HSTRING::from(target), None, None, SW_SHOWNORMAL) };
+    // ShellExecute reports success as a value above 32.
+    if result.0 as usize > 32 { Ok(()) } else { Err(format!("Tidak bisa membuka {target}")) }
 }
 
 /// Opens a meeting link from the calendar ("Join"). Web links only.
@@ -102,6 +115,9 @@ mod plan_tests {
         assert_eq!(plan(&s("downloads", ""), Some(r"C:\Users\me\Downloads".into())), Plan::Open(r"C:\Users\me\Downloads".into()));
         assert_eq!(plan(&s("open", r#" "C:\Tools\backup.bat" "#), None), Plan::Open(r"C:\Tools\backup.bat".into()));
         assert_eq!(plan(&s("open", "https://mail.google.com"), None), Plan::Open("https://mail.google.com".into()));
+        assert_eq!(plan(&s("ocr", ""), None), Plan::Ocr);
+        assert_eq!(plan(&s("darkmode", ""), None), Plan::DarkMode);
+        assert_eq!(plan(&s("nightlight", ""), None), Plan::Open("ms-settings:nightlight".into()));
     }
 
     #[test]

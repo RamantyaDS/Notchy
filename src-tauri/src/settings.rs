@@ -89,6 +89,43 @@ pub struct Settings {
     /// Language preference: "en" or "id"
     #[serde(default = "legacy_language")]
     pub language: String,
+    /// Newer pages: per-app volume, saved text snippets, teleprompter.
+    pub sound_enabled: bool,
+    pub snippets_enabled: bool,
+    pub prompter_enabled: bool,
+    /// `notchy --peek`, `notchy://` links (registered for this user while on).
+    pub external_peeks: bool,
+    /// Claude Code hooks (`notchy --agent ...`) show the agent's state.
+    pub agent_status: bool,
+    /// Global hotkeys, e.g. "Win+Alt+N"; empty for none.
+    pub open_hotkey: String,
+    pub ocr_hotkey: String,
+    /// Horizontal swipe on the music page skips tracks.
+    pub swipe_tracks: bool,
+    /// Warn ~30 minutes before rain (Open-Meteo, the weather city).
+    pub rain_alert: bool,
+    /// Remind to unplug at this battery percent (and to plug in at 20%); 0 = off.
+    pub charge_reminder: u32,
+    /// After a presentation or full-screen app, sum up notifications held back.
+    pub presentation_summary: bool,
+    /// 20-20-20: look away for 20 s after 20 minutes at the screen.
+    pub eye_break: bool,
+    /// Peek when the internet connection drops or comes back.
+    pub connection_peek: bool,
+    /// Camera and microphone dots and peeks.
+    pub privacy_indicators: bool,
+    /// Dates counted down on the Today page.
+    pub countdowns: Vec<Countdown>,
+}
+
+/// A date counted down on the Today page; `repeat` is "none", "monthly" or "yearly".
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Countdown {
+    pub name: String,
+    /// "YYYY-MM-DD"
+    pub date: String,
+    pub repeat: String,
 }
 
 /// One button on the shortcuts page. `action` is "lock", "sleep", "screenshot",
@@ -174,6 +211,21 @@ impl Default for Settings {
             spring_physics: "spring".into(),
             windows_accent_glow: false,
             language: default_language(),
+            sound_enabled: true,
+            snippets_enabled: false,
+            prompter_enabled: false,
+            external_peeks: true,
+            agent_status: true,
+            open_hotkey: "Ctrl+Alt+N".into(),
+            ocr_hotkey: String::new(),
+            swipe_tracks: true,
+            rain_alert: true,
+            charge_reminder: 0,
+            presentation_summary: true,
+            eye_break: false,
+            connection_peek: true,
+            privacy_indicators: true,
+            countdowns: vec![],
         }
     }
 }
@@ -192,6 +244,8 @@ pub fn save_settings(app: AppHandle, settings: Settings) -> Result<(), String> {
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     crate::store::write_safely(&path(), &json)?;
     crate::network::update_settings(&settings);
+    crate::extras::hotkeys_changed();
+    crate::extras::register_link(settings.external_peeks);
     crate::place_window_for_settings(&app);
     let _ = app.emit("settings", &settings);
     Ok(())
@@ -291,6 +345,10 @@ mod tests {
         assert_eq!(s.net_speed_island, false);
         assert!(s.net_speed_status);
         assert!(s.language == "en" || s.language == "id");
+        assert!(s.sound_enabled && !s.snippets_enabled && !s.prompter_enabled);
+        assert_eq!(s.open_hotkey, "Ctrl+Alt+N");
+        assert_eq!(s.charge_reminder, 0);
+        assert!(!s.eye_break && s.rain_alert && s.privacy_indicators);
     }
 
     #[test]

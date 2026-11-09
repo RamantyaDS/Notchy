@@ -83,7 +83,7 @@ pub fn install_on_hook_thread() {
         CAPS_PEEK.store(settings.caps_lock_peek, Ordering::Relaxed);
         VOLUME_KEYS.store(settings.hide_volume_osd, Ordering::Relaxed);
         if settings.caps_lock_peek || settings.hide_volume_osd {
-            let _ = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), None, 0);
+            ensure_keyboard_hook();
         }
     }
 }
@@ -176,6 +176,17 @@ unsafe extern "system" fn power_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpara
 
 // ---------------------------------------------------------------- keyboard
 
+static KEYBOARD_HOOKED: AtomicBool = AtomicBool::new(false);
+
+/// Installs the keyboard hook once. Only on the hook thread (it needs that
+/// thread's message loop). Off by default when Caps Lock and volume peeks are off;
+/// the keyboard-cleaning lock installs it when first used.
+pub fn ensure_keyboard_hook() {
+    if !KEYBOARD_HOOKED.swap(true, Ordering::Relaxed) {
+        let _ = unsafe { SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), None, 0) };
+    }
+}
+
 static KEY_TX: OnceLock<mpsc::Sender<bool>> = OnceLock::new();
 static KEY_PENDING: AtomicBool = AtomicBool::new(false);
 static CAPS_PEEK: AtomicBool = AtomicBool::new(false);
@@ -187,6 +198,10 @@ static VOLUME_TX: OnceLock<mpsc::Sender<u32>> = OnceLock::new();
 /// Only looks at *which* key went up to spot Caps Lock; nothing typed is kept.
 unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     let up = wparam.0 as u32 == WM_KEYUP || wparam.0 as u32 == WM_SYSKEYUP;
+    // Keyboard cleaning: every key is swallowed until unlocked.
+    if code >= 0 && crate::extras::KEYS_LOCKED.load(Ordering::Relaxed) {
+        return LRESULT(1);
+    }
     let info = unsafe { &*(lparam.0 as *const KBDLLHOOKSTRUCT) };
     let vk = info.vkCode;
     if code >= 0
@@ -281,7 +296,7 @@ fn start_network(app: AppHandle) {
             std::thread::sleep(Duration::from_millis(800));
             let now = read();
             let mut last = last.lock().unwrap();
-            if now.0 != last.0 || (now.0 && now.1 != last.1) {
+            if (now.0 != last.0 || (now.0 && now.1 != last.1)) && crate::settings::get_settings().connection_peek {
                 peek(&app, "network", json!({ "online": now.0, "name": now.1, "wifi": now.2 }));
             }
             *last = now;
@@ -376,7 +391,7 @@ fn start_privacy(app: AppHandle) {
                 if last.as_ref() != Some(&now) {
                     let _ = app.emit("in-use", &now);
                     // Announce a device being picked up, not put down.
-                    if let Some(prev) = last.as_ref() {
+                    if let Some(prev) = last.as_ref().filter(|_| crate::settings::get_settings().privacy_indicators) {
                         for (kind, apps, before) in [("camera", &now.camera, &prev.camera), ("mic-in-use", &now.mic, &prev.mic)] {
                             if let Some(new) = apps.iter().find(|a| !before.contains(a)) {
                                 peek(&app, kind, json!({ "app": new }));

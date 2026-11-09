@@ -38,6 +38,30 @@
     sync: "M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3M4 4v4h4M20 20v-4h-4",
     alert: "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
     code: "M8 9l-3 3 3 3M16 9l3 3-3 3M13 6l-2 12",
+    rain: "M7 15a4 4 0 1 1 1-7.9A5 5 0 0 1 17.6 8 3.5 3.5 0 0 1 17 15zM8 18l-1 2M12 18l-1 2M16 18l-1 2",
+    eye: "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+    text: "M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 10h8M8 14h5",
+    bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4",
+    info: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01",
+    spark: "M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z",
+    moon: "M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z",
+    cup: "M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 11h1.5a2.5 2.5 0 0 1 0 5H17M8 3v3M12 3v3",
+    gift: "M4 11h16v10H4zM2 7h20v4H2zM12 7v14M12 7S10 3 7.5 3a2 2 0 0 0 0 4M12 7s2-4 4.5-4a2 2 0 0 1 0 4",
+  };
+
+  // The eye break counts its 20 seconds down in the peek.
+  let secs = $state(20);
+  $effect(() => {
+    if (peek.kind !== "eyes") return;
+    secs = 20;
+    const id = setInterval(() => (secs = Math.max(0, secs - 1)), 1000);
+    return () => clearInterval(id);
+  });
+  const CUSTOM: Record<string, [string, string]> = {
+    done: ["done", "#34d399"],
+    error: ["alert", "#f87171"],
+    info: ["info", "#38bdf8"],
+    bell: ["bell", "#fbbf24"],
   };
 
   // ring: 0..100, the icon sits inside a battery ring and the value is shown big.
@@ -92,6 +116,7 @@
       case "mic-in-use":
         return { icon: "mic", tone: "#fb923c", title: t("peek.micInUse"), detail: p.app };
       case "timer":
+        if (p.phase === "quick") return { icon: "timer", tone: "#fbbf24", title: t("peek.quickDone", { min: p.min }) };
         return p.phase === "break"
           ? { icon: "timer", tone: "#34d399", title: t("peek.timeForBreak"), detail: t("peek.focusDone") }
           : { icon: "timer", tone: "#fb7185", title: t("peek.breakDone"), detail: t("peek.readyToFocus") };
@@ -117,6 +142,38 @@
           ring: p.battery ?? undefined,
           value: p.battery != null ? `${p.battery}%` : undefined,
         };
+      case "custom": {
+        const [icon, tone] = CUSTOM[p.icon] ?? CUSTOM.info;
+        return { icon, tone, title: p.text, detail: p.detail || undefined };
+      }
+      case "rain":
+        return { icon: "rain", tone: "#38bdf8", title: p.minutes > 0 ? t("peek.rain", { min: p.minutes }) : t("peek.rainNow"), detail: t("peek.rainDetail") };
+      case "charge-full":
+        return { icon: "bolt", tone: "#34d399", title: t("peek.chargeFull", { p: p.percent }), detail: t("peek.chargeFullDetail"), ring: p.percent, value: `${p.percent}%` };
+      case "battery-low":
+        return { icon: "battery", tone: "#fb923c", title: t("peek.batteryLow", { p: p.percent }), detail: t("peek.batteryLowDetail"), ring: p.percent, value: `${p.percent}%` };
+      case "held":
+        return { icon: "bell", tone: "#fbbf24", title: t("peek.held", { n: p.count }), detail: p.names };
+      case "eyes":
+        return { icon: "eye", tone: "#38bdf8", title: t("peek.eyes"), detail: t("peek.eyesDetail"), ring: (secs / 20) * 100, value: `${secs}` };
+      case "ocr":
+        return p.words > 0
+          ? { icon: "text", tone: "#38bdf8", title: t("peek.ocrDone", { n: p.words }), detail: p.text }
+          : { icon: "text", tone: "#f87171", title: t("peek.ocrEmpty"), detail: t("peek.ocrEmptyDetail") };
+      case "agent":
+        return p.state === "waiting"
+          ? { icon: "spark", tone: "#fbbf24", title: t("peek.agentWaiting"), detail: p.text || "Claude Code" }
+          : { icon: "spark", tone: "#34d399", title: t("peek.agentDone"), detail: p.text || "Claude Code" };
+      case "copied":
+        return { icon: "done", tone: "#34d399", title: t("peek.copied"), detail: p.text };
+      case "darkmode":
+        return { icon: p.dark ? "moon" : "sun", tone: p.dark ? "#a78bfa" : "#fbbf24", title: p.dark ? t("peek.darkOn") : t("peek.darkOff") };
+      case "countdown":
+        return { icon: "gift", tone: "#fb7185", title: t("peek.countdownToday", { name: p.name }) };
+      case "keep-awake":
+        return p.on
+          ? { icon: "cup", tone: "#34d399", title: t("peek.keepAwakeOn"), detail: p.label }
+          : { icon: "cup", title: t("peek.keepAwakeOff") };
       default:
         return null;
     }
