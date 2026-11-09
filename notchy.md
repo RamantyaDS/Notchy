@@ -303,6 +303,20 @@ Ide fitur diambil dari README aplikasi notch lain (boring.notch, Atoll, DynamicW
 - **Clipboard melewati password** sudah ada sejak awal (`ExcludeClipboardContentFromMonitorProcessing` dll.).
 - **Diuji 9 Nov 2026:** cargo test (34) dan vitest (51) hijau, `svelte-check` bersih, clippy tanpa peringatan baru. `--peek` dan `--agent` dikirim ke build yang jalan (satu proses tetap). `Ctrl+Alt+N` terdaftar, link `notchy://` terdaftar, CPU proses utama ~0,04% saat diam. Tampilan tiap fitur dicek lewat harness Playwright (`notchy-promo/live/check-new.mjs`). **Belum dicoba langsung di layar:** OCR, mode gelap, mixer dengan aplikasi asli, kunci keyboard, dan hotkey.
 
+### O. PR #6 (Malik): Jadwal Solat Offline dan Perbaikan Responsivitas Maskot, 9 Nov 2026
+Dibangun di atas v0.3.0 untuk melengkapi kebutuhan pengingat harian dan menyempurnakan interaktivitas maskot:
+- **Jadwal Solat & Pengingat Azan Offline** (`prayer_reminders`, default mati):
+  - Dihitung 100% lokal di `prayer.ts` memakai hisab koordinat matahari (deklinasi, persamaan waktu, sudut senja) tanpa request API luar dan tanpa latensi jaringan.
+  - Otomatis memakai titik latitude/longitude cuaca yang sudah aktif di Notchy.
+  - Peek pengingat 10 menit sebelum waktu solat (`crescent` icon) dan peek saat waktu solat tiba dengan denting halus (*chime*). Waktu peringatan bisa diatur 5–30 menit.
+  - Pilihan metode hisab Kemenag RI (Subuh 20°, Isya 18°) dan Muslim World League (MWL). Menu baru di Settings → "Jadwal & Waktu Solat" (dwibahasa EN/ID).
+- **Perbaikan Freeze & Responsivitas Maskot**:
+  - **Eliminasi Freeze pada Instalasi Pertama**: jendela yang dibuat `visible: false` kini langsung diaktifkan dengan `ShowWindow(SW_SHOWNOACTIVATE)` saat `setup()` selesai menempatkan jendela; `update_hit_rect()` dipanggil saat perubahan visibilitas (`SW_HIDE` / `SW_SHOWNOACTIVATE`) dan di akhir `place_window()`, serta posisi kursor diinisialisasi via `GetCursorPos`. Area hover dan koordinat hit rect langsung sinkron sejak detik pertama.
+  - **0-Deadzone Kursor**: Menghapus ambang batas gerak 2px yang kaku di `src-tauri/src/lib.rs` agar pelacakan mata maskot merespons gerak mikro mouse dengan luwes.
+  - **Mata Tidur Simetris**: Koordinat mata saat dozing/mengantuk dipusatkan (`dozing ? 0 : look[0]`) agar mata tidak terkunci miring.
+  - **Polesan Tema Anime**: Gradasi iris lebih pekat, bulu mata berlapis, dan pantulan bintang kontras tinggi.
+- **Diuji 9 Nov 2026**: 54 tes vitest lolos (termasuk tes hisab solat Kemenag & MWL), `svelte-check` 0 error/0 warning, `cargo check` bersih.
+
 ---
 
 ## 6. Urutan pengerjaan
@@ -347,7 +361,7 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 - Akun, login, sinkronisasi cloud, atau analytics.
 - Code signing Windows (peringatan SmartScreen tetap muncul saat pasang manual).
 - Lirik dari Spotify atau sumber lain yang butuh login/scraping.
-- Jadwal sholat.
+- Jadwal sholat via API eksternal (jadwal dihitung 100% offline via hisab astronomi lokal tanpa network latency).
 - Tema yang bisa dikustomisasi bebas (cukup satu gaya yang rapi dulu).
 
 ---
