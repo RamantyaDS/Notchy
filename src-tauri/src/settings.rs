@@ -86,6 +86,16 @@ pub struct Settings {
     pub spring_physics: String,
     /// false: Default Notchy neutral ambient glow; true: Windows DWM accent sync
     pub windows_accent_glow: bool,
+    /// Prayer Times & Adhan Reminder
+    pub prayer_enabled: bool,
+    pub prayer_pre_alert: bool,
+    pub prayer_method: String,
+    pub prayer_fajr: bool,
+    pub prayer_dhuhr: bool,
+    pub prayer_asr: bool,
+    pub prayer_maghrib: bool,
+    pub prayer_isha: bool,
+    pub prayer_sound: bool,
     /// Language preference: "en" or "id"
     #[serde(default = "legacy_language")]
     pub language: String,
@@ -210,6 +220,15 @@ impl Default for Settings {
             monitor_placement: "primary".into(),
             spring_physics: "spring".into(),
             windows_accent_glow: false,
+            prayer_enabled: false,
+            prayer_pre_alert: true,
+            prayer_method: "kemenag".into(),
+            prayer_fajr: true,
+            prayer_dhuhr: true,
+            prayer_asr: true,
+            prayer_maghrib: true,
+            prayer_isha: true,
+            prayer_sound: true,
             language: default_language(),
             sound_enabled: true,
             snippets_enabled: false,

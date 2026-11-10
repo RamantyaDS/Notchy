@@ -28,7 +28,7 @@ use windows::Win32::UI::Shell::{
     SHQueryUserNotificationState, QUNS_BUSY, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, GetClassNameW, GetForegroundWindow, GetMessageW, GetWindowLongPtrW,
+    CallNextHookEx, GetClassNameW, GetCursorPos, GetForegroundWindow, GetMessageW, GetWindowLongPtrW,
     GetWindow, GetWindowRect, GetWindowThreadProcessId, IsIconic, IsWindowVisible, SetForegroundWindow,
     SetWindowLongPtrW, SetWindowPos, SetWindowsHookExW, ShowWindow, GW_HWNDPREV, HWND_TOPMOST,
     SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WS_EX_TOPMOST,
@@ -157,6 +157,20 @@ fn update_hit_rect() {
     HIT_T.store(t, Ordering::Relaxed);
     HIT_R.store(r, Ordering::Relaxed);
     HIT_B.store(b, Ordering::Relaxed);
+
+    let cur_x = CURSOR_X.load(Ordering::Relaxed);
+    let cur_y = CURSOR_Y.load(Ordering::Relaxed);
+    let inside = r > l && cur_x >= l && cur_x < r && cur_y < b;
+    if HIT_INSIDE.swap(inside, Ordering::Relaxed) != inside {
+        if let Some(tx) = HOVER_TX.get() {
+            let _ = tx.send(inside);
+        }
+    }
+    if r > l && !EYES_PENDING.swap(true, Ordering::Relaxed) {
+        if let Some(tx) = EYES_TX.get() {
+            let _ = tx.send(());
+        }
+    }
 }
 
 fn on_mouse_move(x: i32, y: i32) {
@@ -297,21 +311,26 @@ fn start_eyes_emitter() {
             std::thread::sleep(Duration::from_millis(16));
             EYES_PENDING.store(false, Ordering::Relaxed);
             let ((l, t, r, b), inside) = (hit_rect(), hit_inside());
-            if inside || r <= l || TUCKED.load(Ordering::Relaxed) {
+            if r <= l || inside || TUCKED.load(Ordering::Relaxed) {
                 continue;
             }
-            let dx = (CURSOR_X.load(Ordering::Relaxed) - (l + r) / 2) as f64;
-            let dy = (CURSOR_Y.load(Ordering::Relaxed) - (t + b) / 2) as f64;
+            let cur_x = CURSOR_X.load(Ordering::Relaxed);
+            let cur_y = CURSOR_Y.load(Ordering::Relaxed);
+
+            let dx = (cur_x - (l + r) / 2) as f64;
+            let dy = (cur_y - (t + b) / 2) as f64;
             let dist = dx.hypot(dy).max(1.0);
             // Full deflection once the cursor is ~300px away.
             let reach = (dist / 300.0).min(1.0);
             // 1 when the cursor is right at the notch, 0 from ~250px away.
             let near = 1.0 - (dist / 250.0).min(1.0);
             let look = (dx / dist * reach, dy / dist * reach, near);
-            if (look.0 - last.0).abs() < 0.015
-                && (look.1 - last.1).abs() < 0.015
-                && (look.2 - last.2).abs() < 0.015
-            {
+
+            let moved = (look.0 - last.0).abs() >= 0.008
+                || (look.1 - last.1).abs() >= 0.008
+                || (look.2 - last.2).abs() >= 0.008;
+
+            if !moved {
                 continue;
             }
             last = look;
@@ -453,8 +472,8 @@ pub(crate) fn place_window(window: &WebviewWindow) {
                 win_h,
                 SWP_NOACTIVATE,
             );
-            update_hit_rect();
         }
+        update_hit_rect();
     }
 }
 
@@ -701,9 +720,11 @@ fn start_watcher(window: WebviewWindow) {
             let visible = unsafe { IsWindowVisible(h).as_bool() };
             if hide && visible {
                 unsafe { let _ = ShowWindow(h, SW_HIDE); }
+                update_hit_rect();
                 let _ = window.emit("notch-hidden", true);
             } else if !hide && !visible {
                 unsafe { let _ = ShowWindow(h, SW_SHOWNOACTIVATE); }
+                update_hit_rect();
                 let _ = window.emit("notch-hidden", false);
             }
             if !hide && below_ordinary_window(h) {
@@ -919,6 +940,13 @@ pub fn run() {
             window.set_ignore_cursor_events(true)?;
             NOTCH_HWND.store(hwnd(&window).0 as isize, Ordering::Relaxed);
             place_window(&window);
+
+            let mut pt = POINT::default();
+            if unsafe { GetCursorPos(&mut pt).is_ok() } {
+                CURSOR_X.store(pt.x, Ordering::Relaxed);
+                CURSOR_Y.store(pt.y, Ordering::Relaxed);
+            }
+            update_hit_rect();
 
             let w_event = window.clone();
             window.on_window_event(move |event| {

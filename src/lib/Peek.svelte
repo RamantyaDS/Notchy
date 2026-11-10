@@ -38,6 +38,7 @@
     sync: "M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3M4 4v4h4M20 20v-4h-4",
     alert: "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
     code: "M8 9l-3 3 3 3M16 9l3 3-3 3M13 6l-2 12",
+    crescent: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z",
     rain: "M7 15a4 4 0 1 1 1-7.9A5 5 0 0 1 17.6 8 3.5 3.5 0 0 1 17 15zM8 18l-1 2M12 18l-1 2M16 18l-1 2",
     eye: "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
     text: "M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 10h8M8 14h5",
@@ -62,6 +63,7 @@
     error: ["alert", "#f87171"],
     info: ["info", "#38bdf8"],
     bell: ["bell", "#fbbf24"],
+
   };
 
   // ring: 0..100, the icon sits inside a battery ring and the value is shown big.
@@ -142,6 +144,13 @@
           ring: p.battery ?? undefined,
           value: p.battery != null ? `${p.battery}%` : undefined,
         };
+      case "prayer":
+        return {
+          icon: "crescent",
+          tone: p.preAlert ? "#38bdf8" : "#34d399",
+          title: p.title,
+          detail: p.detail,
+        };
       case "custom": {
         const [icon, tone] = CUSTOM[p.icon] ?? CUSTOM.info;
         return { icon, tone, title: p.text, detail: p.detail || undefined };
@@ -174,6 +183,7 @@
         return p.on
           ? { icon: "cup", tone: "#34d399", title: t("peek.keepAwakeOn"), detail: p.label }
           : { icon: "cup", title: t("peek.keepAwakeOff") };
+
       default:
         return null;
     }
