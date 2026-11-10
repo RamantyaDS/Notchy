@@ -115,7 +115,11 @@ notchy --peek "Backup failed" --detail "Disk is full" --icon error
 
 Icons: `done`, `error`, `info`, `bell`. There's also a link form, `notchy://peek?text=Hello&icon=info`, for apps that open URLs.
 
-**Claude Code:** turn on *Claude Code status* in Settings → Keyboard & system and copy the hooks shown there into `~/.claude/settings.json`. They call `notchy --agent working | waiting | done`, so the notch shows Claude working, pings you when it's waiting for you, and tells you when it's finished.
+**AI Coding Assistants & Agents:** turn on *AI Assistants & Agents* in Settings → Keyboard & system. Supports Antigravity / Gemini CLI, OpenAI Codex, OpenCode, Claude Code, Cursor, Aider, or any custom script:
+- **CLI flag:** `notchy --agent working | waiting | done [--app "Antigravity"] [--text "Needs approval"]`
+- **URL Scheme:** `notchy://agent?app=Antigravity&state=waiting&text=Approval%20required` (location-free, callable from any terminal or script)
+
+The notch pulses while your AI works, startles the mascot and pings you when it needs your approval, and flashes a gentle green peek when finished.
 
 ## Install
 

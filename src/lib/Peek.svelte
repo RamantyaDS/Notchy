@@ -171,10 +171,15 @@
         return p.words > 0
           ? { icon: "text", tone: "#38bdf8", title: t("peek.ocrDone", { n: p.words }), detail: p.text }
           : { icon: "text", tone: "#f87171", title: t("peek.ocrEmpty"), detail: t("peek.ocrEmptyDetail") };
-      case "agent":
+      case "agent": {
+        const app = p.app?.trim() || "Claude Code";
+        const isClaude = app.toLowerCase().includes("claude");
+        const titleWaiting = isClaude ? t("peek.agentWaiting") : t("peek.agentWaitingGeneric", { app });
+        const titleDone = isClaude ? t("peek.agentDone") : t("peek.agentDoneGeneric", { app });
         return p.state === "waiting"
-          ? { icon: "spark", tone: "#fbbf24", title: t("peek.agentWaiting"), detail: p.text || "Claude Code" }
-          : { icon: "spark", tone: "#34d399", title: t("peek.agentDone"), detail: p.text || "Claude Code" };
+          ? { icon: "spark", tone: "#fbbf24", title: titleWaiting, detail: p.text || app }
+          : { icon: "spark", tone: "#34d399", title: titleDone, detail: p.text || app };
+      }
       case "copied":
         return { icon: "done", tone: "#34d399", title: t("peek.copied"), detail: p.text };
       case "darkmode":

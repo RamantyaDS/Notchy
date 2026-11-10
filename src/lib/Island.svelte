@@ -164,7 +164,13 @@
       <span class="run" class:on={active}></span>
     {:else if main.kind === "agent"}
       <span class="spark" class:wait={main.waiting}>{@render spark()}</span>
-      <span class="label">{main.waiting ? t("peek.agentWaiting") : t("peek.agentWorking")}</span>
+      <span class="label">
+        {#if main.waiting}
+          {main.app && !main.app.toLowerCase().includes("claude") ? t("peek.agentWaitingGeneric", { app: main.app }) : t("peek.agentWaiting")}
+        {:else}
+          {main.app && !main.app.toLowerCase().includes("claude") ? t("peek.agentWorkingGeneric", { app: main.app }) : t("peek.agentWorking")}
+        {/if}
+      </span>
       <span class="run" class:on={active && !main.waiting}></span>
     {:else if main.kind === "network"}
       <span class="net-pill down">
@@ -196,7 +202,7 @@
       {:else if a.kind === "network"}
         <span class="blue num">↓{formatSpeed(a.speed.down)}</span>
       {:else if a.kind === "agent"}
-        <span class="spark" class:wait={a.waiting}>{@render spark()}</span>
+        <span class="spark" class:wait={a.waiting} title={a.app || "AI Agent"}>{@render spark()}</span>
       {/if}
     </div>
   {/each}

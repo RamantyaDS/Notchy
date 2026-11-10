@@ -13,7 +13,7 @@ export type Activity =
   | { kind: "music"; lyric: boolean }
   | { kind: "network"; speed: NetworkSpeed }
   /** Claude Code working (or waiting for you), reported by its hooks. */
-  | { kind: "agent"; waiting: boolean };
+  | { kind: "agent"; waiting: boolean; app?: string };
 
 const ORDER: Activity["kind"][] = ["call", "agent", "timer", "download", "music", "network"];
 
@@ -44,7 +44,7 @@ export function mainWidth(a: Activity): number {
     case "network":
       return 210;
     case "agent":
-      return 220;
+      return a.app ? Math.max(220, 160 + Math.min(a.app.length, 18) * 5) : 220;
   }
 }
 

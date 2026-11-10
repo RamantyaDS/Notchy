@@ -6,6 +6,7 @@ const timer: Activity = { kind: "timer" };
 const download: Activity = { kind: "download", download: { name: "a.pdf", bytes: 1, speed: 1 } };
 const music: Activity = { kind: "music", lyric: false };
 const sung: Activity = { kind: "music", lyric: true };
+const agent: Activity = { kind: "agent", waiting: false, app: "Antigravity" };
 
 describe("arrange", () => {
   it("is empty without activities", () => {
@@ -15,6 +16,11 @@ describe("arrange", () => {
   it("puts the call first, then timer, download, music", () => {
     expect(arrange([music, download, timer, call])).toEqual({ main: call, side: [timer, download] });
     expect(arrange([music, timer])).toEqual({ main: timer, side: [music] });
+  });
+
+  it("prioritizes agent activity right after call", () => {
+    expect(arrange([music, timer, agent, call])).toEqual({ main: call, side: [agent, timer] });
+    expect(arrange([music, timer, agent])).toEqual({ main: agent, side: [timer, music] });
   });
 
   it("keeps music with a sung line in front", () => {
@@ -37,6 +43,8 @@ describe("sizes and labels", () => {
   it("widens the pill for each side activity", () => {
     expect(islandWidth(music, [])).toBe(200);
     expect(islandWidth(sung, [timer])).toBe(380 + 84);
+    expect(islandWidth(agent, [])).toBe(220);
+    expect(islandWidth({ kind: "agent", waiting: true, app: "VeryLongAssistantName" }, [])).toBeGreaterThan(220);
   });
 
   it("formats durations", () => {

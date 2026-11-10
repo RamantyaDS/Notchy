@@ -500,7 +500,7 @@ pub fn register_link(on: bool) {
 #[derive(Debug, PartialEq)]
 pub enum External {
     Peek { text: String, detail: String, icon: String, sound: bool, seconds: u32 },
-    Agent { state: String, text: String },
+    Agent { state: String, app: String, text: String },
 }
 
 fn clip(s: &str, n: usize) -> String {
@@ -529,6 +529,7 @@ pub fn parse_external(args: &[String]) -> Option<External> {
             }),
             "agent" => Some(External::Agent {
                 state: get("state").unwrap_or_else(|| "done".into()),
+                app: clip(&get("app").unwrap_or_else(|| "Claude Code".into()), 40),
                 text: clip(&get("text").unwrap_or_default(), 120),
             }),
             _ => None,
@@ -543,7 +544,11 @@ pub fn parse_external(args: &[String]) -> Option<External> {
             seconds: value("--seconds").and_then(|v| v.parse().ok()).unwrap_or(5).clamp(2, 30),
         });
     }
-    value("--agent").map(|state| External::Agent { state, text: clip(&value("--text").unwrap_or_default(), 120) })
+    value("--agent").map(|state| External::Agent {
+        state,
+        app: clip(&value("--app").unwrap_or_else(|| "Claude Code".into()), 40),
+        text: clip(&value("--text").unwrap_or_default(), 120),
+    })
 }
 
 fn url_decode(s: &str) -> String {
@@ -575,8 +580,8 @@ pub fn handle_args(app: &AppHandle, args: &[String]) {
         Some(External::Peek { text, detail, icon, sound, seconds }) if settings.external_peeks => {
             peek(app, "custom", json!({ "text": text, "detail": detail, "icon": icon, "sound": sound, "seconds": seconds }));
         }
-        Some(External::Agent { state, text }) if settings.agent_status => {
-            let _ = app.emit("agent", json!({ "state": state, "text": text }));
+        Some(External::Agent { state, app: agent_app, text }) if settings.agent_status => {
+            let _ = app.emit("agent", json!({ "state": state, "app": agent_app, "text": text }));
         }
         _ => {}
     }
@@ -612,8 +617,12 @@ mod tests {
             got,
             Some(External::Peek { text: "Halo dunia".into(), detail: "".into(), icon: "bell".into(), sound: false, seconds: 30 })
         );
-        let got = parse_external(&args(&["notchy.exe", "--agent", "waiting", "--text", "Needs approval"]));
-        assert_eq!(got, Some(External::Agent { state: "waiting".into(), text: "Needs approval".into() }));
+        let got = parse_external(&args(&["notchy.exe", "--agent", "waiting", "--app", "Antigravity", "--text", "Needs approval"]));
+        assert_eq!(got, Some(External::Agent { state: "waiting".into(), app: "Antigravity".into(), text: "Needs approval".into() }));
+        let got_default = parse_external(&args(&["notchy.exe", "--agent", "done"]));
+        assert_eq!(got_default, Some(External::Agent { state: "done".into(), app: "Claude Code".into(), text: "".into() }));
+        let got_url = parse_external(&args(&["notchy.exe", "notchy://agent?app=Codex&state=working"]));
+        assert_eq!(got_url, Some(External::Agent { state: "working".into(), app: "Codex".into(), text: "".into() }));
         assert_eq!(parse_external(&args(&["notchy.exe", "--settings"])), None);
         assert_eq!(parse_external(&args(&["notchy.exe", "notchy://format-c"])), None);
     }

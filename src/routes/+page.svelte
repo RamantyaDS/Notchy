@@ -107,7 +107,7 @@
   /** Keyboard-cleaning lock: 0 off, otherwise when it unlocks by itself. */
   let keyLockUntil = $state(0);
   /** Claude Code, from its hooks: working, or waiting for you. */
-  let agent = $state<{ waiting: boolean } | null>(null);
+  let agent = $state<{ waiting: boolean; app: string } | null>(null);
   let agentTimer: ReturnType<typeof setTimeout> | undefined;
   /** Hidden for a full-screen app or presentation; notifications are held meanwhile. */
   let hidden = $state(false);
@@ -251,7 +251,7 @@
   // What runs right now, for the closed notch
   const running = $derived.by((): Activity[] => [
     ...(call ? [{ kind: "call", call } as const] : []),
-    ...(agent ? [{ kind: "agent", waiting: agent.waiting } as const] : []),
+    ...(agent ? [{ kind: "agent", waiting: agent.waiting, app: agent.app } as const] : []),
     ...(timerActive ? [{ kind: "timer" } as const] : []),
     ...(download ? [{ kind: "download", download } as const] : []),
     ...(musicEnabled && media?.playing ? [{ kind: "music", lyric: false } as const] : []),
@@ -984,13 +984,23 @@
       },
       onAgent: (a) => {
         clearTimeout(agentTimer);
+        const appName = a.app?.trim() || "Claude Code";
         if (a.state === "working" || a.state === "waiting") {
-          agent = { waiting: a.state === "waiting" };
-          if (a.state === "waiting") showPeek({ kind: "agent", state: "waiting", text: a.text });
+          agent = { waiting: a.state === "waiting", app: appName };
+          if (a.state === "waiting") {
+            showPeek({ kind: "agent", state: "waiting", app: appName, text: a.text });
+            shocked = true;
+            clearTimeout(shockedTimer);
+            shockedTimer = setTimeout(() => (shocked = false), 2500);
+          }
           // A session that stops reporting (closed terminal) clears itself.
           agentTimer = setTimeout(() => (agent = null), 20 * 60_000);
         } else {
-          if (agent && a.state === "done") showPeek({ kind: "agent", state: "done", text: a.text });
+          if (agent && a.state === "done") {
+            showPeek({ kind: "agent", state: "done", app: appName, text: a.text });
+            wink = Math.random() < 0.5 ? "left" : "right";
+            setTimeout(() => (wink = null), 800);
+          }
           agent = null;
         }
       },

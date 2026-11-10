@@ -220,25 +220,91 @@
     exe = (await invoke<string>("exe_path").catch(() => "")).replaceAll("\\", "/");
   });
 
-  // Claude Code hooks that report to the notch (merged into ~/.claude/settings.json by the user).
-  const hookJson = $derived.by(() => {
-    const cmd = (state: string) => [{ type: "command", command: `"${exe || "notchy.exe"}" --agent ${state}` }];
-    return JSON.stringify(
-      {
-        hooks: {
-          UserPromptSubmit: [{ hooks: cmd("working") }],
-          PostToolUse: [{ matcher: "*", hooks: cmd("working") }],
-          Notification: [{ hooks: cmd("waiting") }],
-          Stop: [{ hooks: cmd("done") }],
-        },
-      },
-      null,
-      2,
-    );
+  type AiTool = "antigravity" | "codex" | "opencode" | "claude" | "cursor" | "aider" | "url";
+  let selectedAi = $state<AiTool>("antigravity");
+  const AI_TOOLS: { id: AiTool; label: string }[] = [
+    { id: "antigravity", label: "Antigravity / Gemini" },
+    { id: "codex", label: "OpenAI Codex" },
+    { id: "opencode", label: "OpenCode" },
+    { id: "claude", label: "Claude Code" },
+    { id: "cursor", label: "Cursor / VS Code" },
+    { id: "aider", label: "Aider" },
+    { id: "url", label: "URL Scheme (Universal)" },
+  ];
+
+  const aiSnippet = $derived.by(() => {
+    const exePath = exe || "notchy.exe";
+    switch (selectedAi) {
+      case "antigravity":
+        return `# Antigravity / Gemini CLI (DeepMind Advanced Coding)
+# Panggil di hook atau script eksekusi:
+& "${exePath}" --agent working --app "Antigravity"
+# Saat butuh konfirmasi:
+& "${exePath}" --agent waiting --app "Antigravity" --text "Menunggu persetujuan eksekusi"
+# Saat selesai:
+& "${exePath}" --agent done --app "Antigravity"`;
+      case "codex":
+        return `# OpenAI Codex / ChatGPT CLI
+# Alias / Script:
+${exePath} --agent working --app "Codex"
+# Saat butuh konfirmasi:
+${exePath} --agent waiting --app "Codex" --text "Confirm terminal execution"
+# Saat selesai:
+${exePath} --agent done --app "Codex"`;
+      case "opencode":
+        return JSON.stringify(
+          {
+            onStart: `"${exePath}" --agent working --app "OpenCode"`,
+            onApproval: `"${exePath}" --agent waiting --app "OpenCode" --text "Menunggu konfirmasi"`,
+            onDone: `"${exePath}" --agent done --app "OpenCode"`,
+          },
+          null,
+          2,
+        );
+      case "claude": {
+        const cmd = (state: string) => [{ type: "command", command: `"${exePath}" --agent ${state} --app "Claude Code"` }];
+        return JSON.stringify(
+          {
+            hooks: {
+              UserPromptSubmit: [{ hooks: cmd("working") }],
+              PostToolUse: [{ matcher: "*", hooks: cmd("working") }],
+              Notification: [{ hooks: cmd("waiting") }],
+              Stop: [{ hooks: cmd("done") }],
+            },
+          },
+          null,
+          2,
+        );
+      }
+      case "cursor":
+        return JSON.stringify(
+          {
+            version: "2.0.0",
+            tasks: [
+              { label: "Notchy: AI Working", type: "shell", command: `"${exePath}" --agent working --app "Cursor"` },
+              { label: "Notchy: AI Waiting", type: "shell", command: `"${exePath}" --agent waiting --app "Cursor" --text "Periksa hasil"` },
+              { label: "Notchy: AI Done", type: "shell", command: `"${exePath}" --agent done --app "Cursor"` },
+            ],
+          },
+          null,
+          2,
+        );
+      case "aider":
+        return `# Aider (.aider.conf.yml atau wrapper):
+# notchy --agent working --app "Aider"
+# notchy --agent waiting --app "Aider" --text "Izin perubahan file"
+# notchy --agent done --app "Aider"`;
+      case "url":
+        return `# Skema URL notchy://agent (Bebas lokasi file! Bisa dipanggil dari mana saja):
+start "notchy://agent?app=Antigravity&state=working"
+start "notchy://agent?app=Codex&state=waiting&text=Izin%20menjalankan%20perintah"
+start "notchy://agent?app=OpenCode&state=done"`;
+    }
   });
+
   let hookCopied = $state(false);
   async function copyHooks() {
-    await navigator.clipboard.writeText(hookJson).catch(() => {});
+    await navigator.clipboard.writeText(aiSnippet).catch(() => {});
     hookCopied = true;
     setTimeout(() => (hookCopied = false), 1500);
   }
@@ -662,8 +728,22 @@
           {#if settings.agentStatus !== false}
             <div class="row column" transition:slide={{ duration: 150 }}>
               {@render row(tr("s.agentHint"), "")}
-              <pre class="code">{hookJson}</pre>
-              <button class="btn" onclick={copyHooks}>{hookCopied ? `✓ ${tr("s.copiedOk")}` : tr("s.copy")}</button>
+              <div class="ai-chips">
+                {#each AI_TOOLS as tool}
+                  <button
+                    class="chip"
+                    class:active={selectedAi === tool.id}
+                    onclick={() => (selectedAi = tool.id)}
+                    type="button"
+                  >
+                    {tool.label}
+                  </button>
+                {/each}
+              </div>
+              <div class="snippet-box">
+                <pre class="code">{aiSnippet}</pre>
+                <button class="btn" onclick={copyHooks}>{hookCopied ? `✓ ${tr("s.copiedOk")}` : tr("s.copy")}</button>
+              </div>
             </div>
           {/if}
         </div>
@@ -1139,6 +1219,38 @@
   .text.hotkey {
     width: 130px;
     text-align: center;
+  }
+  .ai-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0 8px;
+  }
+  .chip {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .chip:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+  .chip.active {
+    background: #0a84ff;
+    border-color: #0a84ff;
+    color: #fff;
+    font-weight: 500;
+  }
+  .snippet-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
   }
   .code {
     margin: 0;
