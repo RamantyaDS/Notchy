@@ -398,7 +398,13 @@
   );
   // Status dots (camera, mic, keep-awake) in the resting notch get room beside the clock.
   const restDots = $derived(view === "rest" && (camOn || micOn || micMuted || !!keepAwake));
-  const size = $derived({ ...baseSize, w: baseSize.w + (ringed ? 22 : 0) + (restDots ? 18 : 0) });
+  // A second row of shortcuts needs a taller notch (the window itself is 200px high).
+  const tallShortcuts = $derived(view === "shortcuts" && shortcuts.length > 5);
+  const size = $derived({
+    ...baseSize,
+    w: baseSize.w + (ringed ? 22 : 0) + (restDots ? 18 : 0),
+    h: baseSize.h + (tallShortcuts ? 34 : 0),
+  });
   const closedView = $derived(view === "rest" || view === "island" || view === "charging");
   const withStatus = $derived(paged && !mirror && view !== "peek" && view !== "clock");
 

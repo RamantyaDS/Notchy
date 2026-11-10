@@ -79,7 +79,7 @@
     <span class="hint">{t("shortcuts.hint")}</span>
   </div>
   <!-- One row for up to five, two rows of four beyond that. -->
-  <div class="grid" style:--cols={shortcuts.length <= 5 ? Math.max(shortcuts.length, 1) : 4}>
+  <div class="grid" class:rows={shortcuts.length > 5} style:--cols={shortcuts.length <= 5 ? Math.max(shortcuts.length, 1) : 4}>
     {#each shortcuts.slice(0, 8) as s, i}
       {@const awake = s.action === "keepawake" && !!keepAwake}
       <button class="sc" class:failed={failed === i} class:on={awake} onclick={() => run(i)} title={s.target || s.name}>
@@ -118,8 +118,13 @@
     margin-bottom: 4px;
     display: grid;
     grid-template-columns: repeat(var(--cols, 4), 1fr);
-    grid-auto-rows: 1fr;
+    grid-auto-rows: minmax(0, 1fr);
     gap: 6px;
+  }
+  /* Two rows: the notch grows a little, and the buttons tighten up. */
+  .rows .sc {
+    gap: 3px;
+    padding: 2px 4px;
   }
   .sc {
     min-width: 0;
