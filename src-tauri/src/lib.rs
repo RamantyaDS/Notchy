@@ -307,27 +307,15 @@ fn start_eyes_emitter() {
     EYES_TX.set(tx).ok();
     std::thread::spawn(move || {
         let mut last = (0.0f64, 0.0f64, 0.0f64);
-        let mut last_raw = (0i32, 0i32);
         for _ in rx {
             std::thread::sleep(Duration::from_millis(16));
             EYES_PENDING.store(false, Ordering::Relaxed);
             let ((l, t, r, b), inside) = (hit_rect(), hit_inside());
-            if r <= l || TUCKED.load(Ordering::Relaxed) {
+            if r <= l || inside || TUCKED.load(Ordering::Relaxed) {
                 continue;
             }
             let cur_x = CURSOR_X.load(Ordering::Relaxed);
             let cur_y = CURSOR_Y.load(Ordering::Relaxed);
-
-            if inside {
-                let look = (0.0, 0.35, 1.0);
-                if (look.0 - last.0).abs() > 0.005 || (look.1 - last.1).abs() > 0.005 || (look.2 - last.2).abs() > 0.005 {
-                    last = look;
-                    if let Some(window) = main_window() {
-                        let _ = window.emit("eyes-look", look);
-                    }
-                }
-                continue;
-            }
 
             let dx = (cur_x - (l + r) / 2) as f64;
             let dy = (cur_y - (t + b) / 2) as f64;
@@ -338,16 +326,14 @@ fn start_eyes_emitter() {
             let near = 1.0 - (dist / 250.0).min(1.0);
             let look = (dx / dist * reach, dy / dist * reach, near);
 
-            let raw_moved = cur_x != last_raw.0 || cur_y != last_raw.1;
-            let look_moved = (look.0 - last.0).abs() >= 0.002
-                || (look.1 - last.1).abs() >= 0.002
-                || (look.2 - last.2).abs() >= 0.002;
+            let moved = (look.0 - last.0).abs() >= 0.008
+                || (look.1 - last.1).abs() >= 0.008
+                || (look.2 - last.2).abs() >= 0.008;
 
-            if !raw_moved && !look_moved {
+            if !moved {
                 continue;
             }
             last = look;
-            last_raw = (cur_x, cur_y);
             if let Some(window) = main_window() {
                 let _ = window.emit("eyes-look", look);
             }
@@ -959,12 +945,6 @@ pub fn run() {
             if unsafe { GetCursorPos(&mut pt).is_ok() } {
                 CURSOR_X.store(pt.x, Ordering::Relaxed);
                 CURSOR_Y.store(pt.y, Ordering::Relaxed);
-            }
-            let h = hwnd(&window);
-            if !fullscreen_app_running() {
-                unsafe {
-                    let _ = ShowWindow(h, SW_SHOWNOACTIVATE);
-                }
             }
             update_hit_rect();
 

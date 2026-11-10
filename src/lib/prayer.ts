@@ -11,6 +11,7 @@ export interface MethodParams {
   ishaAngle: number;
   dhuhrBufferMin: number;
   maghribBufferMin: number;
+  ihtiyatMin?: number;
 }
 
 export const METHODS: Record<PrayerMethod, MethodParams> = {
@@ -19,6 +20,7 @@ export const METHODS: Record<PrayerMethod, MethodParams> = {
     ishaAngle: 18, // Kemenag RI standard: Isya 18°
     dhuhrBufferMin: 2, // Ihtiyat / precaution: +2 min
     maghribBufferMin: 2,
+    ihtiyatMin: 2, // Kemenag RI standard safety buffer (+2 min across all prayers)
   },
   mwl: {
     fajrAngle: 18, // Muslim World League
@@ -139,13 +141,17 @@ export function calculatePrayerTimes(
   const asrAlt = darctan(1 / (1 + dtan(Math.abs(latitude - declination))));
   const asrHourAngle = hourAngle(asrAlt);
 
-  // Calculations in hours
-  const fajrHours = fixHour(transit - hourAngle(-params.fajrAngle));
+  const ihtiyat = (params.ihtiyatMin ?? 0) / 60;
+  const dhuhrBuf = (params.dhuhrBufferMin ?? 2) / 60;
+  const maghribBuf = (params.maghribBufferMin ?? 2) / 60;
+
+  // Calculations in hours with Kemenag Ihtiyat
+  const fajrHours = fixHour(transit - hourAngle(-params.fajrAngle) + ihtiyat);
   const sunriseHours = fixHour(transit - hourAngle(-0.8333));
-  const dhuhrHours = fixHour(transit + params.dhuhrBufferMin / 60);
-  const asrHours = fixHour(transit + asrHourAngle);
-  const maghribHours = fixHour(transit + hourAngle(-0.8333) + params.maghribBufferMin / 60);
-  const ishaHours = fixHour(transit + hourAngle(-params.ishaAngle) + params.maghribBufferMin / 60);
+  const dhuhrHours = fixHour(transit + dhuhrBuf);
+  const asrHours = fixHour(transit + asrHourAngle + ihtiyat);
+  const maghribHours = fixHour(transit + hourAngle(-0.8333) + maghribBuf);
+  const ishaHours = fixHour(transit + hourAngle(-params.ishaAngle) + maghribBuf);
 
   // Helper to convert decimal hours to Date and string
   const toDate = (hours: number): Date => {

@@ -23,8 +23,8 @@ describe("prayer times calculation", () => {
     expect(times.asr < times.maghrib).toBe(true);
     expect(times.maghrib < times.isha).toBe(true);
 
-    // Approximate Jakarta times in November:
-    // Subuh ~04:00-04:25, Dzuhur ~11:35-11:55, Ashar ~14:50-15:20, Maghrib ~17:45-18:10, Isya ~18:55-19:25
+    // Approximate Jakarta times in November with Kemenag +2 min ihtiyat:
+    // Subuh ~04:06, Dzuhur ~11:38, Ashar ~14:58, Maghrib ~17:50, Isya ~19:03
     const [fajrH] = times.fajr.split(":").map(Number);
     const [dhuhrH] = times.dhuhr.split(":").map(Number);
     const [asrH] = times.asr.split(":").map(Number);
@@ -36,6 +36,39 @@ describe("prayer times calculation", () => {
     expect(asrH === 14 || asrH === 15).toBe(true);
     expect(maghribH).toBe(17);
     expect(ishaH).toBe(19);
+  });
+
+  it("matches official Bimas Islam Kemenag schedule for Jakarta within ±1 minute across dates", () => {
+    const toMinutes = (timeStr: string) => {
+      const [h, m] = timeStr.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const diffMin = (t1: string, t2: string) => Math.abs(toMinutes(t1) - toMinutes(t2));
+
+    // Sample benchmark dates against Bimas Islam Jakarta (-6.2088, 106.8456, UTC+7)
+    const benchmarks = [
+      {
+        date: "2026-11-10T12:00:00+07:00",
+        expected: { fajr: "04:06", dhuhr: "11:39", asr: "14:59", maghrib: "17:51", isha: "19:03" }
+      },
+      {
+        date: "2026-07-15T12:00:00+07:00",
+        expected: { fajr: "04:44", dhuhr: "12:01", asr: "15:23", maghrib: "17:54", isha: "19:08" }
+      },
+      {
+        date: "2026-01-01T12:00:00+07:00",
+        expected: { fajr: "04:19", dhuhr: "11:58", asr: "15:25", maghrib: "18:12", isha: "19:27" }
+      }
+    ];
+
+    for (const b of benchmarks) {
+      const actual = calculatePrayerTimes(-6.2088, 106.8456, new Date(b.date), "kemenag", 7);
+      expect(diffMin(actual.fajr, b.expected.fajr)).toBeLessThanOrEqual(1);
+      expect(diffMin(actual.dhuhr, b.expected.dhuhr)).toBeLessThanOrEqual(1);
+      expect(diffMin(actual.asr, b.expected.asr)).toBeLessThanOrEqual(1);
+      expect(diffMin(actual.maghrib, b.expected.maghrib)).toBeLessThanOrEqual(1);
+      expect(diffMin(actual.isha, b.expected.isha)).toBeLessThanOrEqual(1);
+    }
   });
 
   it("calculates prayer times for Makkah (MWL standard)", () => {
