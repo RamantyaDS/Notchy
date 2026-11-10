@@ -126,6 +126,8 @@ pub struct Settings {
     pub privacy_indicators: bool,
     /// Dates counted down on the Today page.
     pub countdowns: Vec<Countdown>,
+    /// One-time "new feature" peeks already shown, e.g. "prayer".
+    pub notices: Vec<String>,
 }
 
 /// A date counted down on the Today page; `repeat` is "none", "monthly" or "yearly".
@@ -245,6 +247,7 @@ impl Default for Settings {
             connection_peek: true,
             privacy_indicators: true,
             countdowns: vec![],
+            notices: vec![],
         }
     }
 }
@@ -285,10 +288,17 @@ pub fn patch_settings(app: AppHandle, patch: serde_json::Value) -> Result<Settin
     Ok(settings)
 }
 
-/// The water page's "Atur" button.
+/// The water page's "Atur" button; `section` opens that page of Settings (e.g. "prayer").
 #[tauri::command]
-pub fn open_settings(app: AppHandle) {
-    open_window(&app);
+pub fn open_settings(app: AppHandle, section: Option<String>) {
+    let Some(section) = section else { return open_window(&app) };
+    if let Some(window) = app.get_webview_window("settings") {
+        let _ = window.emit("settings-section", &section);
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+        return;
+    }
+    build_window(&app, &format!("settings?section={section}"));
 }
 
 /// Latitude and longitude from Windows location, if the user allows desktop apps to use it.
@@ -334,7 +344,11 @@ pub fn open_window(app: &AppHandle) {
         let _ = window.set_focus();
         return;
     }
-    let _ = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings".into()))
+    build_window(app, "settings");
+}
+
+fn build_window(app: &AppHandle, url: &str) {
+    let _ = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App(url.into()))
         .title("Notchy Settings")
         .inner_size(780.0, 560.0)
         .theme(Some(tauri::Theme::Dark))

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { listen } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
   import { fade, slide } from "svelte/transition";
   import { searchCity, type Place } from "$lib/weather";
@@ -203,6 +204,16 @@
   const enabledPages = $derived(settings ? PAGE_ITEMS.filter(([k]) => settings![k] !== false).length : PAGE_ITEMS.length);
 
   let exe = $state("");
+  // Opened from a peek straight to one page, e.g. ?section=prayer.
+  const pick = (id: string | null) => {
+    if (SECTIONS.some((s) => s.id === id)) section = id as SectionId;
+  };
+  onMount(() => {
+    pick(new URLSearchParams(location.search).get("section"));
+    const off = listen<string>("settings-section", (e) => pick(e.payload));
+    return () => off.then((f) => f());
+  });
+
   onMount(async () => {
     settings = await invoke<Settings>("get_settings");
     if (settings?.language) setLocale(settings.language);

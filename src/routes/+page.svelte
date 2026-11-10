@@ -674,6 +674,7 @@
     eyeBreak?: boolean;
     privacyIndicators?: boolean;
     countdowns?: Countdown[];
+    notices?: string[];
   };
 
   const loadCalendar = async () => {
@@ -817,7 +818,17 @@
     };
 
     invoke<string>("get_accent_color").then((c) => (accentColor = c)).catch(() => {});
-    invoke<AllSettings>("get_settings").then(applySettings);
+    invoke<AllSettings>("get_settings").then((s) => {
+      applySettings(s);
+      // Tell people once that prayer times exist; it stays off until they turn it on.
+      const seen = s.notices ?? [];
+      if (!seen.includes("prayer")) {
+        invoke("patch_settings", { patch: { notices: [...seen, "prayer"] } }).catch(() => {});
+        if (s.prayerEnabled !== true) {
+          setTimeout(() => showPeek({ kind: "feature", title: t("peek.newPrayer"), detail: t("peek.newPrayerDetail") }), 8000);
+        }
+      }
+    });
     // Windows only reports power changes, so read the current state once.
     invoke<Power>("power_state").then((p) => (power = p)).catch(() => {});
     invoke<number>("keep_awake_state").then((u) => (keepAwake = u)).catch(() => {});

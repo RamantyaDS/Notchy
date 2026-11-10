@@ -144,6 +144,8 @@
           ring: p.battery ?? undefined,
           value: p.battery != null ? `${p.battery}%` : undefined,
         };
+      case "feature":
+        return { icon: "crescent", tone: "#34d399", title: p.title, detail: p.detail };
       case "prayer":
         return {
           icon: "crescent",

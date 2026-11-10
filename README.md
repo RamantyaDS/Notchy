@@ -55,6 +55,8 @@ A small black island at the top of your screen that shows what's happening (musi
 
 🌧️ **Little heads-ups:** rain coming in ~30 minutes, unplug the charger at 80%, a 20-20-20 eye break, and a summary of notifications you missed while presenting.
 
+🕌 **Prayer times (off by default):** a heads-up 10 minutes before and a soft chime when it's time, for the weather location. Worked out on your PC (Kemenag RI, MWL and more), no internet needed. Turn it on in Settings → Prayer times.
+
 🔊 **Quick status:** volume, brightness, Caps Lock, keyboard language, charging, Wi-Fi, headphones and earbuds battery, optional Bluetooth connect and low-battery alerts (mouse, keyboard, earbuds), camera and mic in use, mic mute, screenshot preview, weather, one-click audio output switch, and live **network speed** (↓/↑) in the open notch, optionally also in the small notch during heavy downloads or uploads.
 
 🖱️ **Gestures and keys:** scroll on the notch for volume, swipe on the music page to skip songs, press and hold to keep it open, and **Ctrl+Alt+N** opens it from the keyboard (arrows change page, Esc closes).
@@ -211,7 +213,7 @@ Found a bug or have an idea? [Open an issue](https://github.com/RamantyaDS/Notch
 - **~1–2% CPU at rest**, a few % while music animates.
 - **No account, no analytics.** Your to-dos, water log and settings stay in `%APPDATA%\Notchy`.
 - **Careful with clicks.** Programs and scripts on the Shelf or in Downloads are shown in Explorer, never run; links from notifications open only for web, mail and the usual chat/meeting apps.
-- It only goes online for lyrics ([LRCLIB](https://lrclib.net)), weather and rain alerts ([Open-Meteo](https://open-meteo.com)), your own calendar link if you add one, and checking for updates here on GitHub. Text from the screen is read on your PC, offline.
+- It only goes online for lyrics ([LRCLIB](https://lrclib.net)), weather and rain alerts ([Open-Meteo](https://open-meteo.com)), your own calendar link if you add one, and checking for updates here on GitHub. Text from the screen is read on your PC, offline, and so are prayer times.
 
 ## Built with
 
@@ -236,7 +238,7 @@ Design notes and every decision behind the app are in [`notchy.md`](notchy.md) (
 <details>
 <summary>🇮🇩 Bahasa Indonesia</summary>
 
-**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), status Claude Code, volume per aplikasi, halaman Hari ini dengan hitung mundur, timer fokus dan timer cepat, pengingat minum, to-do dengan strip minggu, kalender, Shelf file, riwayat clipboard, snippet, teleprompter, progres unduhan, halaman pintasan (jaga menyala, kunci keyboard untuk dibersihkan, salin teks dari layar, mode gelap), peringatan hujan, pengingat cabut charger, istirahat mata 20-20-20, kecepatan internet, dan status sistem. Script apa pun bisa memunculkan pesan lewat `notchy --peek "teks"`. Mata maskot punya 5 gaya (Classic, Anime, Pixel, Cat, Cartoon) yang bisa melirik kursor, berkedip, dan berekspresi. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, notch bisa melayang sebagai pil di bawah tepi atas, dan bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
+**Laptop Windows-mu nggak punya notch? Sekarang punya.** Notchy adalah pulau hitam kecil di atas layar yang menampilkan musik beserta lirik yang ikut jalan, notifikasi (klik langsung membuka chat-nya), panggilan dan meeting (mute, cek kamera, Join), status Claude Code, volume per aplikasi, halaman Hari ini dengan hitung mundur, timer fokus dan timer cepat, pengingat minum, to-do dengan strip minggu, kalender, Shelf file, riwayat clipboard, snippet, teleprompter, progres unduhan, halaman pintasan (jaga menyala, kunci keyboard untuk dibersihkan, salin teks dari layar, mode gelap), peringatan hujan, pengingat cabut charger, istirahat mata 20-20-20, jadwal sholat offline (default mati), kecepatan internet, dan status sistem. Script apa pun bisa memunculkan pesan lewat `notchy --peek "teks"`. Mata maskot punya 5 gaya (Classic, Anime, Pixel, Cat, Cartoon) yang bisa melirik kursor, berkedip, dan berekspresi. Halaman yang tidak dipakai bisa dimatikan di Settings. Tampilan bisa bahasa Indonesia atau Inggris, notch bisa melayang sebagai pil di bawah tepi atas, dan bisa ikut pindah ke layar kedua mengikuti kursor. Membesar saat kursor berhenti di atasnya, menyingkir saat menghalangi.
 
 Unduh installer di [Releases](https://github.com/RamantyaDS/Notchy/releases/latest) atau coba demonya langsung di [Website Notchy](https://ramantyads.github.io/Notchy/). Kalau muncul peringatan SmartScreen, klik **More info → Run anyway**. Setelah terpasang, Notchy update sendiri. Data tetap di laptopmu, tanpa akun.
 

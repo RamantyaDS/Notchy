@@ -7,14 +7,15 @@ export class PeekManager {
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   clickable(p: PeekData | null): boolean {
-    return ["notification", "screenshot", "update", "download-done", "meeting", "bluetooth"].includes(p?.kind ?? "");
+    return ["notification", "screenshot", "update", "download-done", "meeting", "bluetooth", "feature"].includes(p?.kind ?? "");
   }
 
   peekLength(p: PeekData): number {
     if (p.kind === "meeting") return 30_000;
     if (p.kind === "eyes") return 21_000;
     if (p.kind === "custom") return Math.min(30, Math.max(2, Number(p.seconds) || 5)) * 1000;
-    if (["rain", "held", "agent", "ocr", "charge-full", "battery-low", "countdown"].includes(p.kind)) return 5000;
+    if (["rain", "held", "agent", "ocr", "charge-full", "battery-low", "countdown", "prayer"].includes(p.kind)) return 5000;
+    if (p.kind === "feature") return 9000;
     if (["screenshot", "update", "download-done"].includes(p.kind)) return 6000;
     if (["bluetooth"].includes(p.kind)) return 4500;
     if (p.kind === "notification") return this.peekQueue.length ? 3200 : 4500;
@@ -57,6 +58,7 @@ export class PeekManager {
     if (p.kind === "update") invoke("install_update");
     if (p.kind === "download-done") invoke("open_download", { path: p.path });
     if (p.kind === "bluetooth") invoke("run_link", { url: "ms-settings:bluetooth" }).catch(() => {});
+    if (p.kind === "feature") invoke("open_settings", { section: "prayer" });
     this.end();
   }
 
