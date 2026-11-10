@@ -301,7 +301,7 @@ Ide fitur diambil dari README aplikasi notch lain (boring.notch, Atoll, DynamicW
 - **Sakelar untuk yang sudah ada**: `privacyIndicators` (titik + peek kamera/mikrofon) dan `connectionPeek` (peek internet putus/sambung).
 - **Visualizer**: bar musik sudah mengikuti level suara asli (IAudioMeterInformation) sejak lama, jadi tidak dibuat ulang. Spektrum FFT penuh tidak dikerjakan (CPU).
 - **Clipboard melewati password** sudah ada sejak awal (`ExcludeClipboardContentFromMonitorProcessing` dll.).
-- **Diuji 9 Nov 2026:** cargo test (34) dan vitest (51) hijau, `svelte-check` bersih, clippy tanpa peringatan baru. `--peek` dan `--agent` dikirim ke build yang jalan (satu proses tetap). `Ctrl+Alt+N` terdaftar, link `notchy://` terdaftar, CPU proses utama ~0,04% saat diam. Tampilan tiap fitur dicek lewat harness Playwright (`notchy-promo/live/check-new.mjs`). **Belum dicoba langsung di layar:** OCR, mode gelap, mixer dengan aplikasi asli, kunci keyboard, dan hotkey.
+- **Diuji 9 Nov 2026:** cargo test (34) dan vitest (51) hijau, `svelte-check` bersih, clippy tanpa peringatan baru. `--peek` dan `--agent` dikirim ke build yang jalan (satu proses tetap). `Ctrl+Alt+N` terdaftar, link `notchy://` terdaftar, CPU proses utama ~0,04% saat diam. Tampilan tiap fitur dicek lewat skrip pengujian Playwright (`notchy-promo/live/check-new.mjs`). **Belum dicoba langsung di layar:** OCR, mode gelap, mixer dengan aplikasi asli, kunci keyboard, dan hotkey.
 
 ### O. PR #6 (Malik): Jadwal Solat Offline dan Perbaikan Responsivitas Maskot, 9 Nov 2026
 Dibangun di atas v0.3.0 untuk melengkapi kebutuhan pengingat harian dan menyempurnakan interaktivitas maskot:
@@ -311,7 +311,7 @@ Dibangun di atas v0.3.0 untuk melengkapi kebutuhan pengingat harian dan menyempu
   - Peek pengingat 10 menit sebelum waktu solat (`crescent` icon) dan peek saat waktu solat tiba dengan denting halus (*chime*). Waktu peringatan bisa diatur 5–30 menit.
   - Pilihan metode hisab Kemenag RI (Subuh 20°, Isya 18°) dan Muslim World League (MWL). Menu baru di Settings → "Jadwal & Waktu Solat" (dwibahasa EN/ID).
 - **Perbaikan Freeze & Responsivitas Maskot**:
-  - **Eliminasi Freeze pada Instalasi Pertama**: jendela yang dibuat `visible: false` kini langsung diaktifkan dengan `ShowWindow(SW_SHOWNOACTIVATE)` saat `setup()` selesai menempatkan jendela; `update_hit_rect()` dipanggil saat perubahan visibilitas (`SW_HIDE` / `SW_SHOWNOACTIVATE`) dan di akhir `place_window()`, serta posisi kursor diinisialisasi via `GetCursorPos`. Area hover dan koordinat hit rect langsung sinkron sejak detik pertama.
+  - **Perbaikan Jendela Diam saat Instalasi Pertama**: jendela yang dibuat `visible: false` kini langsung diaktifkan dengan `ShowWindow(SW_SHOWNOACTIVATE)` saat `setup()` selesai menempatkan jendela; `update_hit_rect()` dipanggil saat perubahan visibilitas (`SW_HIDE` / `SW_SHOWNOACTIVATE`) dan di akhir `place_window()`, serta posisi kursor diinisialisasi via `GetCursorPos`. Area hover dan koordinat hit rect langsung sinkron sejak detik pertama.
   - **0-Deadzone Kursor**: Menghapus ambang batas gerak 2px yang kaku di `src-tauri/src/lib.rs` agar pelacakan mata maskot merespons gerak mikro mouse dengan luwes.
   - **Mata Tidur Simetris**: Koordinat mata saat dozing/mengantuk dipusatkan (`dozing ? 0 : look[0]`) agar mata tidak terkunci miring.
   - **Polesan Tema Anime**: Gradasi iris lebih pekat, bulu mata berlapis, dan pantulan bintang kontras tinggi.

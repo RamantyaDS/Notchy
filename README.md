@@ -18,7 +18,7 @@ A small black island at the top of your screen that shows what's happening (musi
   <a href="https://ramantyads.github.io/Notchy/"><b>🌐 Interactive Website & Demo</b></a>
 </p>
 
-> **✨ New in 0.3:** Claude Code status in the notch · per-app volume · copy text from the screen · rain alerts · keep-awake · keyboard-cleaning lock · countdowns · snippets · a teleprompter under your webcam · `notchy --peek` for your own scripts.
+> **New in 0.3:** AI coding assistant status · per-app volume · screen text OCR · rain alerts · keep-awake · keyboard-cleaning lock · countdowns · snippets · teleprompter · `notchy --peek` for custom scripts.
 
 ---
 
@@ -29,49 +29,19 @@ A small black island at the top of your screen that shows what's happening (musi
 
 ### What it does
 
-🎵 **Music from any player.** Spotify, YouTube in the browser, anything that shows up in Windows' media controls. Cover, a live equalizer, play/pause/skip, and the cover's color tints the notch. Hover the progress bar to see the time, hover a long title to read all of it. Two players open? Click the cover to switch.
+**Media and audio:** Works with Spotify, browser YouTube, and anything exposed to Windows media controls. Displays album artwork, synced lyrics line by line, live audio visualizer bars, and per-app volume sliders with mute buttons. Two players active? Click the album art to toggle between them.
 
-🎤 **Live lyrics.** Synced lyrics appear line by line, even in the small notch while you work.
+**Notifications, calls, and meetings:** Mirrors WhatsApp, Teams, Outlook, and other desktop notifications within half a second; clicking one opens that exact chat or message. Displays call status pills with quick mic mute for Teams, WhatsApp, Zoom, and Meet, plus calendar meeting alerts with camera preview checks and direct Join links.
 
-🔔 **Notifications, in the notch.** WhatsApp, Teams, Outlook… mirrored within half a second. Click one and it opens *that* chat or email, just like the real notification.
+**Coding assistants and AI agents:** Monitors Antigravity, OpenAI Codex, OpenCode, Claude Code, Cursor, and custom scripts. The notch pulses while your AI works, alerts you when approval is required, and flashes a gentle green peek when finished.
 
-📞 **Calls and meetings.** A call pill with mute for Teams, WhatsApp, Zoom and Meet; a meeting reminder with a quick camera check and a **Join** button.
+**Daily productivity:** Focus timer with quick presets (1 to 15 minutes), hydration reminders with daily goal tracking, to-do lists with weekly planning strips, today's schedule, countdowns, and offline prayer times calculation (Kemenag RI, MWL, and others) with gentle chime notifications.
 
-🧩 **Two things at once.** Music, a timer, a call or a download can sit side by side in the small notch; swipe to switch which one leads.
+**Desktop utilities:** Temporary file shelf for drag-and-drop sharing, clipboard history for text and images (skipping password managers), customizable snippets, teleprompter aligned right under your webcam, offline OCR text copy from screen clips, and system shortcuts (sleep, lock screen, keep-awake, and keyboard-cleaning lock).
 
-🤖 **Claude Code, in the notch.** See when Claude is working, get a heads-up the moment it needs your approval, and a peek when it's done. Settings gives you the hooks to paste.
+**System indicators and gestures:** Quick alerts for volume, brightness, battery, charging state, Caps Lock, Wi-Fi, Bluetooth peripherals, and live network speed. Control volume by scrolling on the closed notch, swipe horizontally to skip tracks, or press **Ctrl+Alt+N** to navigate pages via keyboard.
 
-🔉 **Sound page:** a volume slider and mute for every app that's playing (Spotify loud, Zoom quiet), plus the output switch.
-
-📋 **Today page:** your next meeting, today's tasks, water, and countdowns ("Payday in 16 days").
-
-⏱️ **Focus timer** with one-tap timers (1, 3, 5, 10, 15 min), 💧 **water reminder**, ✅ **to-do list** with reminders and a week strip to plan the next days, 📅 **calendar** reminders from your calendar link.
-
-📁 **Shelf** to park files you'll drag somewhere else (right-click to share), 📋 **clipboard history** (up to 50 items, text and images; passwords from password managers are skipped), 📝 **snippets** you type often, ⬇️ **download progress** from your browser, and drop a file on the notch to **share** it.
-
-⚡ **Shortcuts page:** lock, sleep, screenshot, your own apps and links, plus ☕ **keep awake** (30 min to "until I turn it off"), 🧽 **keyboard-cleaning lock**, 🔤 **copy text from the screen** (Windows' own OCR, offline) and 🌗 **dark mode** in one click.
-
-🎬 **Teleprompter:** your script scrolls right under the webcam, so you read while looking at the camera.
-
-🌧️ **Little heads-ups:** rain coming in ~30 minutes, unplug the charger at 80%, a 20-20-20 eye break, and a summary of notifications you missed while presenting.
-
-🕌 **Prayer times (off by default):** a heads-up 10 minutes before and a soft chime when it's time, for the weather location. Worked out on your PC (Kemenag RI, MWL and more), no internet needed. Turn it on in Settings → Prayer times.
-
-🔊 **Quick status:** volume, brightness, Caps Lock, keyboard language, charging, Wi-Fi, headphones and earbuds battery, optional Bluetooth connect and low-battery alerts (mouse, keyboard, earbuds), camera and mic in use, mic mute, screenshot preview, weather, one-click audio output switch, and live **network speed** (↓/↑) in the open notch, optionally also in the small notch during heavy downloads or uploads.
-
-🖱️ **Gestures and keys:** scroll on the notch for volume, swipe on the music page to skip songs, press and hold to keep it open, and **Ctrl+Alt+N** opens it from the keyboard (arrows change page, Esc closes).
-
-🎛️ **Only what you use.** Every page and alert can be turned on or off in Settings, and each one has its own settings.
-
-💊 **Your style:** keep the notch against the top edge or let it float just below it as a pill, and add a small status ring for battery, today's water, CPU or memory.
-
-🖥️ **More than one screen?** Keep the notch on the main screen, the second one, or let it follow your cursor from screen to screen.
-
-👀 **Eyes with character.** Five eye styles (Classic, Anime, Pixel, Cat, Cartoon), winks, and little reactions to alerts. The eyes can wake up only when you're idle or follow your cursor all the time; pick how bouncy the notch feels, and optionally let its glow follow your Windows accent color.
-
-🌐 **English or Indonesian**, switchable in Settings. Clock follows your Windows 12/24-hour setting.
-
-🫥 **Stays out of the way.** It opens only when the cursor stops on it (not when you sweep past to a browser tab), tucks into a thin line when there's a tab or button right under it, hides for full-screen video and games, and dozes off when you're idle.
+**Appearance and behavior:** Five eye mascot styles (Classic, Anime, Pixel, Cat, and Cartoon) with real-time gaze tracking, winks, and startle reactions. Choose between an edge-docked notch or floating island pill, add secondary status rings, configure multi-monitor placement, and switch between English and Indonesian. The notch stays tucked when you need screen space and hides during full-screen games or video.
 
 </td>
 </tr>
@@ -104,7 +74,7 @@ A small black island at the top of your screen that shows what's happening (musi
   <img src="docs/settings.png" width="70%" alt="Settings" />
 </p>
 
-## For your scripts (and Claude Code)
+## External scripts and AI assistant integration
 
 Anything that can run a command can put a message in the notch. Text only: nothing is ever run.
 
@@ -214,7 +184,7 @@ Found a bug or have an idea? [Open an issue](https://github.com/RamantyaDS/Notch
 
 ## Light and private
 
-- **~1–2% CPU at rest**, a few % while music animates.
+- **~1-2% CPU at rest**, a few % while music animates.
 - **No account, no analytics.** Your to-dos, water log and settings stay in `%APPDATA%\Notchy`.
 - **Careful with clicks.** Programs and scripts on the Shelf or in Downloads are shown in Explorer, never run; links from notifications open only for web, mail and the usual chat/meeting apps.
 - It only goes online for lyrics ([LRCLIB](https://lrclib.net)), weather and rain alerts ([Open-Meteo](https://open-meteo.com)), your own calendar link if you add one, and checking for updates here on GitHub. Text from the screen is read on your PC, offline, and so are prayer times.
