@@ -17,7 +17,7 @@ Notchy dianggap berhasil kalau:
 
 **Pengguna:** saya sendiri dan beberapa teman. Repo dan installer kini publik di GitHub (lihat bagian 9), tapi tidak dipromosikan.
 
-**Status:** v0.3.2 (10 November 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
+**Status:** v0.3.3 (11 November 2026). Kode di GitHub `RamantyaDS/Notchy` (publik sejak 20 Okt 2026; riwayat diringkas jadi satu commit, kata "Nusa" dibersihkan). Installer dan zip portable: halaman Releases repo itu.
 
 ---
 
@@ -397,6 +397,7 @@ Setiap langkah selesai = DoD-nya terpenuhi + dites sendiri di laptop.
 | v0.3.0 | 9 Nov 2026 | Paket fitur §5N: status Claude Code dan `notchy --peek`, halaman Suara, pintasan jaga menyala/kunci keyboard/salin teks layar/mode gelap, Ctrl+Alt+N, cincin CPU/RAM, peringatan hujan, pengingat charger, istirahat mata, ringkasan presentasi, hitung mundur, timer cepat, Snippet, Teleprompter, bagikan dari Shelf. |
 | v0.3.1 | 10 Nov 2026 | Jadwal sholat offline (PR #6 dari Malik; default mati) dengan pengumuman sekali di notch yang membuka Settings → Jadwal sholat; perbaikan hover/mata maskot di awal install. |
 | v0.3.2 | 10 Nov 2026 | Perbaikan: halaman Pintasan dengan lebih dari 5 tombol tidak lagi keluar dari notch (notch tumbuh 34px untuk baris kedua). |
+| v0.3.3 | 11 Nov 2026 | Status asisten AI untuk tool apa pun lewat `--app` (PR #7 dari Malik): Settings punya contoh untuk Claude Code, Codex, Aider, dan script/URL; maskot kaget saat AI menunggu dan mengedip saat selesai. |
 
 **Cara membuat rilis baru** (sejak v0.1.2, satu perintah)
 1. Pastikan semua perubahan sudah di-commit, lalu `.\scripts\release.ps1 <versi> "catatan rilis"`.
