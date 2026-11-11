@@ -249,10 +249,10 @@
       }
       case "codex":
         return `# ~/.codex/config.toml (berjalan saat giliran selesai)
-notify = ["${exePath}", "--agent", "done", "--app", "Codex"]`;
+notify = ["${exePath}", "--peek", "Codex selesai", "--icon", "done"]`;
       case "aider":
         return `# .aider.conf.yml (berjalan saat Aider menunggu input)
-notifications-command: "${exePath} --agent waiting --app Aider --text \"Aider butuh respon\""`;
+notifications-command: '"${exePath}" --peek "Aider butuh respon" --icon bell'`;
       case "script":
         return `# CLI: jalankan dari skrip, alias, atau terminal (PowerShell / Bash / CMD)
 "${exePath}" --agent working --app "MyAgent"

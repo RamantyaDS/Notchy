@@ -996,7 +996,7 @@
           // A session that stops reporting (closed terminal) clears itself.
           agentTimer = setTimeout(() => (agent = null), 20 * 60_000);
         } else {
-          if (agent && a.state === "done") {
+          if (a.state === "done") {
             showPeek({ kind: "agent", state: "done", app: appName, text: a.text });
             wink = Math.random() < 0.5 ? "left" : "right";
             setTimeout(() => (wink = null), 800);
