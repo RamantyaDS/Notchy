@@ -308,10 +308,10 @@ Dibangun di atas v0.3.0 untuk melengkapi kebutuhan pengingat harian dan menyempu
 - **Jadwal Solat & Pengingat Azan Offline** (`prayer_reminders`, default mati):
   - Dihitung 100% lokal di `prayer.ts` memakai hisab koordinat matahari (deklinasi, persamaan waktu, sudut senja) tanpa request API luar dan tanpa latensi jaringan.
   - Otomatis memakai titik latitude/longitude cuaca yang sudah aktif di Notchy.
-  - Peek pengingat 10 menit sebelum waktu solat (`crescent` icon) dan peek saat waktu solat tiba dengan denting halus (*chime*). Waktu peringatan bisa diatur 5–30 menit.
+  - Peek pengingat 10 menit sebelum waktu solat (`crescent` icon) dan peek saat waktu solat tiba dengan denting halus (*chime*).
   - Pilihan metode hisab Kemenag RI (Subuh 20°, Isya 18°) dan Muslim World League (MWL). Menu baru di Settings → "Jadwal & Waktu Solat" (dwibahasa EN/ID).
 - **Perbaikan Freeze & Responsivitas Maskot**:
-  - **Perbaikan Jendela Diam saat Instalasi Pertama**: jendela yang dibuat `visible: false` kini langsung diaktifkan dengan `ShowWindow(SW_SHOWNOACTIVATE)` saat `setup()` selesai menempatkan jendela; `update_hit_rect()` dipanggil saat perubahan visibilitas (`SW_HIDE` / `SW_SHOWNOACTIVATE`) dan di akhir `place_window()`, serta posisi kursor diinisialisasi via `GetCursorPos`. Area hover dan koordinat hit rect langsung sinkron sejak detik pertama.
+  - **Perbaikan Jendela Diam saat Instalasi Pertama**: `update_hit_rect()` dipanggil saat perubahan visibilitas dan di akhir `place_window()`, serta posisi kursor diinisialisasi via `GetCursorPos`. Area hover dan koordinat hit rect langsung sinkron sejak detik pertama.
   - **0-Deadzone Kursor**: Menghapus ambang batas gerak 2px yang kaku di `src-tauri/src/lib.rs` agar pelacakan mata maskot merespons gerak mikro mouse dengan luwes.
   - **Mata Tidur Simetris**: Koordinat mata saat dozing/mengantuk dipusatkan (`dozing ? 0 : look[0]`) agar mata tidak terkunci miring.
   - **Polesan Tema Anime**: Gradasi iris lebih pekat, bulu mata berlapis, dan pantulan bintang kontras tinggi.

@@ -43,7 +43,7 @@ describe("sizes and labels", () => {
   it("widens the pill for each side activity", () => {
     expect(islandWidth(music, [])).toBe(200);
     expect(islandWidth(sung, [timer])).toBe(380 + 84);
-    expect(islandWidth(agent, [])).toBe(220);
+    expect(islandWidth(agent, [])).toBe(160 + 11 * 8);
     expect(islandWidth({ kind: "agent", waiting: true, app: "VeryLongAssistantName" }, [])).toBeGreaterThan(220);
   });
 

@@ -43,8 +43,10 @@ export function mainWidth(a: Activity): number {
       return 200;
     case "network":
       return 210;
-    case "agent":
-      return a.app ? Math.max(220, 160 + Math.min(a.app.length, 18) * 5) : 220;
+    case "agent": {
+      const appLen = a.app ? a.app.length : 6;
+      return Math.min(340, Math.max(220, 160 + appLen * 8));
+    }
   }
 }
 
