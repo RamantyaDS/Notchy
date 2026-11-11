@@ -112,7 +112,7 @@
     { id: "calendar", color: "#ff453a", icon: "M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M8 2v4M16 2v4", words: "calendar kalender ics google outlook meeting rapat countdown hitung mundur gajian payday" },
     { id: "shortcuts", color: "#ffd60a", icon: "M13 2 4 14h7l-1 8 9-12h-7z", words: "shortcuts pintasan launcher app link keep awake jaga menyala keyboard clean bersihkan ocr text teks dark mode gelap" },
     { id: "notifications", color: "#ff453a", icon: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0", words: "notifications notifikasi do not disturb dnd whatsapp teams presentation presentasi camera kamera mic mikrofon privacy privasi connection koneksi wifi charger baterai battery" },
-    { id: "system", color: "#636366", icon: "M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 9h.01M11 9h.01M15 9h.01M7 13h10", words: "keyboard caps lock volume overlay osd bluetooth network jaringan speed kecepatan download upload hotkey tombol pintas script peek claude code agent" },
+    { id: "system", color: "#636366", icon: "M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 9h.01M11 9h.01M15 9h.01M7 13h10", words: "keyboard caps lock volume overlay osd bluetooth network jaringan speed kecepatan download upload hotkey tombol pintas script peek claude code agent ai codex aider" },
     { id: "weather", color: "#30b0c7", icon: "M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 1 0 6 16.4M6 19h11.5", words: "weather cuaca city kota location lokasi rain hujan" },
     { id: "prayer", color: "#34d399", icon: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z", words: "azan adhan sholat prayer subuh dzuhur ashar maghrib isya muslim islam jadwal prealert" },
 
@@ -220,25 +220,55 @@
     exe = (await invoke<string>("exe_path").catch(() => "")).replaceAll("\\", "/");
   });
 
-  // Claude Code hooks that report to the notch (merged into ~/.claude/settings.json by the user).
-  const hookJson = $derived.by(() => {
-    const cmd = (state: string) => [{ type: "command", command: `"${exe || "notchy.exe"}" --agent ${state}` }];
-    return JSON.stringify(
-      {
-        hooks: {
-          UserPromptSubmit: [{ hooks: cmd("working") }],
-          PostToolUse: [{ matcher: "*", hooks: cmd("working") }],
-          Notification: [{ hooks: cmd("waiting") }],
-          Stop: [{ hooks: cmd("done") }],
-        },
-      },
-      null,
-      2,
-    );
+  type AiTool = "claude" | "codex" | "aider" | "script";
+  let selectedAi = $state<AiTool>("claude");
+  const AI_TOOLS: { id: AiTool; label: string }[] = [
+    { id: "claude", label: "Claude Code" },
+    { id: "codex", label: "OpenAI Codex" },
+    { id: "aider", label: "Aider" },
+    { id: "script", label: "Script & URL" },
+  ];
+
+  const aiSnippet = $derived.by(() => {
+    const exePath = exe || "notchy.exe";
+    switch (selectedAi) {
+      case "claude": {
+        const cmd = (state: string) => [{ type: "command", command: `"${exePath}" --agent ${state} --app "Claude Code"` }];
+        return JSON.stringify(
+          {
+            hooks: {
+              UserPromptSubmit: [{ hooks: cmd("working") }],
+              PostToolUse: [{ matcher: "*", hooks: cmd("working") }],
+              Notification: [{ hooks: cmd("waiting") }],
+              Stop: [{ hooks: cmd("done") }],
+            },
+          },
+          null,
+          2,
+        );
+      }
+      case "codex":
+        return `# ~/.codex/config.toml (berjalan saat giliran selesai)
+notify = ["${exePath}", "--peek", "Codex selesai", "--icon", "done"]`;
+      case "aider":
+        return `# .aider.conf.yml (berjalan saat Aider menunggu input)
+notifications-command: '"${exePath}" --peek "Aider butuh respon" --icon bell'`;
+      case "script":
+        return `# CLI: jalankan dari skrip, alias, atau terminal (PowerShell / Bash / CMD)
+"${exePath}" --agent working --app "MyAgent"
+"${exePath}" --agent waiting --app "MyAgent" --text "Menunggu persetujuan"
+"${exePath}" --agent done --app "MyAgent"
+
+# Skema URL notchy://agent (Bebas lokasi exe! Argumen pertama "" wajib untuk CMD):
+start "" "notchy://agent?app=MyAgent&state=working"
+start "" "notchy://agent?app=MyAgent&state=waiting&text=Menunggu%20persetujuan"
+start "" "notchy://agent?app=MyAgent&state=done"`;
+    }
   });
+
   let hookCopied = $state(false);
   async function copyHooks() {
-    await navigator.clipboard.writeText(hookJson).catch(() => {});
+    await navigator.clipboard.writeText(aiSnippet).catch(() => {});
     hookCopied = true;
     setTimeout(() => (hookCopied = false), 1500);
   }
@@ -662,8 +692,22 @@
           {#if settings.agentStatus !== false}
             <div class="row column" transition:slide={{ duration: 150 }}>
               {@render row(tr("s.agentHint"), "")}
-              <pre class="code">{hookJson}</pre>
-              <button class="btn" onclick={copyHooks}>{hookCopied ? `✓ ${tr("s.copiedOk")}` : tr("s.copy")}</button>
+              <div class="ai-chips">
+                {#each AI_TOOLS as tool}
+                  <button
+                    class="chip"
+                    class:active={selectedAi === tool.id}
+                    onclick={() => (selectedAi = tool.id)}
+                    type="button"
+                  >
+                    {tool.label}
+                  </button>
+                {/each}
+              </div>
+              <div class="snippet-box">
+                <pre class="code">{aiSnippet}</pre>
+                <button class="btn" onclick={copyHooks}>{hookCopied ? `✓ ${tr("s.copiedOk")}` : tr("s.copy")}</button>
+              </div>
             </div>
           {/if}
         </div>
@@ -1139,6 +1183,38 @@
   .text.hotkey {
     width: 130px;
     text-align: center;
+  }
+  .ai-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0 8px;
+  }
+  .chip {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .chip:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+  .chip.active {
+    background: #0a84ff;
+    border-color: #0a84ff;
+    color: #fff;
+    font-weight: 500;
+  }
+  .snippet-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
   }
   .code {
     margin: 0;

@@ -39,7 +39,7 @@ A small black island at the top of your screen that shows what's happening (musi
 
 🧩 **Two things at once.** Music, a timer, a call or a download can sit side by side in the small notch; swipe to switch which one leads.
 
-🤖 **Claude Code, in the notch.** See when Claude is working, get a heads-up the moment it needs your approval, and a peek when it's done. Settings gives you the hooks to paste.
+🤖 **AI coding assistants in the notch.** See when Claude Code, Codex, Aider, or your own scripts are working, get a heads-up the moment they need approval, and a peek when done. Settings gives you ready-to-paste hooks.
 
 🔉 **Sound page:** a volume slider and mute for every app that's playing (Spotify loud, Zoom quiet), plus the output switch.
 
@@ -104,7 +104,7 @@ A small black island at the top of your screen that shows what's happening (musi
   <img src="docs/settings.png" width="70%" alt="Settings" />
 </p>
 
-## For your scripts (and Claude Code)
+## For your scripts and AI tools
 
 Anything that can run a command can put a message in the notch. Text only: nothing is ever run.
 
@@ -115,7 +115,11 @@ notchy --peek "Backup failed" --detail "Disk is full" --icon error
 
 Icons: `done`, `error`, `info`, `bell`. There's also a link form, `notchy://peek?text=Hello&icon=info`, for apps that open URLs.
 
-**Claude Code:** turn on *Claude Code status* in Settings → Keyboard & system and copy the hooks shown there into `~/.claude/settings.json`. They call `notchy --agent working | waiting | done`, so the notch shows Claude working, pings you when it's waiting for you, and tells you when it's finished.
+**AI assistants:** turn on *AI status* in Settings → Keyboard & system and copy the hooks shown there. Supports Claude Code, Codex CLI, Aider, or custom scripts:
+- **CLI flag:** `notchy --agent working | waiting | done [--app "MyAgent"] [--text "Detail"]`
+- **URL (CMD):** `start "" "notchy://agent?app=MyAgent&state=waiting&text=Approval%20needed"`
+
+The notch pulses while your AI works, startles the mascot and pings you when it needs approval, and flashes a gentle green peek when finished.
 
 ## Install
 

@@ -31,7 +31,7 @@ export interface EventHandlers {
   /** Keyboard lock: 0 unlocked, otherwise when it unlocks by itself (unix ms). */
   onKeyLock?: (until: number) => void;
   /** Claude Code hook: working, waiting, done or idle. */
-  onAgent?: (agent: { state: string; text: string }) => void;
+  onAgent?: (agent: { state: string; app?: string; text: string }) => void;
 }
 
 export async function setupNotchEvents(handlers: EventHandlers): Promise<() => void> {
@@ -68,7 +68,7 @@ export async function setupNotchEvents(handlers: EventHandlers): Promise<() => v
     add(listen("notch-hotkey", () => handlers.onHotkey?.())),
     add(listen<number>("keep-awake", (e) => handlers.onKeepAwake?.(e.payload))),
     add(listen<number>("keyboard-lock", (e) => handlers.onKeyLock?.(e.payload))),
-    add(listen<{ state: string; text: string }>("agent", (e) => handlers.onAgent?.(e.payload))),
+    add(listen<{ state: string; app?: string; text: string }>("agent", (e) => handlers.onAgent?.(e.payload))),
   ]);
 
   return () => {

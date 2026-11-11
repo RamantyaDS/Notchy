@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Notchy — Dynamic Island untuk Windows 10 & 11</title>
+  <title>Notchy: Dynamic Island untuk Windows 10 & 11</title>
   <meta name="description" content="Pulau interaktif kecil di atas layar Windows. Musik, lirik sinkron, notifikasi, status Claude Code, volume per aplikasi, dan maskot lucu. 100% Gratis, open-source, dan super enteng (~1% CPU)." />
   
   <!-- Open Graph -->
-  <meta property="og:title" content="Notchy — Dynamic Island untuk Windows 10 & 11" />
+  <meta property="og:title" content="Notchy: Dynamic Island untuk Windows 10 & 11" />
   <meta property="og:description" content="Layar laptop Windows-mu nggak punya notch? Sekarang punya. Dibuat dengan Tauri 2, Rust, dan Svelte 5." />
   <meta property="og:image" content="assets/banner.png" />
   <meta property="og:type" content="website" />
@@ -109,10 +109,10 @@
       <!-- Subtitle -->
       <p class="max-w-2xl mx-auto text-base sm:text-lg text-slate-400 mb-8 leading-relaxed">
         <span data-lang="id">
-          Pulau kecil pintar di atas layar yang menampilkan musik dengan lirik sinkron, notifikasi WhatsApp, status Claude Code, volume per aplikasi, dan maskot mata lucu yang menemani harimu. Ringan (~1% CPU) dan menyingkir saat menghalangi.
+          Pulau kecil di atas layar untuk musik dengan lirik berjalan, notifikasi, status asisten AI, volume per aplikasi, dan maskot mata interaktif. Menggunakan sekitar 1% CPU dan menyingkir saat kursor mendekat.
         </span>
         <span data-lang="en">
-          A small black island at the top of your screen that shows what's happening—music, live synced lyrics, notifications, Claude Code status, per-app volume—and tucks away when you need space. Built with Tauri 2, Rust, and Svelte 5.
+          A compact island at the top of your screen for music with synced lyrics, notifications, AI assistant status, and per-app volume controls. Uses about 1% CPU and tucks away when you need space. Built with Tauri 2, Rust, and Svelte 5.
         </span>
       </p>
 
@@ -470,24 +470,24 @@
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-        <!-- Claude Code (span 2) -->
+        <!-- AI Assistants & Coding Agents (span 2) -->
         <div class="premium-card p-6 md:col-span-2 flex flex-col justify-between">
           <div class="mb-5">
             <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">
-              🤖 Claude Code
+              🤖 AI Assistants & Agents
             </span>
             <h4 class="text-xl font-bold text-white mt-3 mb-2">
-              <span data-lang="id">Tahu kapan Claude butuh kamu</span>
-              <span data-lang="en">Know when Claude needs you</span>
+              <span data-lang="id">Pantau asisten AI di notch</span>
+              <span data-lang="en">Monitor AI coding assistants</span>
             </h4>
             <p class="text-slate-400 text-sm leading-relaxed max-w-xl">
-              <span data-lang="id">Notch menunjukkan saat Claude sedang bekerja, memberi tahu begitu Claude menunggu persetujuanmu, dan saat tugasnya selesai. Hook-nya tinggal disalin dari Settings → Keyboard & sistem.</span>
-              <span data-lang="en">The notch shows when Claude is working, lets you know the moment it waits for your approval, and tells you when it's done. Copy the hooks from Settings → Keyboard & system.</span>
+              <span data-lang="id">Notch menunjukkan saat Claude Code, Codex, Aider, atau skrip Anda sedang bekerja, memunculkan notifikasi saat butuh persetujuanmu, dan mengabari saat tugas selesai. Hook siap pakai tersedia di Settings → Keyboard & sistem.</span>
+              <span data-lang="en">The notch pulses while Claude Code, Codex, Aider, or your custom scripts are working, alerts you when approval is needed, and tells you when it is finished. Copy integration hooks directly from Settings → Keyboard & system.</span>
             </p>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center p-4 rounded-xl bg-black/60 border border-white/[0.08]">
-            <img src="assets/claude.png" alt="Claude Code menunggu persetujuan" class="w-full h-auto" loading="lazy" />
-            <img src="assets/claude-working.png" alt="Claude Code sedang bekerja" class="w-full h-auto" loading="lazy" />
+            <img src="assets/claude.png" alt="AI menunggu persetujuan" class="w-full h-auto" loading="lazy" />
+            <img src="assets/claude-working.png" alt="AI sedang bekerja" class="w-full h-auto" loading="lazy" />
           </div>
         </div>
 
@@ -835,10 +835,10 @@
             </h4>
             <p class="text-slate-400 text-sm leading-relaxed mb-4">
               <span data-lang="id">
-                Notchy memiliki opsi untuk mengambil alih tombol volume keyboard dan menampilkan animasi mini peek yang rapi, menggantikan kotak overlay bawaan Windows yang besar.
+                Notchy dapat menangani tombol volume keyboard untuk menampilkan indikator mini di notch, menggantikan kotak overlay standar Windows.
               </span>
               <span data-lang="en">
-                Notchy can intercept volume keys to display a sleek, compact peek—replacing Windows 11's oversized default volume overlay.
+                Notchy can intercept volume keys to display a compact volume peek, replacing Windows 11's default overlay.
               </span>
             </p>
             <div class="flex items-center gap-2 text-xs text-slate-300">
@@ -872,8 +872,8 @@
           <span data-lang="en">Engineered with Rust. Zero Bloat.</span>
         </h3>
         <p class="text-slate-400 text-sm">
-          <span data-lang="id">Bukan aplikasi Electron yang memakan memori ratusan MB. Notchy menggunakan Win32 hook asli dan Tauri 2.</span>
-          <span data-lang="en">Not an Electron wrapper hogging your memory. Notchy is built on low-level Win32 event hooks and Tauri 2.</span>
+          <span data-lang="id">Notchy dibangun dengan Win32 hook bawaan dan Tauri 2 agar konsumsi memori dan CPU tetap minimal.</span>
+          <span data-lang="en">Notchy uses native Win32 event hooks and Tauri 2 to run with minimal memory and CPU usage.</span>
         </p>
       </div>
 
