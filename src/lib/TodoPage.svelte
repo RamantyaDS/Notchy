@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import { dayKey, type Task, type Todo } from "./productivity.svelte";
+  import { dayKey, type Repeat, type Task, type Todo } from "./productivity.svelte";
   import { getLocale, t } from "./i18n";
 
   // `onTyping` asks Rust for keyboard focus (the notch normally never takes it).
@@ -10,6 +10,7 @@
   let editing = $state<number | null>(null);
   let text = $state("");
   let time = $state("");
+  let repeat = $state<Repeat | undefined>();
   let input = $state<HTMLInputElement>();
 
   // Week strip: today and the six days after it. Picking a day lists its tasks,
@@ -28,6 +29,7 @@
     editing = task?.id ?? 0;
     text = task?.text ?? "";
     time = task?.time ?? "";
+    repeat = task?.repeat;
     onTyping(true);
     await tick();
     // Give Windows a moment to hand the notch keyboard focus.
@@ -35,8 +37,8 @@
   }
 
   function finish(keep: boolean) {
-    if (keep && editing === 0) todo.add(text, time, day);
-    else if (keep && editing) todo.update(editing, text, time);
+    if (keep && editing === 0) todo.add(text, time, day, repeat);
+    else if (keep && editing) todo.update(editing, text, time, repeat);
     editing = null;
     onTyping(false);
   }
@@ -51,6 +53,9 @@
     const next = e.relatedTarget as Node | null;
     if (!(e.currentTarget as HTMLElement).contains(next)) finish(text.trim() !== "");
   }
+
+  const repeats: (Repeat | undefined)[] = [undefined, "daily", "weekdays", "weekly"];
+  const nextRepeat = () => (repeat = repeats[(repeats.indexOf(repeat) + 1) % repeats.length]);
 </script>
 
 <!-- Left: how the day is going, and the add button. Right: the tasks. -->
@@ -74,18 +79,20 @@
   {#if editing !== null}
     <div class="form" onfocusout={blur}>
       <input bind:this={input} bind:value={text} onkeydown={keys} placeholder={t("todo.placeholder")} class="text" />
-      <input bind:value={time} onkeydown={keys} type="time" class="time" title={t("todo.timeTitle")} />
       <button onclick={() => finish(true)}>{t("todo.save")}</button>
+      <input bind:value={time} onkeydown={keys} type="time" class="time" title={t("todo.timeTitle")} />
+      <button class="repeat" class:on={repeat} onclick={nextRepeat} title={t("todo.repeatTitle")}>↻ {t(`todo.repeat.${repeat ?? "none"}`)}</button>
     </div>
   {/if}
 
   <ul class="scroll">
     {#each tasks.filter((t) => t.id !== editing) as task (task.id)}
       <li class:done={task.done}>
-        <button class="check" onclick={() => todo.toggle(task.id)} aria-label={task.done ? t("todo.markUndone") : t("todo.markDone")}>
+        <button class="check" onclick={() => todo.toggle(task.id, day)} aria-label={task.done ? t("todo.markUndone") : t("todo.markDone")}>
           {#if task.done}✓{/if}
         </button>
         <button class="label" onclick={() => edit(task)}>{task.text}</button>
+        {#if task.repeat}<span class="loop" title={t(`todo.repeat.${task.repeat}`)}>↻</span>{/if}
         {#if task.time}<span class="chip">{task.time}</span>{/if}
         <button class="remove" onclick={() => todo.remove(task.id)} aria-label={t("todo.delete")}>×</button>
       </li>
@@ -202,9 +209,11 @@
     border-radius: 50%;
     background: #fdba74;
   }
+  /* Text and save on the first row; time and repeat below. */
   .form {
     display: flex;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 4px 6px;
     margin-bottom: 4px;
   }
   .form input {
@@ -218,11 +227,25 @@
     color-scheme: dark;
   }
   .form .text {
-    flex: 1;
+    flex: 1 1 60%;
     min-width: 0;
   }
   .form .time {
     width: 92px;
+  }
+  .form .repeat {
+    flex: none;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .form .repeat.on {
+    color: #fdba74;
+    background: rgba(251, 146, 60, 0.18);
+  }
+  .loop {
+    flex: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
   }
   .form input:focus {
     outline: 1px solid #2d5bff;

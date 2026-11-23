@@ -164,6 +164,8 @@
   let showPageLabel = $state(false);
   let pageLabelTimer: ReturnType<typeof setTimeout> | undefined;
   let typing = $state(false);
+  // Clickable peeks would replace the page being typed in, so they wait until typing ends.
+  let typingHeld: PeekData[] = [];
   let dropping = $state(false);
   let dropTarget = $state<string | null>(null);
   let levels = $state<number[] | null>(null);
@@ -517,6 +519,12 @@
     typing = on;
     invoke(on ? "begin_typing" : "end_typing");
     if (!on && !hovered) closeTimer = setTimeout(() => (open = false), 220);
+    if (!on && typingHeld.length) {
+      const [first, ...rest] = typingHeld;
+      typingHeld = [];
+      peekMgr.peekQueue.push(...rest);
+      peekMgr.show(first, hovered);
+    }
   }
   function endKeyboardMode() {
     if (!keyboardMode) return;
@@ -941,6 +949,11 @@
         if (!privacyIndicators && (p.kind === "camera" || p.kind === "mic-in-use")) return;
         if (hidden && presentationSummary && p.kind === "notification") {
           held.push(String(p.app || p.title || ""));
+          return;
+        }
+        if (typing && peekMgr.clickable(p)) {
+          typingHeld.push(p);
+          if (p.kind === "screenshot") shelf.add([p.path]);
           return;
         }
         if (mascot && (p.kind === "notification" || p.kind === "meeting" || p.kind === "download-done" || p.kind === "screenshot")) {

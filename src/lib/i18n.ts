@@ -205,6 +205,11 @@ export const translations = {
     "todo.delete": "Delete",
     "todo.markDone": "Mark complete",
     "todo.markUndone": "Mark incomplete",
+    "todo.repeatTitle": "Repeat",
+    "todo.repeat.none": "Once",
+    "todo.repeat.daily": "Daily",
+    "todo.repeat.weekdays": "Mon–Fri",
+    "todo.repeat.weekly": "Weekly",
 
     // Subpage: Water
     "water.reminders": "Reminders",
@@ -617,6 +622,11 @@ export const translations = {
     "todo.delete": "Hapus",
     "todo.markDone": "Selesai",
     "todo.markUndone": "Belum selesai",
+    "todo.repeatTitle": "Ulangi",
+    "todo.repeat.none": "Sekali",
+    "todo.repeat.daily": "Harian",
+    "todo.repeat.weekdays": "Sen–Jum",
+    "todo.repeat.weekly": "Mingguan",
 
     // Subpage: Water
     "water.reminders": "Pengingat",

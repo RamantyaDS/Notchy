@@ -219,13 +219,29 @@ export type Task = {
   remindedOn?: number;
   /** "YYYY-MM-DD" the task is for; missing on older tasks, which count as today. */
   date?: string;
+  /** A repeating task starts on `date` and is ticked off per day in `doneDays`. */
+  repeat?: Repeat;
+  doneDays?: string[];
 };
 
-/** Whether a task shows on `day`. Unfinished tasks from earlier days carry over to today. */
+export type Repeat = "daily" | "weekdays" | "weekly";
+
+const weekday = (key: string) => new Date(`${key}T00:00`).getDay();
+
+/** Whether a task shows on `day`. Unfinished one-off tasks from earlier days carry over to today. */
 export function onDay(task: Task, day: string, today = dayKey()): boolean {
   const date = task.date ?? today;
+  if (task.repeat) {
+    if (day < date) return false;
+    if (task.repeat === "weekdays") return weekday(day) >= 1 && weekday(day) <= 5;
+    if (task.repeat === "weekly") return weekday(day) === weekday(date);
+    return true;
+  }
   return day === today ? date === today || (date < today && !task.done) : date === day;
 }
+
+/** Whether a task is ticked off on `day`. */
+export const doneOn = (task: Task, day: string) => (task.repeat ? !!task.doneDays?.includes(day) : task.done);
 
 export class Todo {
   tasks = $state<Task[]>([]);
@@ -235,9 +251,12 @@ export class Todo {
   constructor(private notify: Notify) {}
 
   async load() {
-    // Finished tasks from earlier days are cleared away.
+    // Finished tasks (and ticks on repeating ones) from earlier days are cleared away.
     const today = startOfDay();
-    this.tasks = ((await load<Task[]>("todo")) ?? []).filter((t) => !t.done || (t.doneAt ?? 0) >= today);
+    const key = dayKey();
+    this.tasks = ((await load<Task[]>("todo")) ?? [])
+      .filter((t) => t.repeat || !t.done || (t.doneAt ?? 0) >= today)
+      .map((t) => (t.repeat ? { ...t, doneDays: t.doneDays?.filter((d) => d >= key) } : t));
     this.#schedule();
   }
 
@@ -245,24 +264,30 @@ export class Todo {
     return this.forDay(dayKey()).filter((t) => t.done).length;
   }
 
+  /** The tasks on `day`, with `done` meaning done that day. */
   forDay(day: string) {
     const today = dayKey();
-    return this.tasks.filter((t) => onDay(t, day, today));
+    return this.tasks.filter((t) => onDay(t, day, today)).map((t) => (t.repeat ? { ...t, done: doneOn(t, day) } : t));
   }
 
-  add(text: string, time: string, date = dayKey()) {
+  add(text: string, time: string, date = dayKey(), repeat?: Repeat) {
     if (!text.trim()) return;
-    this.tasks = [...this.tasks, { id: Date.now(), text: text.trim(), time, done: false, date }];
+    this.tasks = [...this.tasks, { id: Date.now(), text: text.trim(), time, done: false, date, repeat }];
     this.#commit();
   }
 
-  update(id: number, text: string, time: string) {
-    this.tasks = this.tasks.map((t) => (t.id === id ? { ...t, text: text.trim() || t.text, time, remindedOn: undefined } : t));
+  update(id: number, text: string, time: string, repeat?: Repeat) {
+    this.tasks = this.tasks.map((t) => (t.id === id ? { ...t, text: text.trim() || t.text, time, repeat, remindedOn: undefined } : t));
     this.#commit();
   }
 
-  toggle(id: number) {
-    this.tasks = this.tasks.map((t) => (t.id === id ? { ...t, done: !t.done, doneAt: t.done ? undefined : Date.now() } : t));
+  toggle(id: number, day = dayKey()) {
+    this.tasks = this.tasks.map((t) => {
+      if (t.id !== id) return t;
+      if (!t.repeat) return { ...t, done: !t.done, doneAt: t.done ? undefined : Date.now() };
+      const days = t.doneDays ?? [];
+      return { ...t, doneDays: days.includes(day) ? days.filter((d) => d !== day) : [...days, day] };
+    });
     this.#commit();
   }
 
@@ -284,7 +309,7 @@ export class Todo {
     const key = dayKey();
     this.#midnight = setTimeout(() => this.#schedule(), today + 24 * 60 * MINUTE + 1000 - Date.now());
     this.#timers = this.tasks
-      .filter((t) => !t.done && t.time && t.remindedOn !== today && (t.date ?? key) === key)
+      .filter((t) => t.time && t.remindedOn !== today && !doneOn(t, key) && (t.repeat ? onDay(t, key, key) : (t.date ?? key) === key))
       .map((t) => {
         const [h, m] = t.time.split(":").map(Number);
         const at = today + (h * 60 + m) * MINUTE;
