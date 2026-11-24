@@ -23,6 +23,15 @@ foreach ($f in $files.Keys) {
     $text = [IO.File]::ReadAllText("$root/$f")
     [IO.File]::WriteAllText("$root/$f", ([regex]$files[$f]).Replace($text, "`${1}$Version`${2}", 1))
 }
+# README badges carry their numbers: GitHub's image proxy gives up on shields.io's
+# live GitHub badges (504), but static ones always load.
+$downloads = (gh api repos/RamantyaDS/Notchy/releases --paginate --jq '.[].assets[].download_count' | Measure-Object -Sum).Sum
+$count = if ($downloads -lt 1000) { "$downloads" } elseif ($downloads -lt 10000) { "{0:0.#}k" -f ($downloads / 1000) } else { "{0:0}k" -f ($downloads / 1000) }
+$count = $count.Replace(",", ".")
+$readme = [IO.File]::ReadAllText("$root/README.md")
+$readme = $readme -replace 'badge/download-[^-?]+-000000', "badge/download-v$Version-000000"
+$readme = $readme -replace 'badge/downloads-[^-?]+-000000', "badge/downloads-$count-000000"
+[IO.File]::WriteAllText("$root/README.md", $readme)
 
 # 2. Build. The watchdog would restart Notchy mid-build and lock the exe, so pause it.
 $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$env:USERPROFILE\.tauri\notchy.key" -Raw
@@ -76,7 +85,7 @@ $json = @{
 } | ConvertTo-Json -Depth 4
 [IO.File]::WriteAllText($latest, $json)  # no BOM
 # 4. Publish.
-git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock README.md
 git commit -m "Release $Version"
 git tag "v$Version"
 git push origin HEAD "v$Version"
