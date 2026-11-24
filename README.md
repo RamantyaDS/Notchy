@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/RamantyaDS/Notchy/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/RamantyaDS/Notchy?style=flat-square&color=000000&label=download&cacheSeconds=3600" /></a>
+  <a href="https://github.com/RamantyaDS/Notchy/releases/latest"><img alt="Latest release" src="https://badgen.net/github/tag/RamantyaDS/Notchy?color=black&label=download" /></a>
   <a href="https://ramantyads.github.io/Notchy/"><img alt="Interactive Website" src="https://img.shields.io/badge/Website-Live%20Demo-000000?style=flat-square&logo=googlechrome" /></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%26%2011-000000?style=flat-square&logo=windows" />
   <img alt="Built with Tauri" src="https://img.shields.io/badge/Tauri%202-Rust%20%2B%20Svelte-000000?style=flat-square&logo=tauri" />
