@@ -171,7 +171,10 @@
           {main.app && !main.app.toLowerCase().includes("claude") ? t("peek.agentWorkingGeneric", { app: main.app }) : t("peek.agentWorking")}
         {/if}
       </span>
-      <span class="run" class:on={active && !main.waiting}></span>
+      <span class="agent-dots" class:wait={main.waiting} aria-hidden="true">
+        <i></i><i></i><i></i>
+      </span>
+      <span class="run agent" class:wait={main.waiting} class:on={active && !main.waiting}></span>
     {:else if main.kind === "network"}
       <span class="net-pill down">
         <svg class="mini-arrow" viewBox="0 0 24 24"><path d="M12 4v13M7 12l5 5 5-5" /></svg>
@@ -231,6 +234,49 @@
       transform: rotate(45deg) scale(0.85);
     }
   }
+  .agent-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding-right: 4px;
+    flex: none;
+  }
+  .agent-dots i {
+    width: 3.5px;
+    height: 3.5px;
+    border-radius: 50%;
+    background: #d97757;
+    opacity: 0.35;
+    animation: agent-dot-pulse 1.4s steps(4) infinite;
+  }
+  .agent-dots i:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  .agent-dots i:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  .agent-dots.wait i {
+    background: #fbbf24;
+    animation: agent-wait-pulse 1.2s steps(4) infinite;
+  }
+  @keyframes agent-dot-pulse {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(0.85);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+  }
+  @keyframes agent-wait-pulse {
+    0%, 100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
   .island {
     position: absolute;
     inset: 0;
@@ -250,6 +296,24 @@
   .main.timer {
     justify-content: center;
     gap: 30px;
+  }
+  .main.agent {
+    padding-left: 4px;
+  }
+  .main.agent .spark {
+    flex: none;
+    width: 20px;
+    align-items: center;
+    justify-content: center;
+  }
+  .main.agent .label {
+    text-align: center;
+  }
+  .main.agent .agent-dots {
+    flex: none;
+    width: 20px;
+    padding-right: 0;
+    justify-content: center;
   }
   .side {
     flex: none;
@@ -466,6 +530,32 @@
     }
     to {
       transform: translateX(290%);
+    }
+  }
+
+  .run.agent {
+    background: rgba(217, 119, 87, 0.15);
+  }
+  .run.agent::after {
+    background: linear-gradient(90deg, transparent, #f97316, #d97757, transparent);
+  }
+  .run.agent.on::after {
+    animation: run 1.8s steps(8) infinite;
+  }
+  .run.agent.wait {
+    background: rgba(251, 191, 36, 0.15);
+  }
+  .run.agent.wait::after {
+    background: #fbbf24;
+    width: 100%;
+    opacity: 0.35;
+    animation: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .agent-dots i,
+    .run.agent.on::after {
+      animation: none;
     }
   }
 
