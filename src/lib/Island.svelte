@@ -247,7 +247,7 @@
     border-radius: 50%;
     background: #d97757;
     opacity: 0.35;
-    animation: agent-dot-pulse 1.4s ease-in-out infinite;
+    animation: agent-dot-pulse 1.4s steps(4) infinite;
   }
   .agent-dots i:nth-child(2) {
     animation-delay: 0.2s;
@@ -257,7 +257,7 @@
   }
   .agent-dots.wait i {
     background: #fbbf24;
-    animation: agent-wait-pulse 1.2s ease-in-out infinite;
+    animation: agent-wait-pulse 1.2s steps(4) infinite;
   }
   @keyframes agent-dot-pulse {
     0%, 100% {
@@ -540,7 +540,7 @@
     background: linear-gradient(90deg, transparent, #f97316, #d97757, transparent);
   }
   .run.agent.on::after {
-    animation: run-smooth 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    animation: run 1.8s steps(8) infinite;
   }
   .run.agent.wait {
     background: rgba(251, 191, 36, 0.15);
@@ -550,14 +550,6 @@
     width: 100%;
     opacity: 0.35;
     animation: none;
-  }
-  @keyframes run-smooth {
-    from {
-      transform: translateX(-100%);
-    }
-    to {
-      transform: translateX(290%);
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {
